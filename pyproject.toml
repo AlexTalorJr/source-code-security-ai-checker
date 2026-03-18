@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aipix-security-scanner"
+version = "0.1.0"
+description = "AI-powered security vulnerability scanner"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]",
+    "pydantic-settings[yaml]",
+    "sqlalchemy>=2.0",
+    "aiosqlite",
+    "alembic",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "httpx",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/scanner"]
