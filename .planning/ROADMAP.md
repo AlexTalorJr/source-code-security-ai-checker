@@ -12,7 +12,7 @@ This roadmap delivers a fully containerized, multi-tool security scanning pipeli
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation and Data Models** - Config system, unified Finding model with dedup keys, SQLite persistence, FastAPI skeleton with health endpoint, Docker base image
+- [x] **Phase 1: Foundation and Data Models** - Config system, unified Finding model with dedup keys, SQLite persistence, FastAPI skeleton with health endpoint, Docker base image (completed 2026-03-18)
 - [ ] **Phase 2: Scanner Adapters and Orchestration** - Five scanner adapters running in parallel with timeouts, finding normalization and cross-tool deduplication, dual-mode scan input
 - [ ] **Phase 3: AI Analysis** - Claude API integration for semantic analysis, fix suggestions, cross-tool correlation, token budgeting, graceful degradation
 - [ ] **Phase 4: Reports and Quality Gate** - Interactive HTML report, formal PDF report, configurable quality gate with exit codes, scan history storage and delta comparison
@@ -124,7 +124,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation and Data Models | 0/3 | Planning complete | - |
+| 1. Foundation and Data Models | 3/3 | Complete   | 2026-03-18 |
 | 2. Scanner Adapters and Orchestration | 0/0 | Not started | - |
 | 3. AI Analysis | 0/0 | Not started | - |
 | 4. Reports and Quality Gate | 0/0 | Not started | - |

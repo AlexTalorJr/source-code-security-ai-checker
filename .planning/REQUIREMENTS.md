@@ -66,7 +66,7 @@
 
 ### Infrastructure
 
-- [ ] **INFRA-01**: Entire stack runs via single docker-compose up
+- [x] **INFRA-01**: Entire stack runs via single docker-compose up
 - [ ] **INFRA-02**: Docker images support x86_64 and ARM64 architectures
 - [x] **INFRA-03**: All configuration via environment variables and config.yml
 - [x] **INFRA-04**: No hardcoded paths, hostnames, or credentials in codebase
@@ -159,7 +159,7 @@
 | CI-01 | Phase 5 | Pending |
 | CI-02 | Phase 5 | Pending |
 | CI-03 | Phase 5 | Pending |
-| INFRA-01 | Phase 1 | Pending |
+| INFRA-01 | Phase 1 | Complete |
 | INFRA-02 | Phase 6 | Pending |
 | INFRA-03 | Phase 1 | Complete |
 | INFRA-04 | Phase 1 | Complete |
