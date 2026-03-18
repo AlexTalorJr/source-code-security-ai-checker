@@ -11,12 +11,12 @@ RUN mkdir -p /data && chown scanner:scanner /data
 
 WORKDIR /app
 
-# Python deps first (Docker cache layer)
+# Copy source and install
 COPY pyproject.toml .
+COPY src/ src/
 RUN pip install --no-cache-dir .
 
-# App code
-COPY src/ src/
+# App config and migrations
 COPY alembic.ini .
 COPY alembic/ alembic/
 COPY config.yml.example config.yml
