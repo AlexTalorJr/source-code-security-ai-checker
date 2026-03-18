@@ -30,11 +30,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Configuration loads from config.yml with environment variable overrides for secrets, and no credentials exist in committed code
   3. Finding and ScanResult data models exist with unified severity levels (Critical/High/Medium/Low/Info) and deterministic deduplication fingerprints
   4. SQLite database is created in a mounted volume with WAL mode enabled, and persists across container restarts
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md -- Project skeleton, config system, Pydantic schemas, fingerprint module
+- [ ] 01-02-PLAN.md -- SQLAlchemy ORM models, DB session with WAL mode, FastAPI app with health endpoint
+- [ ] 01-03-PLAN.md -- Docker packaging (Dockerfile, docker-compose.yml) with smoke test
 
 ### Phase 2: Scanner Adapters and Orchestration
 **Goal**: Users can trigger a scan that runs all five security tools in parallel, producing normalized and deduplicated findings with unified severity
@@ -123,7 +124,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation and Data Models | 0/0 | Not started | - |
+| 1. Foundation and Data Models | 0/3 | Planning complete | - |
 | 2. Scanner Adapters and Orchestration | 0/0 | Not started | - |
 | 3. AI Analysis | 0/0 | Not started | - |
 | 4. Reports and Quality Gate | 0/0 | Not started | - |
