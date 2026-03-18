@@ -1,4 +1,4 @@
-"""Shared test fixtures for the aipix-security-scanner test suite."""
+"""Shared test fixtures for Phase 01: Foundation and Data Models."""
 
 import os
 import pytest
