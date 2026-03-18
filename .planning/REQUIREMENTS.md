@@ -124,66 +124,66 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCAN-01 | — | Pending |
-| SCAN-02 | — | Pending |
-| SCAN-03 | — | Pending |
-| SCAN-04 | — | Pending |
-| SCAN-05 | — | Pending |
-| SCAN-06 | — | Pending |
-| SCAN-07 | — | Pending |
-| AI-01 | — | Pending |
-| AI-02 | — | Pending |
-| AI-03 | — | Pending |
-| AI-04 | — | Pending |
-| AI-05 | — | Pending |
-| RPT-01 | — | Pending |
-| RPT-02 | — | Pending |
-| RPT-03 | — | Pending |
-| RPT-04 | — | Pending |
-| GATE-01 | — | Pending |
-| GATE-02 | — | Pending |
-| GATE-03 | — | Pending |
-| NOTF-01 | — | Pending |
-| NOTF-02 | — | Pending |
-| NOTF-03 | — | Pending |
-| HIST-01 | — | Pending |
-| HIST-02 | — | Pending |
-| HIST-03 | — | Pending |
-| HIST-04 | — | Pending |
-| API-01 | — | Pending |
-| API-02 | — | Pending |
-| API-03 | — | Pending |
-| API-04 | — | Pending |
-| API-05 | — | Pending |
-| API-06 | — | Pending |
-| CI-01 | — | Pending |
-| CI-02 | — | Pending |
-| CI-03 | — | Pending |
-| INFRA-01 | — | Pending |
-| INFRA-02 | — | Pending |
-| INFRA-03 | — | Pending |
-| INFRA-04 | — | Pending |
-| INFRA-05 | — | Pending |
-| INFRA-06 | — | Pending |
-| INFRA-07 | — | Pending |
-| INFRA-08 | — | Pending |
-| DOC-01 | — | Pending |
-| DOC-02 | — | Pending |
-| DOC-03 | — | Pending |
-| DOC-04 | — | Pending |
-| DOC-05 | — | Pending |
-| DOC-06 | — | Pending |
-| DOC-07 | — | Pending |
-| DOC-08 | — | Pending |
-| DOC-09 | — | Pending |
-| DOC-10 | — | Pending |
-| DOC-11 | — | Pending |
+| SCAN-01 | Phase 2 | Pending |
+| SCAN-02 | Phase 1 | Pending |
+| SCAN-03 | Phase 2 | Pending |
+| SCAN-04 | Phase 2 | Pending |
+| SCAN-05 | Phase 2 | Pending |
+| SCAN-06 | Phase 2 | Pending |
+| SCAN-07 | Phase 2 | Pending |
+| AI-01 | Phase 3 | Pending |
+| AI-02 | Phase 3 | Pending |
+| AI-03 | Phase 3 | Pending |
+| AI-04 | Phase 3 | Pending |
+| AI-05 | Phase 3 | Pending |
+| RPT-01 | Phase 4 | Pending |
+| RPT-02 | Phase 4 | Pending |
+| RPT-03 | Phase 4 | Pending |
+| RPT-04 | Phase 4 | Pending |
+| GATE-01 | Phase 4 | Pending |
+| GATE-02 | Phase 4 | Pending |
+| GATE-03 | Phase 4 | Pending |
+| NOTF-01 | Phase 5 | Pending |
+| NOTF-02 | Phase 5 | Pending |
+| NOTF-03 | Phase 5 | Pending |
+| HIST-01 | Phase 4 | Pending |
+| HIST-02 | Phase 4 | Pending |
+| HIST-03 | Phase 5 | Pending |
+| HIST-04 | Phase 5 | Pending |
+| API-01 | Phase 5 | Pending |
+| API-02 | Phase 5 | Pending |
+| API-03 | Phase 5 | Pending |
+| API-04 | Phase 1 | Pending |
+| API-05 | Phase 5 | Pending |
+| API-06 | Phase 5 | Pending |
+| CI-01 | Phase 5 | Pending |
+| CI-02 | Phase 5 | Pending |
+| CI-03 | Phase 5 | Pending |
+| INFRA-01 | Phase 1 | Pending |
+| INFRA-02 | Phase 6 | Pending |
+| INFRA-03 | Phase 1 | Pending |
+| INFRA-04 | Phase 1 | Pending |
+| INFRA-05 | Phase 1 | Pending |
+| INFRA-06 | Phase 6 | Pending |
+| INFRA-07 | Phase 6 | Pending |
+| INFRA-08 | Phase 6 | Pending |
+| DOC-01 | Phase 6 | Pending |
+| DOC-02 | Phase 6 | Pending |
+| DOC-03 | Phase 6 | Pending |
+| DOC-04 | Phase 6 | Pending |
+| DOC-05 | Phase 6 | Pending |
+| DOC-06 | Phase 6 | Pending |
+| DOC-07 | Phase 6 | Pending |
+| DOC-08 | Phase 6 | Pending |
+| DOC-09 | Phase 6 | Pending |
+| DOC-10 | Phase 6 | Pending |
+| DOC-11 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: 46 total
-- Mapped to phases: 0
-- Unmapped: 46 ⚠️
+- v1 requirements: 54 total
+- Mapped to phases: 54
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-18 after initial definition*
+*Last updated: 2026-03-18 after roadmap creation*
