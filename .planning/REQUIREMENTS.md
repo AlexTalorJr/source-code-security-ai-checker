@@ -8,7 +8,7 @@
 ### Scanning Engine
 
 - [ ] **SCAN-01**: Scanner runs Semgrep, cppcheck, Gitleaks, Trivy, and Checkov in parallel on target codebase
-- [ ] **SCAN-02**: All tool findings normalized to unified severity (Critical/High/Medium/Low/Info)
+- [x] **SCAN-02**: All tool findings normalized to unified severity (Critical/High/Medium/Low/Info)
 - [ ] **SCAN-03**: Findings deduplicated across tools using stable fingerprints (file + rule + snippet hash)
 - [ ] **SCAN-04**: Scanner accepts local filesystem path as scan target
 - [ ] **SCAN-05**: Scanner accepts git repository URL + branch as scan target and clones automatically
@@ -68,8 +68,8 @@
 
 - [ ] **INFRA-01**: Entire stack runs via single docker-compose up
 - [ ] **INFRA-02**: Docker images support x86_64 and ARM64 architectures
-- [ ] **INFRA-03**: All configuration via environment variables and config.yml
-- [ ] **INFRA-04**: No hardcoded paths, hostnames, or credentials in codebase
+- [x] **INFRA-03**: All configuration via environment variables and config.yml
+- [x] **INFRA-04**: No hardcoded paths, hostnames, or credentials in codebase
 - [ ] **INFRA-05**: SQLite database in mounted volume for persistence
 - [ ] **INFRA-06**: Makefile with targets: install, run, test, migrate, backup, restore, package
 - [ ] **INFRA-07**: Migration scripts for moving scan history between environments
@@ -125,7 +125,7 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | SCAN-01 | Phase 2 | Pending |
-| SCAN-02 | Phase 1 | Pending |
+| SCAN-02 | Phase 1 | Complete |
 | SCAN-03 | Phase 2 | Pending |
 | SCAN-04 | Phase 2 | Pending |
 | SCAN-05 | Phase 2 | Pending |
@@ -161,8 +161,8 @@
 | CI-03 | Phase 5 | Pending |
 | INFRA-01 | Phase 1 | Pending |
 | INFRA-02 | Phase 6 | Pending |
-| INFRA-03 | Phase 1 | Pending |
-| INFRA-04 | Phase 1 | Pending |
+| INFRA-03 | Phase 1 | Complete |
+| INFRA-04 | Phase 1 | Complete |
 | INFRA-05 | Phase 1 | Pending |
 | INFRA-06 | Phase 6 | Pending |
 | INFRA-07 | Phase 6 | Pending |
