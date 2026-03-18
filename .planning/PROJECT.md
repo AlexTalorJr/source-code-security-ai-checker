@@ -12,7 +12,9 @@ Every release branch is automatically scanned for security vulnerabilities befor
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] Full Docker containerization with single docker-compose up — *Validated in Phase 01: Foundation and Data Models*
+- [x] SQLite local scan history database — *Validated in Phase 01: Foundation and Data Models (async SQLite/WAL)*
+- [x] Health check endpoint — *Validated in Phase 01: Foundation and Data Models*
 
 ### Active
 
@@ -25,14 +27,14 @@ Every release branch is automatically scanned for security vulnerabilities befor
 - [ ] Live web dashboard with scan history and release comparison
 - [ ] Jenkins pipeline integration as a stage
 - [ ] Configurable Slack and email notifications on findings
-- [ ] Full Docker containerization with single docker-compose up
-- [ ] SQLite local scan history database
+- [x] Full Docker containerization with single docker-compose up
+- [x] SQLite local scan history database
 - [ ] Custom Semgrep rules for aipix platform (RTSP auth, VMS API, webhooks)
 - [ ] Dual-mode scan input — local path (Jenkins) or repo URL (API-triggered)
 - [ ] Multi-arch support (Linux x86_64, ARM64)
 - [ ] Bilingual documentation suite (Russian/English, separate files)
 - [ ] Portability — migration scripts, backup/restore, packaging
-- [ ] Health check endpoint
+- [x] Health check endpoint
 - [ ] API key authentication for API/dashboard access
 
 ### Out of Scope
@@ -98,9 +100,9 @@ Every release branch is automatically scanned for security vulnerabilities befor
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| FastAPI over Flask | Async support, auto OpenAPI docs, modern Python — fits REST API + dashboard well | — Pending |
+| FastAPI over Flask | Async support, auto OpenAPI docs, modern Python — fits REST API + dashboard well | Confirmed — Phase 01 |
 | cppcheck alongside Semgrep for C++ | Semgrep has limited C++ support; cppcheck provides proper static analysis for Mediaserver | — Pending |
-| SQLite over PostgreSQL | Simplifies portability — single file, no external DB, easy backup/transfer | — Pending |
+| SQLite over PostgreSQL | Simplifies portability — single file, no external DB, easy backup/transfer | Confirmed — Phase 01 |
 | Dual-mode scan input (path + URL) | Local path for Jenkins pipeline, repo URL for API-triggered standalone scans | — Pending |
 | Separate bilingual doc files | docs/en/ + docs/ru/ — clean separation, easier maintenance | — Pending |
 | Apache 2.0 license | Patent protection, explicit contributor terms — better for enterprise/partner sharing | — Pending |
@@ -108,4 +110,4 @@ Every release branch is automatically scanned for security vulnerabilities befor
 | Configurable notifications | Slack and email both optional via config.yml toggles — teams choose what fits | — Pending |
 
 ---
-*Last updated: 2026-03-18 after initialization*
+*Last updated: 2026-03-18 — Phase 01 complete: project skeleton, config, schemas, ORM, async SQLite/WAL, FastAPI health, Docker packaging*
