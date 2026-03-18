@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-03-18T20:08:10Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-03-18T20:14:34Z"
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -24,21 +24,21 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 ## Current Position
 
 Phase: 01 (foundation-and-data-models) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 1
-- Average duration: 5min
-- Total execution time: 0.08 hours
+- Total plans completed: 2
+- Average duration: 4.5min
+- Total execution time: 0.15 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 1 | 5min | 5min |
+| 01 | 2 | 9min | 4.5min |
 
 **Recent Trend:**
 
@@ -58,6 +58,8 @@ Recent decisions affecting current work:
 - [Roadmap]: AI analysis isolated in Phase 3 to allow iteration without affecting working scanner pipeline
 - [01-01]: Dynamic YAML path resolution via os.environ.get in settings_customise_sources for testability
 - [01-01]: hatchling build backend with src layout for clean package structure
+- [01-02]: Lifespan-managed test client pattern using app.router.lifespan_context for httpx+ASGITransport
+- [01-02]: Tables created via Base.metadata.create_all in lifespan (Phase 1); Alembic for later phases
 
 ### Pending Todos
 
@@ -69,6 +71,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T20:08:10Z
-Stopped at: Completed 01-01-PLAN.md
-Resume file: .planning/phases/01-foundation-and-data-models/01-01-SUMMARY.md
+Last session: 2026-03-18T20:14:34Z
+Stopped at: Completed 01-02-PLAN.md
+Resume file: .planning/phases/01-foundation-and-data-models/01-02-SUMMARY.md

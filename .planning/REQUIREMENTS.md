@@ -54,7 +54,7 @@
 - [ ] **API-01**: FastAPI REST API to trigger scans (POST /api/scans with path or repo URL)
 - [ ] **API-02**: API returns scan status and results (GET /api/scans/{id})
 - [ ] **API-03**: API authenticated via API key in header
-- [ ] **API-04**: Health check endpoint (GET /api/health)
+- [x] **API-04**: Health check endpoint (GET /api/health)
 - [ ] **API-05**: Live web dashboard showing scan history, finding trends, release comparison
 - [ ] **API-06**: Dashboard accessible via browser with API key authentication
 
@@ -70,7 +70,7 @@
 - [ ] **INFRA-02**: Docker images support x86_64 and ARM64 architectures
 - [x] **INFRA-03**: All configuration via environment variables and config.yml
 - [x] **INFRA-04**: No hardcoded paths, hostnames, or credentials in codebase
-- [ ] **INFRA-05**: SQLite database in mounted volume for persistence
+- [x] **INFRA-05**: SQLite database in mounted volume for persistence
 - [ ] **INFRA-06**: Makefile with targets: install, run, test, migrate, backup, restore, package
 - [ ] **INFRA-07**: Migration scripts for moving scan history between environments
 - [ ] **INFRA-08**: make package creates distributable archive
@@ -153,7 +153,7 @@
 | API-01 | Phase 5 | Pending |
 | API-02 | Phase 5 | Pending |
 | API-03 | Phase 5 | Pending |
-| API-04 | Phase 1 | Pending |
+| API-04 | Phase 1 | Complete |
 | API-05 | Phase 5 | Pending |
 | API-06 | Phase 5 | Pending |
 | CI-01 | Phase 5 | Pending |
@@ -163,7 +163,7 @@
 | INFRA-02 | Phase 6 | Pending |
 | INFRA-03 | Phase 1 | Complete |
 | INFRA-04 | Phase 1 | Complete |
-| INFRA-05 | Phase 1 | Pending |
+| INFRA-05 | Phase 1 | Complete |
 | INFRA-06 | Phase 6 | Pending |
 | INFRA-07 | Phase 6 | Pending |
 | INFRA-08 | Phase 6 | Pending |
