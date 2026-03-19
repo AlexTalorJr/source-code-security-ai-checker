@@ -44,3 +44,18 @@ gate:
     - critical
     - high
   include_compound_risks: true
+
+# Notifications
+notifications:
+  slack:
+    enabled: false
+  email:
+    enabled: false
+    recipients: []
+    smtp_port: 587
+    smtp_user: ""
+    smtp_password: ""  # Set via SCANNER_NOTIFICATIONS__EMAIL__SMTP_PASSWORD env var
+    use_tls: true
+
+# Dashboard
+dashboard_url: ""  # e.g., http://scanner:8000/dashboard (auto-derived if empty)

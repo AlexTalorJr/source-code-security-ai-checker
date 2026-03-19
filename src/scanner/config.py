@@ -72,6 +72,30 @@ class GateConfig(BaseModel):
         return (len(reasons) == 0, reasons)
 
 
+class NotificationSlackConfig(BaseModel):
+    """Slack notification configuration."""
+
+    enabled: bool = False
+
+
+class NotificationEmailConfig(BaseModel):
+    """Email notification configuration."""
+
+    enabled: bool = False
+    recipients: list[str] = []
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    use_tls: bool = True
+
+
+class NotificationsConfig(BaseModel):
+    """Notification channels configuration."""
+
+    slack: NotificationSlackConfig = NotificationSlackConfig()
+    email: NotificationEmailConfig = NotificationEmailConfig()
+
+
 class ScannerSettings(BaseSettings):
     """Application settings loaded from YAML config with env var overrides.
 
@@ -117,6 +141,12 @@ class ScannerSettings(BaseSettings):
 
     # Quality gate
     gate: GateConfig = GateConfig()
+
+    # Notifications
+    notifications: NotificationsConfig = NotificationsConfig()
+
+    # Dashboard
+    dashboard_url: str = ""
 
     # Git auth
     git_token: str = Field(
