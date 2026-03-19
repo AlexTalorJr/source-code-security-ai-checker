@@ -123,6 +123,14 @@ def scan(
         else:
             console.print("[bold red]Gate: FAILED[/bold red]")
 
+        # AI analysis info
+        if result.ai_skipped:
+            console.print(
+                f"[dim]AI analysis: skipped ({result.ai_skip_reason})[/dim]"
+            )
+        elif result.ai_cost_usd is not None:
+            console.print(f"AI cost: ${result.ai_cost_usd:.4f}")
+
     # Exit code based on gate
     if not result.gate_passed:
         sys.exit(1)
