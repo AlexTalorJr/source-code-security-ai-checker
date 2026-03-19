@@ -29,6 +29,15 @@ class ScannersConfig(BaseModel):
     checkov: ScannerToolConfig = ScannerToolConfig(timeout=120)
 
 
+class AIConfig(BaseModel):
+    """AI analysis configuration."""
+
+    max_cost_per_scan: float = 5.0
+    model: str = "claude-sonnet-4-6"
+    max_findings_per_batch: int = 50
+    max_tokens_per_response: int = 4096
+
+
 class ScannerSettings(BaseSettings):
     """Application settings loaded from YAML config with env var overrides.
 
@@ -68,6 +77,9 @@ class ScannerSettings(BaseSettings):
 
     # Scanner tool configuration
     scanners: ScannersConfig = ScannersConfig()
+
+    # AI analysis
+    ai: AIConfig = AIConfig()
 
     # Git auth
     git_token: str = Field(

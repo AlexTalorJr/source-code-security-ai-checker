@@ -31,3 +31,9 @@ scanners:
     enabled: true
     timeout: 120
     extra_args: []
+
+ai:
+  max_cost_per_scan: 5.0
+  model: "claude-sonnet-4-6"
+  max_findings_per_batch: 50
+  max_tokens_per_response: 4096

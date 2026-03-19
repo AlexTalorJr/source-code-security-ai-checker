@@ -15,6 +15,7 @@ dependencies = [
     "alembic",
     "typer[all]",
     "rich",
+    "anthropic>=0.86.0",
 ]
 
 [project.optional-dependencies]
