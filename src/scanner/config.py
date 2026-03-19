@@ -2,13 +2,31 @@
 
 import os
 
-from pydantic import Field
+from pydantic import BaseModel, Field
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
     SettingsConfigDict,
     YamlConfigSettingsSource,
 )
+
+
+class ScannerToolConfig(BaseModel):
+    """Per-tool scanner configuration."""
+
+    enabled: bool = True
+    timeout: int = 180
+    extra_args: list[str] = []
+
+
+class ScannersConfig(BaseModel):
+    """Configuration for all scanner tools."""
+
+    semgrep: ScannerToolConfig = ScannerToolConfig(timeout=180)
+    cppcheck: ScannerToolConfig = ScannerToolConfig(timeout=120)
+    gitleaks: ScannerToolConfig = ScannerToolConfig(timeout=120)
+    trivy: ScannerToolConfig = ScannerToolConfig(timeout=120)
+    checkov: ScannerToolConfig = ScannerToolConfig(timeout=120)
 
 
 class ScannerSettings(BaseSettings):
@@ -47,6 +65,14 @@ class ScannerSettings(BaseSettings):
     # Operational
     log_level: str = "info"
     scan_timeout: int = 600
+
+    # Scanner tool configuration
+    scanners: ScannersConfig = ScannersConfig()
+
+    # Git auth
+    git_token: str = Field(
+        default="", description="HTTPS token for git clone auth"
+    )
 
     @classmethod
     def settings_customise_sources(

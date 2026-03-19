@@ -9,3 +9,25 @@ slack_webhook_url: ""
 email_smtp_host: ""
 log_level: "info"
 scan_timeout: 600
+
+scanners:
+  semgrep:
+    enabled: true
+    timeout: 180
+    extra_args: []
+  cppcheck:
+    enabled: true
+    timeout: 120
+    extra_args: []
+  gitleaks:
+    enabled: true
+    timeout: 120
+    extra_args: []
+  trivy:
+    enabled: true
+    timeout: 120
+    extra_args: []
+  checkov:
+    enabled: true
+    timeout: 120
+    extra_args: []
