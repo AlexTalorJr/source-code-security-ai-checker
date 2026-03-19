@@ -21,7 +21,7 @@
 - [x] **AI-02**: Claude generates code-level fix suggestions (before/after diffs) for each finding
 - [x] **AI-03**: Claude correlates findings across tools to identify compound risks
 - [x] **AI-04**: AI analysis cost stays under $5 per release scan
-- [ ] **AI-05**: Scanner functions correctly when Claude API is unavailable (graceful degradation)
+- [x] **AI-05**: Scanner functions correctly when Claude API is unavailable (graceful degradation)
 
 ### Reports
 
@@ -135,7 +135,7 @@
 | AI-02 | Phase 3 | Complete |
 | AI-03 | Phase 3 | Complete |
 | AI-04 | Phase 3 | Complete |
-| AI-05 | Phase 3 | Pending |
+| AI-05 | Phase 3 | Complete |
 | RPT-01 | Phase 4 | Pending |
 | RPT-02 | Phase 4 | Pending |
 | RPT-03 | Phase 4 | Pending |
