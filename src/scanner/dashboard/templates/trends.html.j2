@@ -1,0 +1,24 @@
+{% extends "base.html.j2" %}
+
+{% set active_page = "trends" %}
+
+{% block title %}Finding Trends{% endblock %}
+
+{% block content %}
+<h1 class="page-heading">Finding Trends</h1>
+
+{% if not enough_data %}
+<div class="empty-state">
+  <h2>Not enough data</h2>
+  <p>Run at least two scans to see trends.</p>
+</div>
+{% else %}
+
+<h2 class="page-heading">Severity Over Time</h2>
+<img src="{{ severity_chart }}" alt="Severity Over Time" style="max-width: 100%; margin-bottom: 32px;">
+
+<h2 class="page-heading">Branch Comparison</h2>
+<img src="{{ branch_chart }}" alt="Branch Comparison" style="max-width: 100%;">
+
+{% endif %}
+{% endblock %}

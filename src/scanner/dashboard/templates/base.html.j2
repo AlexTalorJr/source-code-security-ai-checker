@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Dashboard{% endblock %} - Security Scanner</title>
+  {% block head_extra %}{% endblock %}
+  <style>
+    :root {
+      --color-bg: #ffffff;
+      --color-surface: #f8f9fa;
+      --color-accent: #0d6efd;
+      --color-destructive: #dc3545;
+      --color-success: #28a745;
+      --color-border: #dee2e6;
+      --color-text: #212529;
+      --color-text-secondary: #6c757d;
+      --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-system);
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 1.5;
+      color: var(--color-text);
+      background: var(--color-bg);
+    }
+
+    /* Nav Bar */
+    .navbar {
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      height: 48px;
+      background-color: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .navbar__links {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      flex: 1;
+    }
+
+    .navbar__link {
+      text-decoration: none;
+      color: var(--color-text);
+      font-size: 14px;
+      font-weight: 400;
+      padding: 12px 0;
+      border-bottom: 2px solid transparent;
+    }
+
+    .navbar__link:hover {
+      color: var(--color-accent);
+    }
+
+    .navbar__link--active {
+      color: var(--color-accent);
+      border-bottom-color: var(--color-accent);
+    }
+
+    .navbar__right {
+      margin-left: auto;
+    }
+
+    .navbar__logout {
+      text-decoration: none;
+      color: var(--color-text-secondary);
+      font-size: 14px;
+    }
+
+    .navbar__logout:hover {
+      color: var(--color-destructive);
+    }
+
+    /* Content Area */
+    .content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .page-heading {
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.2;
+      margin-bottom: 24px;
+    }
+
+    /* Utility classes */
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      line-height: 1.4;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 400;
+      cursor: pointer;
+      text-decoration: none;
+      line-height: 1.5;
+    }
+
+    .btn--accent {
+      background-color: var(--color-accent);
+      color: #ffffff;
+    }
+
+    .btn--accent:hover {
+      opacity: 0.9;
+    }
+
+    .btn--destructive {
+      background-color: var(--color-destructive);
+      color: #ffffff;
+    }
+
+    .btn--small {
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    th {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      background-color: var(--color-surface);
+    }
+
+    tr:nth-child(even) {
+      background-color: var(--color-surface);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--color-text-secondary);
+    }
+
+    .empty-state h2 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--color-text);
+    }
+
+    .empty-state p {
+      font-size: 14px;
+    }
+
+    {% block extra_styles %}{% endblock %}
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar__links">
+      <a href="/dashboard/history" class="navbar__link{% if active_page == 'history' %} navbar__link--active{% endif %}">Scan History</a>
+      <a href="/dashboard/trends" class="navbar__link{% if active_page == 'trends' %} navbar__link--active{% endif %}">Trends</a>
+    </div>
+    <div class="navbar__right">
+      <a href="/dashboard/logout" class="navbar__logout">Log Out</a>
+    </div>
+  </nav>
+
+  <div class="content">
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>

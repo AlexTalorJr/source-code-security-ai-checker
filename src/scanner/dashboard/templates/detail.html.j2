@@ -1,0 +1,235 @@
+{% extends "base.html.j2" %}
+
+{% set active_page = "history" %}
+
+{% block title %}Scan #{{ scan.id }}{% endblock %}
+
+{% block head_extra %}
+{% if is_running %}
+<meta http-equiv="refresh" content="5">
+{% endif %}
+{% endblock %}
+
+{% block extra_styles %}
+/* Gate Banner */
+.gate-banner {
+  width: 100%;
+  padding: 16px 24px;
+  text-align: center;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.2;
+  margin-bottom: 24px;
+  border-radius: 8px;
+}
+
+.gate-banner--passed {
+  background: #d4edda;
+  color: #155724;
+}
+
+.gate-banner--failed {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* Metadata Row */
+.metadata-row {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 24px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.metadata-row span {
+  display: inline-block;
+}
+
+/* Download Links */
+.download-links {
+  margin-bottom: 24px;
+  display: flex;
+  gap: 8px;
+}
+
+/* Tab Switcher */
+.tab-switcher input[type="radio"] {
+  display: none;
+}
+
+.tab-switcher label {
+  display: inline-block;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.tab-switcher input[type="radio"]:checked + label {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+}
+
+.tab-content {
+  display: none;
+  padding-top: 16px;
+}
+
+#tab-findings:checked ~ .tab-content--findings,
+#tab-delta:checked ~ .tab-content--delta,
+#tab-suppressed:checked ~ .tab-content--suppressed {
+  display: block;
+}
+
+/* Delta badges */
+.delta-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.delta-badge--new { background: #dc3545; }
+.delta-badge--fixed { background: #28a745; }
+.delta-badge--persisting { background: #6c757d; }
+
+.suppress-form {
+  display: inline;
+}
+
+.fp-text {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  vertical-align: middle;
+}
+{% endblock %}
+
+{% block content %}
+<h1 class="page-heading">Scan #{{ scan.id }} -- {{ scan.branch or scan.target_path or 'Unknown' }}</h1>
+
+{% if gate_label is not none %}
+<div class="gate-banner {% if gate_passed %}gate-banner--passed{% else %}gate-banner--failed{% endif %}">
+  Quality Gate: {{ gate_label }}
+</div>
+{% endif %}
+
+<div class="metadata-row">
+  <span><strong>Branch:</strong> {{ scan.branch or '-' }}</span>
+  <span><strong>Duration:</strong> {{ '%.0f' | format(scan.duration_seconds or 0) }}s</span>
+  <span><strong>Total findings:</strong> {{ scan.total_findings or 0 }}</span>
+  {% if scan.ai_cost_usd is not none %}
+  <span><strong>AI cost:</strong> ${{ '%.4f' | format(scan.ai_cost_usd) }}</span>
+  {% endif %}
+</div>
+
+<div class="download-links">
+  <a href="/api/scans/{{ scan.id }}/report" class="btn btn--accent btn--small">Download HTML Report</a>
+  <a href="/api/scans/{{ scan.id }}/report?format=pdf" class="btn btn--accent btn--small">Download PDF Report</a>
+</div>
+
+<div class="tab-switcher">
+  <input type="radio" name="tab" id="tab-findings" checked>
+  <label for="tab-findings">Findings ({{ findings | length }})</label>
+
+  <input type="radio" name="tab" id="tab-delta">
+  <label for="tab-delta">Delta</label>
+
+  <input type="radio" name="tab" id="tab-suppressed">
+  <label for="tab-suppressed">Suppressed ({{ suppressed_findings | length }})</label>
+
+  <!-- Findings Tab -->
+  <div class="tab-content tab-content--findings">
+    {% if findings %}
+    <table>
+      <thead>
+        <tr>
+          <th>Severity</th>
+          <th>Title</th>
+          <th>File</th>
+          <th>Tool</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in findings %}
+        <tr>
+          <td><span class="badge" style="background-color: {{ f.severity_color }};">{{ f.severity }}</span></td>
+          <td>{{ f.title }}</td>
+          <td>{{ f.file_path }}{% if f.line_start %}:{{ f.line_start }}{% endif %}</td>
+          <td>{{ f.tool }}</td>
+          <td>
+            <form class="suppress-form" method="POST" action="/dashboard/scans/{{ scan.id }}/suppress/{{ f.fingerprint }}">
+              <button type="submit" class="btn btn--destructive btn--small">Suppress</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <p>No findings in this scan.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Delta Tab -->
+  <div class="tab-content tab-content--delta">
+    {% if delta %}
+    <div style="margin-bottom: 16px;">
+      <span class="delta-badge delta-badge--new">+{{ delta.new_fingerprints | length }} new</span>
+      <span class="delta-badge delta-badge--fixed">-{{ delta.fixed_fingerprints | length }} fixed</span>
+      <span class="delta-badge delta-badge--persisting">{{ delta.persisting_fingerprints | length }} persisting</span>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <p>First scan for this branch. No comparison available.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Suppressed Tab -->
+  <div class="tab-content tab-content--suppressed">
+    {% if suppressed_findings %}
+    <table>
+      <thead>
+        <tr>
+          <th>Fingerprint</th>
+          <th>Title</th>
+          <th>Tool</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in suppressed_findings %}
+        <tr>
+          <td><span class="fp-text">{{ f.fingerprint }}</span></td>
+          <td>{{ f.title }}</td>
+          <td>{{ f.tool }}</td>
+          <td>
+            <form class="suppress-form" method="POST" action="/dashboard/scans/{{ scan.id }}/unsuppress/{{ f.fingerprint }}">
+              <button type="submit" class="btn btn--accent btn--small">Restore</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <p>No suppressed findings.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

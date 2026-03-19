@@ -1,0 +1,133 @@
+{% extends "base.html.j2" %}
+
+{% set active_page = "history" %}
+
+{% block title %}Scan History{% endblock %}
+
+{% block extra_styles %}
+.start-scan-form {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+  display: none;
+}
+
+.start-scan-form.visible {
+  display: block;
+}
+
+.start-scan-form .form-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.start-scan-form .form-group {
+  flex: 1;
+  min-width: 200px;
+}
+
+.start-scan-form label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 4px;
+}
+
+.start-scan-form input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.actions-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+a.scan-link {
+  color: var(--color-accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+a.scan-link:hover {
+  text-decoration: underline;
+}
+{% endblock %}
+
+{% block content %}
+<h1 class="page-heading">Scan History</h1>
+
+<div class="actions-bar">
+  <button class="btn btn--accent" onclick="document.getElementById('scan-form').classList.toggle('visible')">Start New Scan</button>
+</div>
+
+<div id="scan-form" class="start-scan-form">
+  <form method="POST" action="/dashboard/start-scan">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="path">Local Path</label>
+        <input type="text" id="path" name="path" placeholder="/path/to/project">
+      </div>
+      <div class="form-group">
+        <label for="repo_url">Repository URL</label>
+        <input type="text" id="repo_url" name="repo_url" placeholder="https://github.com/org/repo">
+      </div>
+      <div class="form-group">
+        <label for="branch">Branch</label>
+        <input type="text" id="branch" name="branch" placeholder="main">
+      </div>
+    </div>
+    <button type="submit" class="btn btn--accent">Start Scan</button>
+  </form>
+</div>
+
+{% if scans %}
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Branch</th>
+      <th>Status</th>
+      <th>Findings</th>
+      <th>Gate</th>
+      <th>Duration</th>
+      <th>Date</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for scan in scans %}
+    <tr>
+      <td><a href="/dashboard/scans/{{ scan.id }}" class="scan-link">#{{ scan.id }}</a></td>
+      <td>{{ scan.branch }}</td>
+      <td><span class="badge" style="background-color: {{ scan.status_color }};">{{ scan.status | capitalize }}</span></td>
+      <td>{{ scan.total_findings }}</td>
+      <td>
+        {% if scan.gate_label %}
+        <span class="badge" style="background-color: {% if scan.gate_passed %}#28a745{% else %}#dc3545{% endif %};">{{ scan.gate_label }}</span>
+        {% else %}
+        -
+        {% endif %}
+      </td>
+      <td>{{ scan.duration }}</td>
+      <td>{{ scan.date }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+  <h2>No scans yet</h2>
+  <p>Start your first security scan to see results here. Use the button above or trigger a scan via the API.</p>
+</div>
+{% endif %}
+{% endblock %}
