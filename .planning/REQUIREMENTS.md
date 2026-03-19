@@ -27,7 +27,7 @@
 
 - [x] **RPT-01**: HTML interactive report with findings grouped by severity, filterable by component/tool
 - [x] **RPT-02**: HTML report shows code context with line numbers and AI fix suggestions
-- [ ] **RPT-03**: PDF formal report with executive summary, severity breakdown, and finding details
+- [x] **RPT-03**: PDF formal report with executive summary, severity breakdown, and finding details
 - [x] **RPT-04**: Reports include scan metadata (date, branch, commit, duration, tool versions)
 
 ### Quality Gate
@@ -138,7 +138,7 @@
 | AI-05 | Phase 3 | Complete |
 | RPT-01 | Phase 4 | Complete |
 | RPT-02 | Phase 4 | Complete |
-| RPT-03 | Phase 4 | Pending |
+| RPT-03 | Phase 4 | Complete |
 | RPT-04 | Phase 4 | Complete |
 | GATE-01 | Phase 4 | Complete |
 | GATE-02 | Phase 4 | Complete |
