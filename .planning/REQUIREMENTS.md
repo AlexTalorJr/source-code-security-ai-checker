@@ -46,14 +46,14 @@
 
 - [x] **HIST-01**: All scan results stored in SQLite database with full finding details
 - [x] **HIST-02**: Delta comparison between current and previous scan (new/fixed/persisting findings)
-- [ ] **HIST-03**: User can mark findings as false positive, suppressed across future scans
-- [ ] **HIST-04**: Scan history queryable via API (list scans, get scan details, get finding trends)
+- [x] **HIST-03**: User can mark findings as false positive, suppressed across future scans
+- [x] **HIST-04**: Scan history queryable via API (list scans, get scan details, get finding trends)
 
 ### API & Dashboard
 
-- [ ] **API-01**: FastAPI REST API to trigger scans (POST /api/scans with path or repo URL)
-- [ ] **API-02**: API returns scan status and results (GET /api/scans/{id})
-- [ ] **API-03**: API authenticated via API key in header
+- [x] **API-01**: FastAPI REST API to trigger scans (POST /api/scans with path or repo URL)
+- [x] **API-02**: API returns scan status and results (GET /api/scans/{id})
+- [x] **API-03**: API authenticated via API key in header
 - [x] **API-04**: Health check endpoint (GET /api/health)
 - [ ] **API-05**: Live web dashboard showing scan history, finding trends, release comparison
 - [ ] **API-06**: Dashboard accessible via browser with API key authentication
@@ -148,11 +148,11 @@
 | NOTF-03 | Phase 5 | Complete |
 | HIST-01 | Phase 4 | Complete |
 | HIST-02 | Phase 4 | Complete |
-| HIST-03 | Phase 5 | Pending |
-| HIST-04 | Phase 5 | Pending |
-| API-01 | Phase 5 | Pending |
-| API-02 | Phase 5 | Pending |
-| API-03 | Phase 5 | Pending |
+| HIST-03 | Phase 5 | Complete |
+| HIST-04 | Phase 5 | Complete |
+| API-01 | Phase 5 | Complete |
+| API-02 | Phase 5 | Complete |
+| API-03 | Phase 5 | Complete |
 | API-04 | Phase 1 | Complete |
 | API-05 | Phase 5 | Pending |
 | API-06 | Phase 5 | Pending |

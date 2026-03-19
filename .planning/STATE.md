@@ -4,7 +4,7 @@ milestone: v1.0
 milestone_name: milestone
 status: unknown
 stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-03-19T13:25:39.801Z"
+last_updated: "2026-03-19T13:25:57.871Z"
 progress:
   total_phases: 6
   completed_phases: 4
@@ -55,6 +55,7 @@ Plan: 3 of 3
 | Phase 04 P03 | 5min | 2 tasks | 7 files |
 | Phase 04 P04 | 4min | 2 tasks | 4 files |
 | Phase 05 P02 | 5min | 2 tasks | 11 files |
+| Phase 05 P01 | 5min | 2 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,9 @@ Recent decisions affecting current work:
 - [Phase 05]: SMTP in thread pool via asyncio.to_thread to avoid blocking async event loop
 - [Phase 05]: Inline CSS in email template for email client compatibility
 - [Phase 05]: Jenkins httpRequest plugin for API calls instead of curl
+- [Phase 05]: Timing-safe secrets.compare_digest for API key validation
+- [Phase 05]: asyncio.Queue-based ScanQueue for serial background scan processing
+- [Phase 05]: Notification import in scan_queue wrapped in ImportError for forward compat
 
 ### Pending Todos
 
@@ -108,6 +112,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19T13:25:37.639Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-03-19T13:25:57.864Z
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None
