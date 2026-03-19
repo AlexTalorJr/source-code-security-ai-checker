@@ -1,0 +1,68 @@
+// Jenkinsfile.security
+// Drop-in security scan stage for Jenkins pipelines.
+// Requirements:
+//   - SCANNER_URL credential (e.g., http://scanner:8000)
+//   - SCANNER_API_KEY credential
+//   - Scanner container must have access to Jenkins workspace path
+//     (mount the workspace volume or run scanner on same host)
+
+pipeline {
+    agent any
+    environment {
+        SCANNER_URL = credentials('scanner-url')
+        SCANNER_API_KEY = credentials('scanner-api-key')
+    }
+    stages {
+        stage('Security Scan') {
+            steps {
+                script {
+                    // Trigger scan with workspace path
+                    def triggerResp = httpRequest(
+                        url: "${SCANNER_URL}/api/scans",
+                        httpMode: 'POST',
+                        contentType: 'APPLICATION_JSON',
+                        requestBody: """{"path": "${WORKSPACE}"}""",
+                        customHeaders: [[name: 'X-API-Key', value: "${SCANNER_API_KEY}"]],
+                        validResponseCodes: '202'
+                    )
+                    def scanId = readJSON(text: triggerResp.content).id
+                    echo "Security scan triggered: ID ${scanId}"
+
+                    // Poll for completion (max 15 minutes)
+                    def maxAttempts = 90
+                    def attempt = 0
+                    def status = 'queued'
+
+                    while ((status == 'queued' || status == 'running') && attempt < maxAttempts) {
+                        sleep(time: 10, unit: 'SECONDS')
+                        attempt++
+
+                        def pollResp = httpRequest(
+                            url: "${SCANNER_URL}/api/scans/${scanId}",
+                            customHeaders: [[name: 'X-API-Key', value: "${SCANNER_API_KEY}"]],
+                            validResponseCodes: '200'
+                        )
+                        def result = readJSON(text: pollResp.content)
+                        status = result.status
+
+                        if (status == 'completed') {
+                            echo "Scan completed: ${result.total_findings} findings"
+                            if (!result.gate_passed) {
+                                error("Security gate FAILED: " +
+                                    "${result.critical_count} Critical, " +
+                                    "${result.high_count} High findings")
+                            }
+                            echo "Security gate PASSED"
+                        } else if (status == 'failed') {
+                            error("Security scan failed: ${result.error_message}")
+                        }
+                    }
+
+                    if (status == 'queued' || status == 'running') {
+                        error("Security scan timed out after ${maxAttempts * 10} seconds")
+                    }
+                }
+            }
+        }
+    }
+}
