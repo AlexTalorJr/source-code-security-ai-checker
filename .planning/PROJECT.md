@@ -20,9 +20,9 @@ Every release branch is automatically scanned for security vulnerabilities befor
 
 - [x] Multi-tool security scanning (Semgrep, Gitleaks, Trivy, Checkov, cppcheck) — *Validated in Phase 02: Scanner Adapters and Orchestration*
 - [x] AI-powered semantic analysis via Claude API (business logic, authorization, fix suggestions) — *Validated in Phase 03: AI Analysis*
-- [ ] HTML interactive reports with code diffs and fix examples
-- [ ] PDF formal reports for management and telecom operators
-- [x] Quality Gate — block Jenkins builds on Critical/High findings — *Validated in Phase 02: Scanner Adapters and Orchestration (CLI exit code)*
+- [x] HTML interactive reports with code diffs and fix examples — *Validated in Phase 04: Reports and Quality Gate*
+- [x] PDF formal reports for management and telecom operators — *Validated in Phase 04: Reports and Quality Gate*
+- [x] Quality Gate — block Jenkins builds on Critical/High findings — *Validated in Phase 04: Reports and Quality Gate (configurable severity thresholds via GateConfig)*
 - [ ] FastAPI REST API for triggering scans and fetching reports
 - [ ] Live web dashboard with scan history and release comparison
 - [ ] Jenkins pipeline integration as a stage
@@ -110,4 +110,4 @@ Every release branch is automatically scanned for security vulnerabilities befor
 | Configurable notifications | Slack and email both optional via config.yml toggles — teams choose what fits | — Pending |
 
 ---
-*Last updated: 2026-03-19 — Phase 03 complete: AI-powered semantic analysis with Claude API, component batching, budget control, cross-tool correlation, graceful degradation*
+*Last updated: 2026-03-19 — Phase 04 complete: Configurable quality gate, delta comparison, interactive HTML report, formal PDF report, full CLI pipeline integration*
