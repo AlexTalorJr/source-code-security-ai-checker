@@ -81,11 +81,13 @@ Plans:
   3. Reports include scan metadata (date, branch, commit hash, duration, tool versions)
   4. The scanner returns exit code 0 when no Critical/High findings exist and non-zero when they do, with thresholds configurable in config.yml
   5. Scan results are stored in SQLite with delta comparison showing new, fixed, and persisting findings relative to the previous scan of the same branch
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
+- [ ] 04-01-PLAN.md -- Configurable quality gate, delta comparison module, data contracts
+- [ ] 04-02-PLAN.md -- Interactive HTML report with sidebar filters and AI fix diffs
+- [ ] 04-03-PLAN.md -- PDF report with charts and executive summary
+- [ ] 04-04-PLAN.md -- CLI integration, Docker deps, end-to-end wiring
 
 ### Phase 5: API, Dashboard, CI, and Notifications
 **Goal**: The scanner is fully operational as both a CI pipeline stage and a standalone service with web dashboard and notifications
@@ -129,6 +131,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 1. Foundation and Data Models | 3/3 | Complete   | 2026-03-18 |
 | 2. Scanner Adapters and Orchestration | 1/3 | In Progress|  |
 | 3. AI Analysis | 0/3 | Not started | - |
-| 4. Reports and Quality Gate | 0/0 | Not started | - |
+| 4. Reports and Quality Gate | 0/4 | Not started | - |
 | 5. API, Dashboard, CI, and Notifications | 0/0 | Not started | - |
 | 6. Packaging, Portability, and Documentation | 0/0 | Not started | - |
