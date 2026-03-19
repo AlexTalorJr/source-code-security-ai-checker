@@ -55,8 +55,8 @@
 - [x] **API-02**: API returns scan status and results (GET /api/scans/{id})
 - [x] **API-03**: API authenticated via API key in header
 - [x] **API-04**: Health check endpoint (GET /api/health)
-- [ ] **API-05**: Live web dashboard showing scan history, finding trends, release comparison
-- [ ] **API-06**: Dashboard accessible via browser with API key authentication
+- [x] **API-05**: Live web dashboard showing scan history, finding trends, release comparison
+- [x] **API-06**: Dashboard accessible via browser with API key authentication
 
 ### CI Integration
 
@@ -154,8 +154,8 @@
 | API-02 | Phase 5 | Complete |
 | API-03 | Phase 5 | Complete |
 | API-04 | Phase 1 | Complete |
-| API-05 | Phase 5 | Pending |
-| API-06 | Phase 5 | Pending |
+| API-05 | Phase 5 | Complete |
+| API-06 | Phase 5 | Complete |
 | CI-01 | Phase 5 | Complete |
 | CI-02 | Phase 5 | Complete |
 | CI-03 | Phase 5 | Complete |
