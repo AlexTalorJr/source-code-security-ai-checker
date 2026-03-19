@@ -61,6 +61,7 @@ class AIAnalyzer:
         self.max_cost = settings.ai.max_cost_per_scan
         self.max_findings_per_batch = settings.ai.max_findings_per_batch
         self.max_tokens = settings.ai.max_tokens_per_response
+        self.min_severity = settings.ai.min_severity
         self.spent: float = 0.0
         self.analyzed_components: list[str] = []
         self.skipped_components: list[str] = []
@@ -79,8 +80,9 @@ class AIAnalyzer:
         if not findings:
             return findings, [], 0.0
 
-        # Filter: only Critical/High/Medium worth API cost
-        eligible = [f for f in findings if f.severity >= Severity.MEDIUM]
+        # Filter by configurable minimum severity
+        min_sev = Severity[self.min_severity.upper()]
+        eligible = [f for f in findings if f.severity >= min_sev]
         if not eligible:
             return findings, [], 0.0
 
@@ -149,6 +151,9 @@ class AIAnalyzer:
         self, component: str, findings: list[FindingSchema]
     ) -> list[FindingAnalysis] | None:
         """Analyze a single component batch. Returns None if budget exceeded."""
+        import logging
+
+        logger = logging.getLogger(__name__)
         system_prompt = build_system_prompt(component)
         user_prompt = build_component_prompt(component, findings)
 
@@ -163,30 +168,56 @@ class AIAnalyzer:
         if not is_within_budget(self.spent, est, self.max_cost):
             return None
 
-        # Call Claude
-        response = await self.client.messages.create(
-            model=self.model,
-            max_tokens=self.max_tokens,
-            system=system_prompt,
-            tools=[ANALYSIS_TOOL],
-            tool_choice={"type": "tool", "name": "security_analysis"},
-            messages=[{"role": "user", "content": user_prompt}],
-        )
-        self.spent += actual_cost(
-            response.usage.input_tokens, response.usage.output_tokens
-        )
+        # Retry loop (max 2 attempts) for empty/malformed responses
+        for attempt in range(2):
+            response = await self.client.messages.create(
+                model=self.model,
+                max_tokens=self.max_tokens,
+                system=system_prompt,
+                tools=[ANALYSIS_TOOL],
+                tool_choice={"type": "tool", "name": "security_analysis"},
+                messages=[{"role": "user", "content": user_prompt}],
+            )
+            self.spent += actual_cost(
+                response.usage.input_tokens, response.usage.output_tokens
+            )
 
-        # Parse tool_use response (iterate, don't assume index 0)
-        analysis_data = None
-        for block in response.content:
-            if block.type == "tool_use":
-                analysis_data = block.input
-                break
-        if analysis_data is None:
-            return []
+            # Parse tool_use response
+            analysis_data = None
+            for block in response.content:
+                if block.type == "tool_use":
+                    analysis_data = block.input
+                    break
 
-        parsed = ComponentAnalysisResponse(**analysis_data)
-        return parsed.findings_analysis
+            if analysis_data is None:
+                logger.warning(
+                    "AI analysis for '%s': no tool_use block in response (attempt %d)",
+                    component, attempt + 1,
+                )
+                continue
+
+            if not analysis_data or not analysis_data.get("findings_analysis"):
+                logger.warning(
+                    "AI analysis for '%s': empty tool input %r (attempt %d)",
+                    component, analysis_data, attempt + 1,
+                )
+                if not is_within_budget(self.spent, est, self.max_cost):
+                    logger.warning("Budget exceeded after retry, skipping '%s'", component)
+                    return []
+                continue
+
+            try:
+                parsed = ComponentAnalysisResponse(**analysis_data)
+                return parsed.findings_analysis
+            except Exception as exc:
+                logger.warning(
+                    "AI analysis for '%s': parse error %s, data=%r (attempt %d)",
+                    component, exc, analysis_data, attempt + 1,
+                )
+                continue
+
+        logger.warning("AI analysis for '%s': all attempts failed, skipping", component)
+        return []
 
     async def _correlate(
         self, component_summaries: dict[str, list[dict]]

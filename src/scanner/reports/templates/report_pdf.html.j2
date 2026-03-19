@@ -205,6 +205,27 @@
       <td>{{ f.rule_id }}</td>
       <td>{{ f.title }}</td>
     </tr>
+    {% if ai_analyses.get(f.fingerprint) %}
+    <tr>
+      <td colspan="4" style="background: #f0f7ff; border-left: 3px solid #0d6efd; padding: 8px 12px; font-size: 8px; line-height: 1.5;">
+        <strong style="color: #0d6efd; font-size: 9px;">AI Analysis</strong><br/>
+        {{ ai_analyses[f.fingerprint] | ai_format }}
+      </td>
+    </tr>
+    {% endif %}
+    {% if parsed_fixes.get(f.fingerprint) %}
+    {% set fix = parsed_fixes[f.fingerprint] %}
+    <tr>
+      <td colspan="4" style="background: #f6fff6; border-left: 3px solid #28a745; padding: 8px 12px; font-size: 8px; line-height: 1.5;">
+        <strong style="color: #28a745; font-size: 9px;">AI Fix Suggestion</strong><br/>
+        {% if fix.explanation %}<span>{{ fix.explanation }}</span><br/><br/>{% endif %}
+        <strong style="color: #dc3545;">Before:</strong><br/>
+        <pre style="background: #fff5f5; padding: 6px; font-size: 7px; white-space: pre-wrap;">{{ fix.before }}</pre>
+        <strong style="color: #28a745;">After:</strong><br/>
+        <pre style="background: #f0fff0; padding: 6px; font-size: 7px; white-space: pre-wrap;">{{ fix.after }}</pre>
+      </td>
+    </tr>
+    {% endif %}
     {% endfor %}
   </tbody>
 </table>

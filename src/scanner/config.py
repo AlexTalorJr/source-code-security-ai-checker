@@ -39,7 +39,8 @@ class AIConfig(BaseModel):
     max_cost_per_scan: float = 5.0
     model: str = "claude-sonnet-4-6"
     max_findings_per_batch: int = 50
-    max_tokens_per_response: int = 4096
+    max_tokens_per_response: int = 8192
+    min_severity: str = "medium"  # Minimum severity for AI analysis: critical, high, medium, low
 
 
 class GateConfig(BaseModel):

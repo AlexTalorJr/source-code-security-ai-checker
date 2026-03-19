@@ -5,9 +5,6 @@
 {% block title %}Scan #{{ scan.id }}{% endblock %}
 
 {% block head_extra %}
-{% if is_running %}
-<meta http-equiv="refresh" content="5">
-{% endif %}
 {% endblock %}
 
 {% block extra_styles %}
@@ -83,6 +80,127 @@
   display: block;
 }
 
+/* Finding details row */
+.finding-row { cursor: pointer; }
+.finding-row:hover { background: var(--color-bg-secondary, #f8f9fa); }
+.finding-detail { display: none; }
+.finding-detail td {
+  padding: 12px 16px;
+  background: var(--color-bg-secondary, #f8f9fa);
+  border-top: none;
+}
+.finding-detail .detail-block {
+  margin-bottom: 8px;
+}
+.finding-detail .detail-label {
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  margin-bottom: 4px;
+}
+.finding-detail .detail-text {
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.finding-detail .recommendation {
+  background: #e8f5e9;
+  border-left: 3px solid #28a745;
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin-top: 4px;
+}
+.finding-detail .ai-section {
+  margin-top: 12px;
+  border: 1px solid #b3d4fc;
+  border-radius: 6px;
+  padding: 16px;
+  background: #f0f7ff;
+}
+.finding-detail .ai-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: #0d6efd;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 3px;
+  margin-bottom: 12px;
+}
+.finding-detail .ai-section p {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #1a1a2e;
+}
+.finding-detail .ai-section p:last-child { margin-bottom: 0; }
+.finding-detail .ai-section strong { color: #0d47a1; }
+.finding-detail .ai-section code {
+  background: #e3f2fd;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+.finding-detail .ai-fix {
+  background: #e8f5e9;
+  border-left: 3px solid #0d6efd;
+  padding: 12px;
+  border-radius: 4px;
+  margin-top: 8px;
+  font-family: monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+/* Running scan indicator */
+.scan-running {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+  text-align: center;
+}
+.scan-running__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #856404;
+  margin-bottom: 8px;
+}
+.scan-running__subtitle {
+  font-size: 13px;
+  color: #856404;
+  margin-bottom: 16px;
+}
+.scan-running__bar {
+  width: 100%;
+  height: 6px;
+  background: #ffe69c;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.scan-running__bar-inner {
+  width: 30%;
+  height: 100%;
+  background: #ffc107;
+  border-radius: 3px;
+  animation: progress-slide 1.5s ease-in-out infinite;
+}
+@keyframes progress-slide {
+  0% { margin-left: 0; width: 30%; }
+  50% { margin-left: 35%; width: 40%; }
+  100% { margin-left: 70%; width: 30%; }
+}
+.scan-running__elapsed {
+  font-size: 12px;
+  color: #997404;
+  font-family: monospace;
+}
+
 /* Delta badges */
 .delta-badge {
   display: inline-block;
@@ -117,13 +235,128 @@
 {% block content %}
 <h1 class="page-heading">Scan #{{ scan.id }} -- {{ scan.branch or scan.target_path or 'Unknown' }}</h1>
 
-{% if gate_label is not none %}
+{% if is_running %}
+<div class="scan-running">
+  <div class="scan-running__title" id="stage-title">Scan in progress...</div>
+  <div class="scan-running__subtitle" id="stage-subtitle">Initializing...</div>
+  <div class="scan-running__bar">
+    <div class="scan-running__bar-inner" id="progress-bar"></div>
+  </div>
+  <div id="tool-status" style="text-align:left; margin: 12px auto; max-width: 400px;"></div>
+  <div class="scan-running__elapsed" id="elapsed">
+    Started: {{ scan.started_at.strftime('%H:%M:%S') if scan.started_at else 'queued' }}
+  </div>
+</div>
+<script>
+(function() {
+  var scanId = {{ scan.id }};
+  var start = {{ (scan.started_at.timestamp() | int) if scan.started_at else 0 }};
+
+  var stageNames = {
+    'queued': 'Waiting in queue...',
+    'starting': 'Starting scan...',
+    'scanning': 'Running security scanners',
+    'deduplicating': 'Deduplicating findings',
+    'ai_analysis': 'AI analysis in progress',
+    'finalizing': 'Finalizing results',
+    'completed': 'Scan complete'
+  };
+
+  var stageProgress = {
+    'queued': 5, 'starting': 10, 'scanning': 15,
+    'deduplicating': 70, 'ai_analysis': 80, 'finalizing': 95, 'completed': 100
+  };
+
+  function updateElapsed() {
+    if (!start) return;
+    var diff = Math.floor(Date.now() / 1000) - start;
+    var m = Math.floor(diff / 60), s = diff % 60;
+    document.getElementById('elapsed').textContent = 'Elapsed: ' + m + 'm ' + (s < 10 ? '0' : '') + s + 's';
+  }
+
+  function renderTools(details) {
+    if (!details || !details.tools) return;
+    var tools = details.tools;
+    var completed = details.completed || [];
+    var completedNames = completed.map(function(c) { return c.tool; });
+    var html = '';
+    for (var i = 0; i < tools.length; i++) {
+      var t = tools[i];
+      var done = completedNames.indexOf(t) >= 0;
+      var info = done ? completed.filter(function(c){ return c.tool === t; })[0] : null;
+      var icon = done ? (info && info.error ? '<span style="color:#dc3545;">&#10007;</span>' : '<span style="color:#28a745;">&#10003;</span>') : '<span style="color:#ffc107;">&#9679;</span>';
+      var extra = '';
+      if (info && !info.error) extra = ' <span style="color:#6c757d;font-size:11px;">(' + info.findings + ' findings)</span>';
+      if (info && info.error) extra = ' <span style="color:#dc3545;font-size:11px;">' + info.error.substring(0, 40) + '</span>';
+      html += '<div style="padding:3px 0;font-size:13px;">' + icon + ' <strong>' + t + '</strong>' + extra + '</div>';
+    }
+    // Progress based on completed tools
+    var pct = Math.round((completedNames.length / tools.length) * 55) + 15; // 15-70% range
+    document.getElementById('progress-bar').style.width = pct + '%';
+    document.getElementById('progress-bar').style.animation = 'none';
+    document.getElementById('tool-status').innerHTML = html;
+  }
+
+  function poll() {
+    fetch('/api/scans/' + scanId + '/progress')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var stage = data.stage || 'queued';
+        document.getElementById('stage-title').textContent = stageNames[stage] || stage;
+
+        if (stage === 'scanning') {
+          document.getElementById('stage-subtitle').textContent =
+            (data.details.completed ? data.details.completed.length : 0) + ' / ' +
+            (data.details.tools ? data.details.tools.length : '?') + ' scanners complete';
+          renderTools(data.details);
+        } else if (stage === 'ai_analysis') {
+          document.getElementById('stage-subtitle').textContent = 'Analyzing ' + (data.details.total_findings || 0) + ' findings with Claude';
+          document.getElementById('progress-bar').style.width = stageProgress[stage] + '%';
+          document.getElementById('progress-bar').style.animation = 'none';
+        } else if (stage === 'deduplicating') {
+          document.getElementById('stage-subtitle').textContent = 'Deduplicating ' + (data.details.total_raw || 0) + ' raw findings';
+          document.getElementById('progress-bar').style.width = stageProgress[stage] + '%';
+          document.getElementById('progress-bar').style.animation = 'none';
+        } else if (stage === 'completed' || stage === 'failed') {
+          window.location.reload();
+          return;
+        } else {
+          document.getElementById('stage-subtitle').textContent = stageNames[stage] || '';
+          var pct = stageProgress[stage] || 5;
+          document.getElementById('progress-bar').style.width = pct + '%';
+        }
+      })
+      .catch(function() {});
+  }
+
+  updateElapsed();
+  setInterval(updateElapsed, 1000);
+  poll();
+  setInterval(poll, 2000);
+})();
+</script>
+{% endif %}
+
+{% if gate_label is not none and not is_running %}
 <div class="gate-banner {% if gate_passed %}gate-banner--passed{% else %}gate-banner--failed{% endif %}">
   Quality Gate: {{ gate_label }}
 </div>
+{% if fail_reasons and not gate_passed %}
+<div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 6px; padding: 12px 16px; margin-bottom: 16px; font-size: 13px; color: #721c24;">
+  <strong>Fail reasons:</strong>
+  <ul style="margin: 6px 0 0 0; padding-left: 20px;">
+    {% for reason in fail_reasons %}
+    <li>{{ reason }}</li>
+    {% endfor %}
+  </ul>
+  <div style="margin-top: 8px; font-size: 12px; color: #856404;">
+    Gate configured to fail on: <strong>{{ fail_reasons | length }} issue(s)</strong>. Change in <code>config.yml → gate.fail_on</code>
+  </div>
+</div>
+{% endif %}
 {% endif %}
 
-<div class="metadata-row">
+<div class="metadata-row" {% if is_running %}style="display:none;"{% endif %}>
   <span><strong>Branch:</strong> {{ scan.branch or '-' }}</span>
   <span><strong>Duration:</strong> {{ '%.0f' | format(scan.duration_seconds or 0) }}s</span>
   <span><strong>Total findings:</strong> {{ scan.total_findings or 0 }}</span>
@@ -132,11 +365,14 @@
   {% endif %}
 </div>
 
+{% if not is_running %}
 <div class="download-links">
-  <a href="/api/scans/{{ scan.id }}/report" class="btn btn--accent btn--small">Download HTML Report</a>
-  <a href="/api/scans/{{ scan.id }}/report?format=pdf" class="btn btn--accent btn--small">Download PDF Report</a>
+  <a href="/dashboard/scans/{{ scan.id }}/report" class="btn btn--accent btn--small">Download HTML Report</a>
+  <a href="/dashboard/scans/{{ scan.id }}/report/pdf" class="btn btn--accent btn--small">Download PDF Report</a>
 </div>
+{% endif %}
 
+{% if not is_running %}
 <div class="tab-switcher">
   <input type="radio" name="tab" id="tab-findings" checked>
   <label for="tab-findings">Findings ({{ findings | length }})</label>
@@ -162,15 +398,50 @@
       </thead>
       <tbody>
         {% for f in findings %}
-        <tr>
+        <tr class="finding-row" onclick="var d=document.getElementById('detail-{{f.id}}'); d.style.display = d.style.display==='table-row' ? 'none' : 'table-row';">
           <td><span class="badge" style="background-color: {{ f.severity_color }};">{{ f.severity }}</span></td>
           <td>{{ f.title }}</td>
           <td>{{ f.file_path }}{% if f.line_start %}:{{ f.line_start }}{% endif %}</td>
           <td>{{ f.tool }}</td>
           <td>
-            <form class="suppress-form" method="POST" action="/dashboard/scans/{{ scan.id }}/suppress/{{ f.fingerprint }}">
+            <form class="suppress-form" method="POST" action="/dashboard/scans/{{ scan.id }}/suppress/{{ f.fingerprint }}" onclick="event.stopPropagation();">
               <button type="submit" class="btn btn--destructive btn--small">Suppress</button>
             </form>
+          </td>
+        </tr>
+        <tr class="finding-detail" id="detail-{{f.id}}">
+          <td colspan="5">
+            {% if f.description %}
+            <div class="detail-block">
+              <div class="detail-label">Scanner Description</div>
+              <div class="detail-text">{{ f.description }}</div>
+            </div>
+            {% endif %}
+            {% if f.recommendation %}
+            <div class="detail-block">
+              <div class="detail-label">Scanner Recommendation</div>
+              <div class="detail-text recommendation">{{ f.recommendation }}</div>
+            </div>
+            {% endif %}
+            {% if f.ai_analysis or f.ai_fix_suggestion %}
+            <div class="ai-section">
+              <span class="ai-badge">AI Analysis</span>
+              {% if f.ai_analysis %}
+              <div class="detail-block">
+                {{ f.ai_analysis | ai_format }}
+              </div>
+              {% endif %}
+              {% if f.ai_fix_suggestion %}
+              <div class="detail-block" style="margin-top: 12px; border-top: 1px solid #b3d4fc; padding-top: 12px;">
+                <div class="detail-label" style="color: #28a745;">AI Fix Suggestion</div>
+                {{ f.ai_fix_suggestion | ai_fix_format }}
+              </div>
+              {% endif %}
+            </div>
+            {% endif %}
+            {% if not f.description and not f.recommendation and not f.ai_analysis %}
+            <div class="detail-text" style="color: var(--color-text-secondary);">No additional details available.</div>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -232,4 +503,5 @@
     {% endif %}
   </div>
 </div>
+{% endif %}
 {% endblock %}

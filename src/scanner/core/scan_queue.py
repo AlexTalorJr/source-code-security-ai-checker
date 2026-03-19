@@ -7,6 +7,7 @@ from datetime import datetime
 from fastapi import FastAPI
 from sqlalchemy import select, update
 
+from scanner.models.finding import Finding
 from scanner.models.scan import ScanResult
 from scanner.schemas.scan import ScanResultSchema
 
@@ -25,6 +26,7 @@ class ScanQueue:
     def __init__(self) -> None:
         self._queue: asyncio.Queue[int] = asyncio.Queue()
         self._current_scan_id: int | None = None
+        self._progress: dict = {}  # {scan_id: {"stage": ..., "details": ...}}
 
     async def enqueue(self, scan_id: int) -> None:
         """Add a scan ID to the processing queue."""
@@ -34,6 +36,10 @@ class ScanQueue:
     def current_scan_id(self) -> int | None:
         """Return the scan ID currently being processed, or None."""
         return self._current_scan_id
+
+    def get_progress(self, scan_id: int) -> dict | None:
+        """Return current progress for a scan, or None if not tracking."""
+        return self._progress.get(scan_id)
 
     async def worker(self, app: FastAPI) -> None:
         """Infinite loop that processes scans from the queue.
@@ -68,15 +74,26 @@ class ScanQueue:
                     repo_url = db_scan.repo_url
                     branch = db_scan.branch
 
-                # Run scan (outside session context -- run_scan manages its own DB)
+                # Progress callback
+                def _progress_cb(stage, details):
+                    self._progress[scan_id] = {
+                        "stage": stage,
+                        "details": details,
+                    }
+
+                self._progress[scan_id] = {"stage": "starting", "details": {}}
+
+                # Run scan (worker persists results itself, skip run_scan's persist)
                 scan_result, findings, compound_risks = await run_scan(
                     app.state.settings,
                     target_path=target_path,
                     repo_url=repo_url,
                     branch=branch,
+                    persist=False,
+                    progress_callback=_progress_cb,
                 )
 
-                # Update DB record with results
+                # Update DB record with results and persist findings
                 async with app.state.session_factory() as session:
                     await session.execute(
                         update(ScanResult)
@@ -101,6 +118,26 @@ class ScanQueue:
                             ai_cost_usd=scan_result.ai_cost_usd,
                         )
                     )
+
+                    # Persist individual findings (with AI enrichment if available)
+                    for f in findings:
+                        session.add(Finding(
+                            scan_id=scan_id,
+                            fingerprint=f.fingerprint,
+                            tool=f.tool,
+                            rule_id=f.rule_id,
+                            file_path=f.file_path,
+                            line_start=f.line_start,
+                            line_end=f.line_end,
+                            snippet=getattr(f, "snippet", None),
+                            severity=f.severity.value if hasattr(f.severity, "value") else f.severity,
+                            title=f.title,
+                            description=f.description,
+                            recommendation=getattr(f, "recommendation", None),
+                            ai_analysis=getattr(f, "ai_analysis", None),
+                            ai_fix_suggestion=getattr(f, "ai_fix_suggestion", None),
+                        ))
+
                     await session.commit()
 
                 logger.info("Scan %d completed successfully", scan_id)
@@ -146,6 +183,7 @@ class ScanQueue:
                         db_exc,
                     )
             finally:
+                self._progress.pop(scan_id, None)
                 self._current_scan_id = None
                 self._queue.task_done()
 

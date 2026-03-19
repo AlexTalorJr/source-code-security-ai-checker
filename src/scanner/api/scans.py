@@ -135,6 +135,31 @@ async def get_scan(
     return _scan_to_detail(scan)
 
 
+@router.get("/{scan_id}/progress")
+async def get_scan_progress(
+    scan_id: int,
+    request: Request,
+):
+    """Get real-time scan progress (no auth required for polling)."""
+    scan_queue = request.app.state.scan_queue
+    progress = scan_queue.get_progress(scan_id)
+    if progress is None:
+        # Check if scan exists and is completed
+        async with request.app.state.session_factory() as session:
+            result = await session.execute(
+                select(ScanResult.status).where(ScanResult.id == scan_id)
+            )
+            row = result.first()
+        if row is None:
+            raise HTTPException(status_code=404, detail="Scan not found")
+        if row[0] == "completed":
+            return {"stage": "completed", "details": {}}
+        if row[0] == "failed":
+            return {"stage": "failed", "details": {}}
+        return {"stage": "queued", "details": {}}
+    return progress
+
+
 @router.get("/{scan_id}/report")
 async def get_scan_report(
     scan_id: int,

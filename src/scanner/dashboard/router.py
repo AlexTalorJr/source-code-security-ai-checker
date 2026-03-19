@@ -30,10 +30,68 @@ from scanner.schemas.severity import Severity
 
 router = APIRouter()
 
+import re
+from markupsafe import Markup
+
+
+def _format_ai_text(text):
+    """Format AI analysis text into readable HTML paragraphs."""
+    if not text:
+        return Markup("")
+    import html as html_mod
+    text = html_mod.escape(text)
+    # Numbered items (1), (2)... -> line breaks with bold numbers
+    text = re.sub(r'\((\d+)\)\s*', r'<br><strong>\1.</strong> ', text)
+    # Split on double newlines
+    text = re.sub(r'\n{2,}', '</p><p>', text)
+    # Convert single newlines to <br>
+    text = text.replace('\n', '<br>')
+    # Bold markdown **text**
+    text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
+    # Inline code `text`
+    text = re.sub(r'`(.+?)`', r'<code>\1</code>', text)
+    # Bullet points
+    text = re.sub(r'(?:^|<br>)\s*[-•]\s+', '<br>• ', text)
+    return Markup(f'<p>{text}</p>')
+
+
+def _format_ai_fix(json_str):
+    """Parse ai_fix_suggestion JSON and render as HTML."""
+    if not json_str:
+        return Markup("")
+    import html as html_mod
+    import json
+    try:
+        fix = json.loads(json_str)
+    except (json.JSONDecodeError, TypeError):
+        return Markup(f"<pre>{html_mod.escape(str(json_str))}</pre>")
+
+    parts = []
+    if fix.get("explanation"):
+        parts.append(f'<div style="margin-bottom:10px;line-height:1.6;">{html_mod.escape(fix["explanation"])}</div>')
+    if fix.get("before"):
+        parts.append(
+            f'<div style="margin-bottom:8px;">'
+            f'<div style="font-size:11px;font-weight:600;color:#dc3545;margin-bottom:4px;">Before</div>'
+            f'<pre style="background:#fff5f5;padding:8px;border-radius:4px;font-size:12px;white-space:pre-wrap;line-height:1.5;overflow-x:auto;">{html_mod.escape(fix["before"])}</pre>'
+            f'</div>'
+        )
+    if fix.get("after"):
+        parts.append(
+            f'<div>'
+            f'<div style="font-size:11px;font-weight:600;color:#28a745;margin-bottom:4px;">After</div>'
+            f'<pre style="background:#f0fff0;padding:8px;border-radius:4px;font-size:12px;white-space:pre-wrap;line-height:1.5;overflow-x:auto;">{html_mod.escape(fix["after"])}</pre>'
+            f'</div>'
+        )
+    return Markup("".join(parts))
+
+
 _jinja_env = Environment(
     loader=PackageLoader("scanner.dashboard", "templates"),
     autoescape=True,
 )
+_jinja_env.filters["ai_format"] = _format_ai_text
+_jinja_env.filters["ai_fix_format"] = _format_ai_fix
 
 SEVERITY_COLORS = {
     "Critical": "#dc3545",
@@ -100,6 +158,151 @@ async def logout(request: Request):
     response = RedirectResponse(url="/dashboard/login", status_code=302)
     response.delete_cookie(key="scanner_session", path="/")
     return response
+
+
+# ---------- Reports (proxied from API with cookie auth) ----------
+
+
+async def _build_report_data(scan_id: int, session, settings):
+    """Load scan, findings, and build ReportData for report generation."""
+    from scanner.reports.models import ReportData
+
+    result = await session.execute(
+        select(ScanResult).where(ScanResult.id == scan_id)
+    )
+    scan = result.scalar_one_or_none()
+    if not scan:
+        return None, "Scan not found"
+    if scan.status != "completed":
+        return None, f"Scan is not completed (status: {scan.status})"
+
+    findings_result = await session.execute(
+        select(Finding).where(Finding.scan_id == scan_id)
+    )
+    all_findings = findings_result.scalars().all()
+
+    finding_schemas = [
+        FindingSchema(
+            fingerprint=f.fingerprint,
+            tool=f.tool,
+            rule_id=f.rule_id,
+            file_path=f.file_path,
+            line_start=f.line_start,
+            line_end=f.line_end,
+            severity=f.severity,
+            title=f.title,
+            description=f.description,
+            recommendation=f.recommendation,
+            ai_analysis=f.ai_analysis,
+            ai_fix_suggestion=f.ai_fix_suggestion,
+        )
+        for f in all_findings
+    ]
+
+    from scanner.schemas.scan import ScanResultSchema
+    scan_schema = ScanResultSchema(
+        id=scan.id,
+        status=scan.status,
+        target_path=scan.target_path,
+        repo_url=scan.repo_url,
+        branch=scan.branch,
+        commit_hash=scan.commit_hash,
+        started_at=scan.started_at,
+        completed_at=scan.completed_at,
+        duration_seconds=scan.duration_seconds,
+        total_findings=scan.total_findings,
+        critical_count=scan.critical_count,
+        high_count=scan.high_count,
+        medium_count=scan.medium_count,
+        low_count=scan.low_count,
+        info_count=scan.info_count,
+        gate_passed=bool(scan.gate_passed) if scan.gate_passed is not None else None,
+        error_message=scan.error_message,
+        ai_cost_usd=scan.ai_cost_usd,
+    )
+
+    delta = await compute_delta(
+        finding_schemas, scan.branch, scan.id, session
+    )
+
+    gate_config = settings.gate
+    severity_counts = {s: 0 for s in Severity}
+    for f in finding_schemas:
+        severity_counts[f.severity] += 1
+    _, fail_reasons = gate_config.evaluate(severity_counts, [])
+
+    return ReportData(
+        scan_result=scan_schema,
+        findings=finding_schemas,
+        compound_risks=[],
+        delta=delta,
+        gate_passed=bool(scan.gate_passed) if scan.gate_passed is not None else True,
+        fail_reasons=fail_reasons,
+    ), None
+
+
+@router.get("/scans/{scan_id}/report")
+async def dashboard_html_report(scan_id: int, request: Request):
+    """Generate and serve full HTML report with cookie auth."""
+    from fastapi import HTTPException
+    from fastapi.responses import HTMLResponse
+    from scanner.reports.html_report import generate_html_report
+    import tempfile
+
+    redirect = await require_dashboard_auth(request)
+    if redirect:
+        return redirect
+
+    async with request.app.state.session_factory() as session:
+        report_data, error = await _build_report_data(
+            scan_id, session, request.app.state.settings
+        )
+
+    if error:
+        raise HTTPException(status_code=404 if "not found" in error else 409, detail=error)
+
+    with tempfile.NamedTemporaryFile(suffix=".html", delete=False) as tmp:
+        generate_html_report(report_data, tmp.name)
+        html_content = open(tmp.name).read()
+
+    return HTMLResponse(content=html_content)
+
+
+@router.get("/scans/{scan_id}/report/pdf")
+async def dashboard_pdf_report(scan_id: int, request: Request):
+    """Generate and serve PDF report with cookie auth."""
+    from fastapi import HTTPException
+    from fastapi.responses import Response
+    from scanner.reports.pdf_report import generate_pdf_report
+    import tempfile
+    import os
+
+    redirect = await require_dashboard_auth(request)
+    if redirect:
+        return redirect
+
+    async with request.app.state.session_factory() as session:
+        report_data, error = await _build_report_data(
+            scan_id, session, request.app.state.settings
+        )
+
+    if error:
+        raise HTTPException(status_code=404 if "not found" in error else 409, detail=error)
+
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+        try:
+            generate_pdf_report(report_data, tmp.name)
+            pdf_content = open(tmp.name, "rb").read()
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"PDF generation failed: {exc}")
+        finally:
+            os.unlink(tmp.name)
+
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=scan-{scan_id}-report.pdf"},
+    )
 
 
 # ---------- History ----------
@@ -176,16 +379,24 @@ async def detail_page(request: Request, scan_id: int):
                 "file_path": f.file_path,
                 "line_start": f.line_start,
                 "severity": _severity_name(f.severity),
+                "severity_order": f.severity,
                 "severity_color": SEVERITY_COLORS.get(
                     _severity_name(f.severity), "#6c757d"
                 ),
                 "title": f.title,
                 "description": f.description,
+                "recommendation": f.recommendation,
+                "ai_analysis": f.ai_analysis,
+                "ai_fix_suggestion": f.ai_fix_suggestion,
             }
             if f.fingerprint in suppressed_fps:
                 suppressed_findings.append(entry)
             else:
                 active_findings.append(entry)
+
+        # Sort by severity: Critical first, Info last
+        active_findings.sort(key=lambda x: x["severity_order"], reverse=True)
+        suppressed_findings.sort(key=lambda x: x["severity_order"], reverse=True)
 
         # Compute delta
         finding_schemas = [
@@ -210,6 +421,18 @@ async def detail_page(request: Request, scan_id: int):
     gate_label, gate_passed_bool = _gate_display(scan.gate_passed)
     is_running = scan.status in ("running", "queued")
 
+    # Compute gate fail reasons
+    fail_reasons = []
+    if not gate_passed_bool and gate_label is not None:
+        settings = request.app.state.settings
+        severity_counts = {s: 0 for s in Severity}
+        for f in all_findings:
+            try:
+                severity_counts[Severity(f.severity)] += 1
+            except ValueError:
+                pass
+        _, fail_reasons = settings.gate.evaluate(severity_counts, [])
+
     template = _jinja_env.get_template("detail.html.j2")
     return HTMLResponse(
         template.render(
@@ -220,6 +443,7 @@ async def detail_page(request: Request, scan_id: int):
             gate_label=gate_label,
             gate_passed=gate_passed_bool,
             is_running=is_running,
+            fail_reasons=fail_reasons,
         )
     )
 

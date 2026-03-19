@@ -48,6 +48,7 @@ async def _run_adapter(
     target_path: str,
     timeout: int,
     extra_args: list[str] | None,
+    on_complete=None,
 ) -> tuple[str, list[FindingSchema] | Exception]:
     """Run a single adapter with error isolation.
 
@@ -57,8 +58,12 @@ async def _run_adapter(
     """
     try:
         findings = await adapter.run(target_path, timeout, extra_args)
+        if on_complete:
+            on_complete(adapter.tool_name, len(findings), None)
         return (adapter.tool_name, findings)
     except Exception as exc:
+        if on_complete:
+            on_complete(adapter.tool_name, 0, str(exc))
         return (adapter.tool_name, exc)
 
 
@@ -102,6 +107,8 @@ async def run_scan(
     target_path: str | None = None,
     repo_url: str | None = None,
     branch: str | None = None,
+    persist: bool = True,
+    progress_callback=None,
 ) -> tuple[ScanResultSchema, list[FindingSchema], list[CompoundRiskSchema]]:
     """Run all enabled scanners against a target, deduplicate, and persist.
 
@@ -155,6 +162,28 @@ async def run_scan(
             if tool_config.enabled:
                 enabled_adapters.append(instance)
 
+        # Notify: scanning stage with tool list
+        if progress_callback:
+            progress_callback("scanning", {
+                "tools": [a.tool_name for a in enabled_adapters],
+                "completed": [],
+            })
+
+        # Track per-tool completion
+        completed_tools = []
+
+        def _on_tool_complete(tool_name, finding_count, error):
+            completed_tools.append({
+                "tool": tool_name,
+                "findings": finding_count,
+                "error": error,
+            })
+            if progress_callback:
+                progress_callback("scanning", {
+                    "tools": [a.tool_name for a in enabled_adapters],
+                    "completed": completed_tools,
+                })
+
         # Run all adapters in parallel
         tasks = [
             _run_adapter(
@@ -163,6 +192,7 @@ async def run_scan(
                 getattr(settings.scanners, adapter.tool_name).timeout,
                 getattr(settings.scanners, adapter.tool_name).extra_args
                 or None,
+                on_complete=_on_tool_complete,
             )
             for adapter in enabled_adapters
         ]
@@ -190,12 +220,21 @@ async def run_scan(
                 tool_versions[adapter.tool_name] = "unknown"
 
         # Deduplicate
+        if progress_callback:
+            progress_callback("deduplicating", {"total_raw": len(all_findings)})
         deduped_findings = deduplicate_findings(all_findings)
 
         # AI enrichment (graceful degradation)
+        if progress_callback:
+            progress_callback("ai_analysis", {
+                "total_findings": len(deduped_findings),
+                "skipped": not settings.claude_api_key,
+            })
         enriched_findings, compound_risks, ai_result = await enrich_with_ai(
             deduped_findings, settings
         )
+        if progress_callback:
+            progress_callback("finalizing", {})
 
         # Count by severity
         counts: dict[Severity, int] = {s: 0 for s in Severity}
@@ -230,83 +269,84 @@ async def run_scan(
             ai_skip_reason=ai_result.skip_reason,
         )
 
-        # Persist to SQLite
-        engine = create_engine(settings.db_path)
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+        # Persist to SQLite (skip when called from scan_queue worker)
+        if persist:
+            engine = create_engine(settings.db_path)
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
 
-        session_factory = create_session_factory(engine)
-        async with session_factory() as session:
-            async with session.begin():
-                db_scan = ScanResult(
-                    target_path=scan_result.target_path,
-                    repo_url=scan_result.repo_url,
-                    branch=scan_result.branch,
-                    status=scan_result.status,
-                    started_at=scan_result.started_at,
-                    completed_at=scan_result.completed_at,
-                    duration_seconds=scan_result.duration_seconds,
-                    total_findings=scan_result.total_findings,
-                    critical_count=scan_result.critical_count,
-                    high_count=scan_result.high_count,
-                    medium_count=scan_result.medium_count,
-                    low_count=scan_result.low_count,
-                    info_count=scan_result.info_count,
-                    gate_passed=1 if scan_result.gate_passed else 0,
-                    tool_versions=json.dumps(tool_versions),
-                    error_message=scan_result.error_message,
-                )
-                db_scan.ai_cost_usd = (
-                    ai_result.cost_usd if ai_result.cost_usd > 0 else None
-                )
-                session.add(db_scan)
-                await session.flush()
-
-                for finding in enriched_findings:
-                    db_finding = Finding(
-                        scan_id=db_scan.id,
-                        fingerprint=finding.fingerprint,
-                        tool=finding.tool,
-                        rule_id=finding.rule_id,
-                        file_path=finding.file_path,
-                        line_start=finding.line_start,
-                        line_end=finding.line_end,
-                        snippet=finding.snippet,
-                        severity=finding.severity.value,
-                        title=finding.title,
-                        description=finding.description,
-                        recommendation=finding.recommendation,
-                        ai_analysis=finding.ai_analysis,
-                        ai_fix_suggestion=finding.ai_fix_suggestion,
+            session_factory = create_session_factory(engine)
+            async with session_factory() as session:
+                async with session.begin():
+                    db_scan = ScanResult(
+                        target_path=scan_result.target_path,
+                        repo_url=scan_result.repo_url,
+                        branch=scan_result.branch,
+                        status=scan_result.status,
+                        started_at=scan_result.started_at,
+                        completed_at=scan_result.completed_at,
+                        duration_seconds=scan_result.duration_seconds,
+                        total_findings=scan_result.total_findings,
+                        critical_count=scan_result.critical_count,
+                        high_count=scan_result.high_count,
+                        medium_count=scan_result.medium_count,
+                        low_count=scan_result.low_count,
+                        info_count=scan_result.info_count,
+                        gate_passed=1 if scan_result.gate_passed else 0,
+                        tool_versions=json.dumps(tool_versions),
+                        error_message=scan_result.error_message,
                     )
-                    session.add(db_finding)
-
-                # Persist compound risks
-                from scanner.models.compound_risk import CompoundRisk as CompoundRiskModel
-                from scanner.models.compound_risk import compound_risk_findings
-
-                for cr in compound_risks:
-                    db_cr = CompoundRiskModel(
-                        scan_id=db_scan.id,
-                        title=cr.title,
-                        description=cr.description,
-                        severity=cr.severity,
-                        risk_category=cr.risk_category,
-                        recommendation=cr.recommendation,
+                    db_scan.ai_cost_usd = (
+                        ai_result.cost_usd if ai_result.cost_usd > 0 else None
                     )
-                    session.add(db_cr)
+                    session.add(db_scan)
                     await session.flush()
-                    for fp in cr.finding_fingerprints:
-                        await session.execute(
-                            compound_risk_findings.insert().values(
-                                compound_risk_id=db_cr.id,
-                                finding_fingerprint=fp,
-                            )
+
+                    for finding in enriched_findings:
+                        db_finding = Finding(
+                            scan_id=db_scan.id,
+                            fingerprint=finding.fingerprint,
+                            tool=finding.tool,
+                            rule_id=finding.rule_id,
+                            file_path=finding.file_path,
+                            line_start=finding.line_start,
+                            line_end=finding.line_end,
+                            snippet=finding.snippet,
+                            severity=finding.severity.value,
+                            title=finding.title,
+                            description=finding.description,
+                            recommendation=finding.recommendation,
+                            ai_analysis=finding.ai_analysis,
+                            ai_fix_suggestion=finding.ai_fix_suggestion,
                         )
+                        session.add(db_finding)
 
-            scan_result.id = db_scan.id
+                    # Persist compound risks
+                    from scanner.models.compound_risk import CompoundRisk as CompoundRiskModel
+                    from scanner.models.compound_risk import compound_risk_findings
 
-        await engine.dispose()
+                    for cr in compound_risks:
+                        db_cr = CompoundRiskModel(
+                            scan_id=db_scan.id,
+                            title=cr.title,
+                            description=cr.description,
+                            severity=cr.severity,
+                            risk_category=cr.risk_category,
+                            recommendation=cr.recommendation,
+                        )
+                        session.add(db_cr)
+                        await session.flush()
+                        for fp in cr.finding_fingerprints:
+                            await session.execute(
+                                compound_risk_findings.insert().values(
+                                    compound_risk_id=db_cr.id,
+                                    finding_fingerprint=fp,
+                                )
+                            )
+
+                scan_result.id = db_scan.id
+
+            await engine.dispose()
 
         return (scan_result, enriched_findings, compound_risks)
 

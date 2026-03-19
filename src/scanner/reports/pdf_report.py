@@ -1,11 +1,15 @@
 """PDF report generator using WeasyPrint."""
 
+import html as html_mod
+import json
 import logging
+import re
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
 
 from jinja2 import Environment, PackageLoader, select_autoescape
+from markupsafe import Markup
 from weasyprint import HTML
 
 from scanner.reports.charts import generate_severity_pie_chart, generate_tool_bar_chart
@@ -72,6 +76,33 @@ def generate_pdf_report(data: ReportData, output_path: str) -> str:
         else datetime.utcnow().strftime("%Y-%m-%d %H:%M")
     )
 
+    # Collect AI analysis text
+    ai_analyses = {
+        f.fingerprint: f.ai_analysis
+        for f in data.findings
+        if f.ai_analysis
+    }
+
+    # Parse AI fix suggestions
+    parsed_fixes = {}
+    for f in data.findings:
+        if f.ai_fix_suggestion:
+            try:
+                parsed_fixes[f.fingerprint] = json.loads(f.ai_fix_suggestion)
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+    def _format_ai_text_pdf(text):
+        if not text:
+            return ""
+        text = html_mod.escape(text)
+        text = re.sub(r'\((\d+)\)\s*', r'<br/><strong>\1.</strong> ', text)
+        text = re.sub(r'\n{2,}', '<br/><br/>', text)
+        text = text.replace('\n', '<br/>')
+        return Markup(text)
+
+    env.filters["ai_format"] = _format_ai_text_pdf
+
     html_content = template.render(
         scan=scan,
         findings=sorted_findings,
@@ -85,6 +116,8 @@ def generate_pdf_report(data: ReportData, output_path: str) -> str:
         executive_summary=executive_summary,
         scan_date=scan_date,
         target=target,
+        ai_analyses=ai_analyses,
+        parsed_fixes=parsed_fixes,
     )
 
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
