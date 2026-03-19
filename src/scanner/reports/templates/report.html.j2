@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security Scan Report - {{ scan.branch or scan.target_path }}</title>
+  <style>
+    :root {
+      --critical: #dc3545;
+      --high: #fd7e14;
+      --medium: #ffc107;
+      --low: #28a745;
+      --info: #6c757d;
+
+      --dominant: #ffffff;
+      --secondary: #f8f9fa;
+      --accent: #0d6efd;
+      --destructive: #dc3545;
+      --success: #28a745;
+      --border: #dee2e6;
+      --text-primary: #212529;
+      --text-secondary: #6c757d;
+
+      --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 16px;
+      --space-lg: 24px;
+      --space-xl: 32px;
+      --space-2xl: 48px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-system);
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 1.5;
+      color: var(--text-primary);
+      background: var(--dominant);
+      min-width: 1024px;
+    }
+
+    /* Gate Status Banner */
+    .gate-banner {
+      width: 100%;
+      min-height: 48px;
+      padding: var(--space-md) var(--space-lg);
+      text-align: center;
+      font-size: 28px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    .gate-banner--passed {
+      background: #d4edda;
+      color: #155724;
+      border-bottom: 2px solid #c3e6cb;
+    }
+
+    .gate-banner--failed {
+      background: #f8d7da;
+      color: #721c24;
+      border-bottom: 2px solid #f5c6cb;
+    }
+
+    .gate-banner__reasons {
+      font-size: 14px;
+      font-weight: 400;
+      margin-top: var(--space-sm);
+      text-align: left;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .gate-banner__reasons ul {
+      list-style: disc;
+      padding-left: var(--space-lg);
+      margin-top: var(--space-xs);
+    }
+
+    /* Delta Summary Bar */
+    .delta-bar {
+      padding: var(--space-md) var(--space-lg);
+      border-bottom: 1px solid var(--border);
+      background: var(--secondary);
+    }
+
+    .delta-bar__heading {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: var(--space-sm);
+    }
+
+    .delta-badge {
+      display: inline-block;
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: 4px;
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 600;
+      margin-right: var(--space-sm);
+    }
+
+    .delta-badge--new { background: #dc3545; }
+    .delta-badge--fixed { background: #28a745; }
+    .delta-badge--persisting { background: #6c757d; }
+
+    .delta-bar__no-delta {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    /* Layout: Sidebar + Main */
+    .layout {
+      display: flex;
+      min-height: calc(100vh - 150px);
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 240px;
+      min-width: 240px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      background: var(--secondary);
+      border-right: 1px solid var(--border);
+      padding: var(--space-lg);
+    }
+
+    .sidebar__heading {
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.2;
+      margin-bottom: var(--space-lg);
+    }
+
+    .filter-group {
+      margin-bottom: var(--space-lg);
+    }
+
+    .filter-group__heading {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: var(--space-sm);
+    }
+
+    .filter-group__item {
+      display: flex;
+      align-items: center;
+      margin-bottom: var(--space-xs);
+    }
+
+    .filter-checkbox {
+      margin-right: var(--space-sm);
+    }
+
+    .filter-group__label {
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .filter-count {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-left: var(--space-xs);
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      padding: var(--space-lg);
+    }
+
+    /* Scan Metadata */
+    .metadata-section {
+      margin-bottom: var(--space-xl);
+    }
+
+    .section-heading {
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.2;
+      margin-bottom: var(--space-md);
+    }
+
+    .metadata-grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: var(--space-xs) var(--space-md);
+    }
+
+    .metadata-label {
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.4;
+      color: var(--text-secondary);
+    }
+
+    .metadata-value {
+      font-size: 14px;
+    }
+
+    /* Compound Risks */
+    .compound-risks-section {
+      margin-bottom: var(--space-xl);
+    }
+
+    .compound-risk-card {
+      padding: var(--space-md);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: var(--space-md);
+    }
+
+    .compound-risk-card__title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: var(--space-sm);
+    }
+
+    .compound-risk-card__description {
+      margin-bottom: var(--space-sm);
+    }
+
+    .compound-risk-card__recommendation {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-style: italic;
+    }
+
+    /* Severity Groups */
+    .severity-section {
+      margin-bottom: var(--space-xl);
+    }
+
+    .severity-heading {
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.2;
+      margin-bottom: var(--space-md);
+    }
+
+    /* Finding Cards */
+    .finding-card {
+      width: 100%;
+      padding: var(--space-md);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: var(--space-md);
+      background: var(--dominant);
+    }
+
+    .finding-card--new {
+      border-left: 4px solid #dc3545;
+    }
+
+    .finding-card__header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-sm);
+      flex-wrap: wrap;
+    }
+
+    .severity-badge {
+      display: inline-block;
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: 4px;
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      line-height: 1.4;
+    }
+
+    .severity-badge--critical { background: var(--critical); }
+    .severity-badge--high { background: var(--high); }
+    .severity-badge--medium { background: var(--medium); }
+    .severity-badge--low { background: var(--low); }
+    .severity-badge--info { background: var(--info); }
+
+    .tag {
+      display: inline-block;
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: 4px;
+      background: var(--secondary);
+      color: var(--text-primary);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .finding-card__meta {
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.4;
+      color: var(--text-secondary);
+      margin-bottom: var(--space-xs);
+    }
+
+    .finding-card__description {
+      margin-bottom: var(--space-md);
+    }
+
+    /* Code Context */
+    .code-context {
+      margin-bottom: var(--space-md);
+    }
+
+    .code-context__label {
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.4;
+      margin-bottom: var(--space-xs);
+      color: var(--text-secondary);
+    }
+
+    .code-context__block {
+      background: var(--secondary);
+      padding: var(--space-sm);
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+
+    .code-context__block pre {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.4;
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .code-context__line-number {
+      color: var(--text-secondary);
+      user-select: none;
+      margin-right: var(--space-sm);
+    }
+
+    /* AI Fix Suggestion */
+    .ai-fix {
+      margin-top: var(--space-md);
+    }
+
+    .ai-fix__label {
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.4;
+      margin-bottom: var(--space-xs);
+    }
+
+    .ai-fix__diff {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .ai-fix__diff-column {
+      padding: var(--space-sm);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .ai-fix__diff-column--before {
+      background: #f8d7da;
+    }
+
+    .ai-fix__diff-column--after {
+      background: #d4edda;
+    }
+
+    .ai-fix__diff-heading {
+      font-weight: 600;
+      margin-bottom: var(--space-xs);
+      font-size: 12px;
+    }
+
+    .ai-fix__explanation {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: var(--space-sm);
+      font-style: italic;
+    }
+
+    .ai-fix__unavailable {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-style: italic;
+    }
+
+    /* Footer */
+    .footer {
+      padding: var(--space-2xl) var(--space-lg);
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-secondary);
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+  {# ===== Gate Status Banner ===== #}
+  {% if gate_passed %}
+  <div class="gate-banner gate-banner--passed">
+    QUALITY GATE: PASSED
+  </div>
+  {% else %}
+  <div class="gate-banner gate-banner--failed">
+    QUALITY GATE: FAILED
+    {% if fail_reasons %}
+    <div class="gate-banner__reasons">
+      Blocked by:
+      <ul>
+        {% for reason in fail_reasons %}
+        <li>{{ reason|e }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# ===== Delta Summary Bar ===== #}
+  <div class="delta-bar">
+    {% if delta %}
+    <div class="delta-bar__heading">Changes Since Last Scan</div>
+    <span class="delta-badge delta-badge--new">{{ delta.new_fingerprints|length }} new</span>
+    <span class="delta-badge delta-badge--fixed">{{ delta.fixed_fingerprints|length }} fixed</span>
+    <span class="delta-badge delta-badge--persisting">{{ delta.persisting_fingerprints|length }} persisting</span>
+    {% else %}
+    <div class="delta-bar__heading">Changes Since Last Scan</div>
+    <span class="delta-bar__no-delta">First scan on this branch -- no previous scan to compare.</span>
+    {% endif %}
+  </div>
+
+  {# ===== Layout: Sidebar + Main ===== #}
+  <div class="layout">
+
+    {# ===== Sidebar ===== #}
+    <aside class="sidebar">
+      <h2 class="sidebar__heading">Filters</h2>
+
+      {# Severity filters #}
+      <div class="filter-group">
+        <h3 class="filter-group__heading">Severity</h3>
+        {% for sev_name, sev_findings in findings_by_severity.items() %}
+        <div class="filter-group__item">
+          <input type="checkbox" class="filter-checkbox" data-filter-group="severity" data-filter-value="{{ sev_name }}" checked id="sev-{{ sev_name }}">
+          <label class="filter-group__label" for="sev-{{ sev_name }}">{{ sev_name }} (<span class="filter-count" data-count-group="severity" data-count-value="{{ sev_name }}">{{ sev_findings|length }}</span>)</label>
+        </div>
+        {% endfor %}
+      </div>
+
+      {# Tool filters #}
+      <div class="filter-group">
+        <h3 class="filter-group__heading">Tool</h3>
+        {% for tool_name in all_tools %}
+        <div class="filter-group__item">
+          <input type="checkbox" class="filter-checkbox" data-filter-group="tool" data-filter-value="{{ tool_name }}" checked id="tool-{{ tool_name }}">
+          <label class="filter-group__label" for="tool-{{ tool_name }}">{{ tool_name }} (<span class="filter-count" data-count-group="tool" data-count-value="{{ tool_name }}">0</span>)</label>
+        </div>
+        {% endfor %}
+      </div>
+
+      {# Component filters #}
+      <div class="filter-group">
+        <h3 class="filter-group__heading">Component</h3>
+        {% for comp_name in all_components %}
+        <div class="filter-group__item">
+          <input type="checkbox" class="filter-checkbox" data-filter-group="component" data-filter-value="{{ comp_name }}" checked id="comp-{{ comp_name }}">
+          <label class="filter-group__label" for="comp-{{ comp_name }}">{{ comp_name }} (<span class="filter-count" data-count-group="component" data-count-value="{{ comp_name }}">0</span>)</label>
+        </div>
+        {% endfor %}
+      </div>
+    </aside>
+
+    {# ===== Main Content ===== #}
+    <main class="main-content">
+
+      {# Scan Metadata #}
+      <section class="metadata-section">
+        <h2 class="section-heading">Scan Details</h2>
+        <div class="metadata-grid">
+          <span class="metadata-label">Date:</span>
+          <span class="metadata-value">{{ scan.started_at.strftime('%Y-%m-%d %H:%M:%S') if scan.started_at else 'N/A' }}</span>
+
+          <span class="metadata-label">Branch:</span>
+          <span class="metadata-value">{{ scan.branch|e if scan.branch else 'N/A' }}</span>
+
+          <span class="metadata-label">Commit:</span>
+          <span class="metadata-value">{{ scan.commit_hash|e if scan.commit_hash else 'N/A' }}</span>
+
+          <span class="metadata-label">Duration:</span>
+          <span class="metadata-value">{{ '%.1f'|format(scan.duration_seconds) }}s</span>
+
+          <span class="metadata-label">Tool Versions:</span>
+          <span class="metadata-value">
+            {% if scan.tool_versions %}
+              {% for tool, ver in scan.tool_versions.items() %}
+                {{ tool|e }} {{ ver|e }}{% if not loop.last %}, {% endif %}
+              {% endfor %}
+            {% else %}
+              N/A
+            {% endif %}
+          </span>
+
+          {% if scan.ai_cost_usd is not none %}
+          <span class="metadata-label">AI Cost:</span>
+          <span class="metadata-value">${{ '%.4f'|format(scan.ai_cost_usd) }}</span>
+          {% endif %}
+        </div>
+      </section>
+
+      {# Compound Risks #}
+      {% if compound_risks %}
+      <section class="compound-risks-section">
+        <h2 class="section-heading">Compound Risks</h2>
+        {% for risk in compound_risks %}
+        <div class="compound-risk-card">
+          <div class="compound-risk-card__header">
+            <span class="severity-badge severity-badge--{% if risk.severity >= 5 %}critical{% elif risk.severity >= 4 %}high{% elif risk.severity >= 3 %}medium{% elif risk.severity >= 2 %}low{% else %}info{% endif %}">
+              {% if risk.severity >= 5 %}CRITICAL{% elif risk.severity >= 4 %}HIGH{% elif risk.severity >= 3 %}MEDIUM{% elif risk.severity >= 2 %}LOW{% else %}INFO{% endif %}
+            </span>
+            {% if risk.risk_category %}
+            <span class="tag">{{ risk.risk_category|e }}</span>
+            {% endif %}
+          </div>
+          <div class="compound-risk-card__title">{{ risk.title|e }}</div>
+          <div class="compound-risk-card__description">{{ risk.description|e }}</div>
+          {% if risk.recommendation %}
+          <div class="compound-risk-card__recommendation">Recommendation: {{ risk.recommendation|e }}</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </section>
+      {% endif %}
+
+      {# Severity-Grouped Findings #}
+      {% for sev_name, sev_findings in findings_by_severity.items() %}
+      <section class="severity-section" data-severity-section="{{ sev_name }}">
+        <h2 class="severity-heading">{{ sev_name }} ({{ sev_findings|length }})</h2>
+        {% for finding in sev_findings %}
+        <div class="finding-card{% if finding.fingerprint in new_fingerprints %} finding-card--new{% endif %}"
+             data-severity="{{ sev_name }}"
+             data-tool="{{ finding.tool }}"
+             data-component="{{ extract_component(finding.file_path) }}"
+             data-fingerprint="{{ finding.fingerprint }}">
+
+          <div class="finding-card__header">
+            <span class="severity-badge severity-badge--{{ sev_name|lower }}">{{ sev_name }}</span>
+            <span class="tag">{{ finding.tool|e }}</span>
+            <span class="tag">{{ extract_component(finding.file_path)|e }}</span>
+          </div>
+
+          <div class="finding-card__meta">Rule: {{ finding.rule_id|e }}</div>
+          <div class="finding-card__meta">File: {{ finding.file_path|e }}{% if finding.line_start %}:{{ finding.line_start }}{% if finding.line_end %}-{{ finding.line_end }}{% endif %}{% endif %}</div>
+
+          {% if finding.description %}
+          <div class="finding-card__description">{{ finding.description|e }}</div>
+          {% endif %}
+
+          {# Code Context #}
+          {% if finding.snippet %}
+          <div class="code-context">
+            <div class="code-context__label">Code Context</div>
+            <div class="code-context__block">
+              <pre>{% if finding.line_start %}{% for line in finding.snippet.split('\n') %}<span class="code-context__line-number">{{ finding.line_start + loop.index0 }}</span>{{ line|e }}
+{% endfor %}{% else %}{{ finding.snippet|e }}{% endif %}</pre>
+            </div>
+          </div>
+          {% endif %}
+
+          {# AI Fix Suggestion #}
+          {% if parsed_fixes.get(finding.fingerprint) %}
+          {% set fix = parsed_fixes[finding.fingerprint] %}
+          <div class="ai-fix">
+            <div class="ai-fix__label">AI Fix Suggestion</div>
+            <div class="ai-fix__diff">
+              <div class="ai-fix__diff-column ai-fix__diff-column--before">
+                <div class="ai-fix__diff-heading">Before</div>
+                <pre>{{ fix.before|e }}</pre>
+              </div>
+              <div class="ai-fix__diff-column ai-fix__diff-column--after">
+                <div class="ai-fix__diff-heading">After</div>
+                <pre>{{ fix.after|e }}</pre>
+              </div>
+            </div>
+            {% if fix.explanation %}
+            <div class="ai-fix__explanation">{{ fix.explanation|e }}</div>
+            {% endif %}
+          </div>
+          {% else %}
+          <div class="ai-fix">
+            <div class="ai-fix__unavailable">AI analysis not available for this finding.</div>
+          </div>
+          {% endif %}
+
+        </div>
+        {% endfor %}
+      </section>
+      {% endfor %}
+
+    </main>
+  </div>
+
+  {# ===== Footer ===== #}
+  <div class="footer">
+    Generated by aipix-security-scanner on {{ scan.started_at.strftime('%Y-%m-%d') if scan.started_at else 'unknown date' }}
+  </div>
+
+  {# ===== JavaScript: Client-side Filtering ===== #}
+  <script>
+  (function() {
+    'use strict';
+
+    var filterGroups = {
+      severity: new Set(),
+      tool: new Set(),
+      component: new Set()
+    };
+
+    var checkboxes = document.querySelectorAll('.filter-checkbox');
+    var findingCards = document.querySelectorAll('.finding-card');
+    var severitySections = document.querySelectorAll('.severity-section');
+
+    // Initialize: all checked
+    checkboxes.forEach(function(cb) {
+      filterGroups[cb.dataset.filterGroup].add(cb.dataset.filterValue);
+      cb.addEventListener('change', onCheckboxChange);
+    });
+
+    updateCounts();
+
+    function onCheckboxChange(e) {
+      var group = e.target.dataset.filterGroup;
+      var value = e.target.dataset.filterValue;
+      if (e.target.checked) {
+        filterGroups[group].add(value);
+      } else {
+        filterGroups[group].delete(value);
+      }
+      applyFilters();
+      updateCounts();
+    }
+
+    function applyFilters() {
+      findingCards.forEach(function(card) {
+        var matchSev = filterGroups.severity.has(card.dataset.severity);
+        var matchTool = filterGroups.tool.has(card.dataset.tool);
+        var matchComp = filterGroups.component.has(card.dataset.component);
+        card.style.display = (matchSev && matchTool && matchComp) ? '' : 'none';
+      });
+
+      // Hide empty severity sections
+      severitySections.forEach(function(section) {
+        var sev = section.dataset.severitySection;
+        var cards = section.querySelectorAll('.finding-card');
+        var anyVisible = false;
+        cards.forEach(function(card) {
+          if (card.style.display !== 'none') anyVisible = true;
+        });
+        section.style.display = anyVisible ? '' : 'none';
+      });
+    }
+
+    function updateCounts() {
+      var countSpans = document.querySelectorAll('.filter-count');
+      countSpans.forEach(function(span) {
+        var group = span.dataset.countGroup;
+        var value = span.dataset.countValue;
+        var count = 0;
+        findingCards.forEach(function(card) {
+          if (card.style.display === 'none') return;
+          // Check if matches this group's value AND all other groups
+          if (card.dataset[group] === value) {
+            count++;
+          }
+        });
+        span.textContent = count;
+      });
+    }
+  })();
+  </script>
+
+</body>
+</html>
