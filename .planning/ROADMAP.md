@@ -64,11 +64,12 @@ Plans:
   3. Related findings across tools are correlated into compound risk entries
   4. AI analysis cost stays under $5 per release scan (tracked and logged)
   5. When the Claude API is unavailable, the scan completes without AI enrichment and the report clearly indicates AI analysis was skipped
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
+- [ ] 03-01-PLAN.md -- AI config, response schemas, prompts, cost module, compound risk DB models
+- [ ] 03-02-PLAN.md -- AIAnalyzer class with component batching, budget control, and correlation
+- [ ] 03-03-PLAN.md -- Orchestrator integration, graceful degradation, CLI update, quality gate
 
 ### Phase 4: Reports and Quality Gate
 **Goal**: Every scan produces professional reports and an automated pass/fail decision that can block deployment
@@ -127,7 +128,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 |-------|----------------|--------|-----------|
 | 1. Foundation and Data Models | 3/3 | Complete   | 2026-03-18 |
 | 2. Scanner Adapters and Orchestration | 1/3 | In Progress|  |
-| 3. AI Analysis | 0/0 | Not started | - |
+| 3. AI Analysis | 0/3 | Not started | - |
 | 4. Reports and Quality Gate | 0/0 | Not started | - |
 | 5. API, Dashboard, CI, and Notifications | 0/0 | Not started | - |
 | 6. Packaging, Portability, and Documentation | 0/0 | Not started | - |
