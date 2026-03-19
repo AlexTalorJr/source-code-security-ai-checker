@@ -99,12 +99,13 @@ Plans:
   3. A Jenkinsfile.security stage can be dropped into an existing pipeline, passes the workspace path to the scanner, and fails the build when the quality gate fails
   4. Slack and email notifications fire on scan completion with severity summary, and each channel is independently configurable
   5. Users can mark findings as false positive via the API, and suppressed findings are excluded from future scan results and quality gate decisions
-**Plans**: 3 plans
+**Plans**: 4 plans
 
 Plans:
 - [ ] 05-01-PLAN.md -- API auth, scan lifecycle endpoints, background queue, suppression, config extension
 - [ ] 05-02-PLAN.md -- Slack/email notifications, dispatcher service, Jenkinsfile.security
 - [ ] 05-03-PLAN.md -- Server-rendered Jinja2 dashboard (login, history, detail, trends)
+- [ ] 05-04-PLAN.md -- Gap closure: fix notify_scan_complete call site bug + regression test
 
 ### Phase 6: Packaging, Portability, and Documentation
 **Goal**: The scanner is a distributable, self-contained package that any team can deploy and operate using comprehensive documentation
@@ -133,5 +134,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 2. Scanner Adapters and Orchestration | 1/3 | In Progress|  |
 | 3. AI Analysis | 0/3 | Not started | - |
 | 4. Reports and Quality Gate | 3/4 | In Progress|  |
-| 5. API, Dashboard, CI, and Notifications | 3/3 | Complete   | 2026-03-19 |
+| 5. API, Dashboard, CI, and Notifications | 3/4 | Gap closure | 2026-03-19 |
 | 6. Packaging, Portability, and Documentation | 0/0 | Not started | - |
