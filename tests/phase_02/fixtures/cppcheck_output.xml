@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<results version="2">
+  <cppcheck version="2.13"/>
+  <errors>
+    <error id="bufferAccessOutOfBounds" severity="error" msg="Buffer overrun" verbose="Buffer is accessed out of bounds: buf" cwe="788">
+      <location file="/tmp/target/src/media/rtsp_handler.cpp" line="127" column="5"/>
+    </error>
+    <error id="uninitvar" severity="warning" msg="Uninitialized variable: ptr" verbose="Uninitialized variable: ptr" cwe="457">
+      <location file="/tmp/target/src/media/stream.cpp" line="45" column="10"/>
+    </error>
+  </errors>
+</results>

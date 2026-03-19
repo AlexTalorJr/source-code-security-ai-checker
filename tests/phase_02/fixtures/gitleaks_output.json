@@ -1,0 +1,28 @@
+[
+  {
+    "RuleID": "generic-api-key",
+    "Description": "Generic API Key",
+    "StartLine": 12,
+    "EndLine": 12,
+    "File": "config/production.env",
+    "Match": "API_KEY=AKIAIOSFODNN7EXAMPLE",
+    "Secret": "AKIAIOSFODNN7EXAMPLE",
+    "Fingerprint": "config/production.env:generic-api-key:12",
+    "Commit": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+    "Author": "dev@example.com",
+    "Tags": []
+  },
+  {
+    "RuleID": "private-key",
+    "Description": "Private Key",
+    "StartLine": 1,
+    "EndLine": 27,
+    "File": "deploy/id_rsa",
+    "Match": "-----BEGIN RSA PRIVATE KEY-----",
+    "Secret": "-----BEGIN RSA PRIVATE KEY-----",
+    "Fingerprint": "deploy/id_rsa:private-key:1",
+    "Commit": "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3",
+    "Author": "dev@example.com",
+    "Tags": []
+  }
+]

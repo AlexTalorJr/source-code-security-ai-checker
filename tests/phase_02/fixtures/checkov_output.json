@@ -1,0 +1,39 @@
+[
+  {
+    "check_type": "dockerfile",
+    "results": {
+      "passed_checks": [
+        {
+          "check_id": "CKV_DOCKER_1",
+          "check_name": "Ensure port is not exposed",
+          "check_result": {"result": "PASSED"},
+          "file_path": "/Dockerfile",
+          "file_line_range": [1, 20],
+          "resource": "Dockerfile."
+        }
+      ],
+      "failed_checks": [
+        {
+          "check_id": "CKV_DOCKER_2",
+          "check_name": "Ensure that HEALTHCHECK instructions have been added",
+          "check_result": {"result": "FAILED"},
+          "file_path": "/Dockerfile",
+          "file_line_range": [1, 20],
+          "resource": "Dockerfile.",
+          "guideline": "https://docs.bridgecrew.io/docs/ensure-that-healthcheck-instructions-have-been-added"
+        },
+        {
+          "check_id": "CKV2_K8S_1",
+          "check_name": "Ensure RBAC is configured",
+          "check_result": {"result": "FAILED"},
+          "file_path": "/k8s/deployment.yaml",
+          "file_line_range": [1, 45],
+          "resource": "Deployment.default.app",
+          "guideline": "https://docs.bridgecrew.io/docs/ensure-rbac"
+        }
+      ],
+      "skipped_checks": []
+    },
+    "summary": {"passed": 1, "failed": 2, "skipped": 0}
+  }
+]

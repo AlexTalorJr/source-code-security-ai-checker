@@ -1,0 +1,42 @@
+{
+  "results": [
+    {
+      "check_id": "python.lang.security.audit.exec-used",
+      "path": "/tmp/target/src/app/utils.py",
+      "start": {"line": 42, "col": 1, "offset": 1024},
+      "end": {"line": 42, "col": 30, "offset": 1053},
+      "extra": {
+        "message": "Use of exec() detected",
+        "severity": "ERROR",
+        "lines": "exec(user_input)",
+        "metadata": {}
+      }
+    },
+    {
+      "check_id": "python.lang.security.audit.eval-used",
+      "path": "/tmp/target/src/app/parser.py",
+      "start": {"line": 15, "col": 5, "offset": 300},
+      "end": {"line": 15, "col": 25, "offset": 320},
+      "extra": {
+        "message": "Use of eval() detected",
+        "severity": "WARNING",
+        "lines": "result = eval(expr)",
+        "metadata": {}
+      }
+    },
+    {
+      "check_id": "generic.secrets.security.detected-generic-api-key",
+      "path": "/tmp/target/config/settings.py",
+      "start": {"line": 8, "col": 1, "offset": 150},
+      "end": {"line": 8, "col": 50, "offset": 200},
+      "extra": {
+        "message": "Generic API key detected",
+        "severity": "ERROR",
+        "lines": "API_KEY = 'sk-1234567890abcdef'",
+        "metadata": {}
+      }
+    }
+  ],
+  "errors": [],
+  "version": "1.56.0"
+}
