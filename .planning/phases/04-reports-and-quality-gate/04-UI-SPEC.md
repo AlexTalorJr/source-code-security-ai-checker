@@ -53,10 +53,9 @@ Exceptions: none
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
 | Body | 14px | 400 (regular) | 1.5 | Finding descriptions, filter labels |
-| Label | 12px | 600 (semibold) | 1.4 | Severity badges, tool tags, metadata labels |
+| Label | 12px | 600 (semibold) | 1.4 | Severity badges, tool tags, metadata labels, code snippets and diff blocks (monospace font) |
 | Heading | 20px | 600 (semibold) | 1.2 | Severity group headings (e.g., "Critical (5)") |
 | Display | 28px | 600 (semibold) | 1.2 | Gate status badge text (PASSED / FAILED) |
-| Code | 13px | 400 (regular) | 1.4 | Code snippets, diff blocks (monospace font) |
 
 ### PDF Report
 
@@ -245,8 +244,8 @@ Accent reserved for: hyperlinks in HTML report, active filter state indicator, "
 
 - Severity badge: inline-block, 4px vertical padding, 8px horizontal padding, 4px border-radius, white text on severity color background, 12px semibold uppercase
 - Tool/component tags: inline-block, 4px vertical padding, 8px horizontal padding, 4px border-radius, `#f8f9fa` background, `#212529` text, 12px regular
-- Code block: `#f8f9fa` background, 12px padding, 4px border-radius, monospace 13px, line numbers in `#6c757d`, overflow-x auto
-- Diff block: side-by-side layout using CSS grid (2 equal columns), removed lines with `#f8d7da` background, added lines with `#d4edda` background, monospace 13px
+- Code block: `#f8f9fa` background, 8px padding, 4px border-radius, monospace 12px, line numbers in `#6c757d`, overflow-x auto
+- Diff block: side-by-side layout using CSS grid (2 equal columns), removed lines with `#f8d7da` background, added lines with `#d4edda` background, monospace 12px
 - New finding indicator: 4px left border in `#dc3545` on the finding card (only when delta available and finding is new)
 
 ### PDF Report Structure
