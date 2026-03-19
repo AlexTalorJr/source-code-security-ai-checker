@@ -38,9 +38,9 @@
 
 ### Notifications
 
-- [ ] **NOTF-01**: Slack webhook notification on scan completion with severity summary
-- [ ] **NOTF-02**: Email notification on scan completion with severity summary
-- [ ] **NOTF-03**: Both notification channels independently configurable (enable/disable via config.yml)
+- [x] **NOTF-01**: Slack webhook notification on scan completion with severity summary
+- [x] **NOTF-02**: Email notification on scan completion with severity summary
+- [x] **NOTF-03**: Both notification channels independently configurable (enable/disable via config.yml)
 
 ### Scan History
 
@@ -60,9 +60,9 @@
 
 ### CI Integration
 
-- [ ] **CI-01**: Jenkinsfile.security stage ready to drop into existing pipelines
-- [ ] **CI-02**: Jenkins stage passes local workspace path to scanner
-- [ ] **CI-03**: Quality gate result determines Jenkins stage pass/fail
+- [x] **CI-01**: Jenkinsfile.security stage ready to drop into existing pipelines
+- [x] **CI-02**: Jenkins stage passes local workspace path to scanner
+- [x] **CI-03**: Quality gate result determines Jenkins stage pass/fail
 
 ### Infrastructure
 
@@ -143,9 +143,9 @@
 | GATE-01 | Phase 4 | Complete |
 | GATE-02 | Phase 4 | Complete |
 | GATE-03 | Phase 4 | Complete |
-| NOTF-01 | Phase 5 | Pending |
-| NOTF-02 | Phase 5 | Pending |
-| NOTF-03 | Phase 5 | Pending |
+| NOTF-01 | Phase 5 | Complete |
+| NOTF-02 | Phase 5 | Complete |
+| NOTF-03 | Phase 5 | Complete |
 | HIST-01 | Phase 4 | Complete |
 | HIST-02 | Phase 4 | Complete |
 | HIST-03 | Phase 5 | Pending |
@@ -156,9 +156,9 @@
 | API-04 | Phase 1 | Complete |
 | API-05 | Phase 5 | Pending |
 | API-06 | Phase 5 | Pending |
-| CI-01 | Phase 5 | Pending |
-| CI-02 | Phase 5 | Pending |
-| CI-03 | Phase 5 | Pending |
+| CI-01 | Phase 5 | Complete |
+| CI-02 | Phase 5 | Complete |
+| CI-03 | Phase 5 | Complete |
 | INFRA-01 | Phase 1 | Complete |
 | INFRA-02 | Phase 6 | Pending |
 | INFRA-03 | Phase 1 | Complete |
