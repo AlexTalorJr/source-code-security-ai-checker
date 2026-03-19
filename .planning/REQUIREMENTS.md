@@ -7,7 +7,7 @@
 
 ### Scanning Engine
 
-- [ ] **SCAN-01**: Scanner runs Semgrep, cppcheck, Gitleaks, Trivy, and Checkov in parallel on target codebase
+- [x] **SCAN-01**: Scanner runs Semgrep, cppcheck, Gitleaks, Trivy, and Checkov in parallel on target codebase
 - [x] **SCAN-02**: All tool findings normalized to unified severity (Critical/High/Medium/Low/Info)
 - [ ] **SCAN-03**: Findings deduplicated across tools using stable fingerprints (file + rule + snippet hash)
 - [x] **SCAN-04**: Scanner accepts local filesystem path as scan target
@@ -124,7 +124,7 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCAN-01 | Phase 2 | Pending |
+| SCAN-01 | Phase 2 | Complete |
 | SCAN-02 | Phase 1 | Complete |
 | SCAN-03 | Phase 2 | Pending |
 | SCAN-04 | Phase 2 | Complete |
