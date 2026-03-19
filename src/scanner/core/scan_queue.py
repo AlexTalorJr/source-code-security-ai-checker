@@ -112,7 +112,7 @@ class ScanQueue:
                     )
 
                     await notify_scan_complete(
-                        app.state.settings, scan_id, scan_result
+                        scan_result, None, app.state.settings
                     )
                 except ImportError:
                     pass
