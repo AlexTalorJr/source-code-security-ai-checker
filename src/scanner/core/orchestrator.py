@@ -2,19 +2,24 @@
 
 import asyncio
 import json
+import logging
 from datetime import datetime
 
 from scanner.adapters import ALL_ADAPTERS
 from scanner.adapters.base import ScannerAdapter
+from scanner.ai.schemas import AIAnalysisResult
 from scanner.config import ScannerSettings
 from scanner.core.git import cleanup_clone, clone_repo
 from scanner.db.session import create_engine, create_session_factory
 from scanner.models.base import Base
 from scanner.models.finding import Finding
 from scanner.models.scan import ScanResult
+from scanner.schemas.compound_risk import CompoundRiskSchema
 from scanner.schemas.finding import FindingSchema
 from scanner.schemas.scan import ScanResultSchema
 from scanner.schemas.severity import Severity
+
+logger = logging.getLogger(__name__)
 
 
 def deduplicate_findings(
@@ -55,6 +60,41 @@ async def _run_adapter(
         return (adapter.tool_name, findings)
     except Exception as exc:
         return (adapter.tool_name, exc)
+
+
+async def enrich_with_ai(
+    findings: list[FindingSchema],
+    settings: ScannerSettings,
+) -> tuple[list[FindingSchema], list[CompoundRiskSchema], AIAnalysisResult]:
+    """Enrich findings with AI analysis. Returns originals on any failure."""
+    result = AIAnalysisResult()
+
+    if not settings.claude_api_key:
+        result.skipped = True
+        result.skip_reason = "Claude API key not configured"
+        logger.info("AI analysis skipped: %s", result.skip_reason)
+        return findings, [], result
+
+    try:
+        from scanner.ai.analyzer import AIAnalyzer
+
+        analyzer = AIAnalyzer(settings)
+        enriched, compound_risks, cost = await analyzer.analyze(findings)
+        result.cost_usd = cost
+        result.analyzed_components = analyzer.analyzed_components
+        result.skipped_components = analyzer.skipped_components
+        logger.info(
+            "AI analysis complete: cost=$%.4f, analyzed=%s, skipped=%s",
+            cost,
+            analyzer.analyzed_components,
+            analyzer.skipped_components,
+        )
+        return enriched, compound_risks, result
+    except Exception as exc:
+        result.skipped = True
+        result.skip_reason = f"AI analysis failed: {exc}"
+        logger.warning("AI analysis failed: %s", exc)
+        return findings, [], result
 
 
 async def run_scan(
@@ -152,13 +192,22 @@ async def run_scan(
         # Deduplicate
         deduped_findings = deduplicate_findings(all_findings)
 
+        # AI enrichment (graceful degradation)
+        enriched_findings, compound_risks, ai_result = await enrich_with_ai(
+            deduped_findings, settings
+        )
+
         # Count by severity
         counts: dict[Severity, int] = {s: 0 for s in Severity}
-        for f in deduped_findings:
+        for f in enriched_findings:
             counts[f.severity] += 1
 
-        # Quality gate
+        # Quality gate: check individual findings AND compound risks
         gate_passed = (counts[Severity.CRITICAL] + counts[Severity.HIGH]) == 0
+        for cr in compound_risks:
+            if cr.severity >= Severity.HIGH.value:
+                gate_passed = False
+                break
 
         # Build result schema
         completed_at = datetime.utcnow()
@@ -167,7 +216,7 @@ async def run_scan(
             started_at=started_at,
             completed_at=completed_at,
             duration_seconds=(completed_at - started_at).total_seconds(),
-            total_findings=len(deduped_findings),
+            total_findings=len(enriched_findings),
             critical_count=counts[Severity.CRITICAL],
             high_count=counts[Severity.HIGH],
             medium_count=counts[Severity.MEDIUM],
@@ -179,6 +228,9 @@ async def run_scan(
             target_path=target_path,
             repo_url=repo_url,
             branch=branch,
+            ai_cost_usd=ai_result.cost_usd if ai_result.cost_usd > 0 else None,
+            ai_skipped=ai_result.skipped,
+            ai_skip_reason=ai_result.skip_reason,
         )
 
         # Persist to SQLite
@@ -207,10 +259,13 @@ async def run_scan(
                     tool_versions=json.dumps(tool_versions),
                     error_message=scan_result.error_message,
                 )
+                db_scan.ai_cost_usd = (
+                    ai_result.cost_usd if ai_result.cost_usd > 0 else None
+                )
                 session.add(db_scan)
                 await session.flush()
 
-                for finding in deduped_findings:
+                for finding in enriched_findings:
                     db_finding = Finding(
                         scan_id=db_scan.id,
                         fingerprint=finding.fingerprint,
@@ -224,8 +279,33 @@ async def run_scan(
                         title=finding.title,
                         description=finding.description,
                         recommendation=finding.recommendation,
+                        ai_analysis=finding.ai_analysis,
+                        ai_fix_suggestion=finding.ai_fix_suggestion,
                     )
                     session.add(db_finding)
+
+                # Persist compound risks
+                from scanner.models.compound_risk import CompoundRisk as CompoundRiskModel
+                from scanner.models.compound_risk import compound_risk_findings
+
+                for cr in compound_risks:
+                    db_cr = CompoundRiskModel(
+                        scan_id=db_scan.id,
+                        title=cr.title,
+                        description=cr.description,
+                        severity=cr.severity,
+                        risk_category=cr.risk_category,
+                        recommendation=cr.recommendation,
+                    )
+                    session.add(db_cr)
+                    await session.flush()
+                    for fp in cr.finding_fingerprints:
+                        await session.execute(
+                            compound_risk_findings.insert().values(
+                                compound_risk_id=db_cr.id,
+                                finding_fingerprint=fp,
+                            )
+                        )
 
             scan_result.id = db_scan.id
 

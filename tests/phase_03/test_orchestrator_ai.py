@@ -1,6 +1,5 @@
 """Tests for AI integration in the scan orchestrator."""
 
-import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -10,6 +9,9 @@ from scanner.config import ScannerSettings
 from scanner.schemas.compound_risk import CompoundRiskSchema
 from scanner.schemas.finding import FindingSchema
 from scanner.schemas.severity import Severity
+
+# Import CompoundRisk model so SQLAlchemy mapper can resolve the relationship
+import scanner.models.compound_risk  # noqa: F401
 
 
 def _make_settings(**overrides) -> ScannerSettings:
@@ -40,6 +42,38 @@ def _make_finding(
     )
 
 
+def _setup_db_mocks(mock_engine, mock_sf):
+    """Create and wire up DB mock objects. Returns (mock_db_scan,)."""
+    mock_conn = AsyncMock()
+    mock_engine_inst = MagicMock()
+    mock_engine.return_value = mock_engine_inst
+    mock_engine_inst.begin = MagicMock(return_value=mock_conn)
+    mock_conn.__aenter__ = AsyncMock(return_value=mock_conn)
+    mock_conn.__aexit__ = AsyncMock(return_value=False)
+    mock_conn.run_sync = AsyncMock()
+
+    mock_session = AsyncMock()
+    mock_session_ctx = AsyncMock()
+    mock_session_ctx.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_session_ctx.__aexit__ = AsyncMock(return_value=False)
+
+    mock_begin_ctx = AsyncMock()
+    mock_begin_ctx.__aenter__ = AsyncMock(return_value=None)
+    mock_begin_ctx.__aexit__ = AsyncMock(return_value=False)
+    mock_session.begin = MagicMock(return_value=mock_begin_ctx)
+
+    mock_db_scan = MagicMock()
+    mock_db_scan.id = 1
+    mock_session.add = MagicMock()
+    mock_session.flush = AsyncMock()
+    mock_session.execute = AsyncMock()
+
+    mock_sf.return_value = MagicMock(return_value=mock_session_ctx)
+    mock_engine_inst.dispose = AsyncMock()
+
+    return mock_db_scan
+
+
 @pytest.mark.asyncio
 async def test_ai_enrichment_in_orchestrator():
     """run_scan calls enrich_with_ai after deduplicate_findings."""
@@ -61,39 +95,11 @@ async def test_ai_enrichment_in_orchestrator():
         patch("scanner.core.orchestrator.create_engine") as mock_engine,
         patch("scanner.core.orchestrator.create_session_factory") as mock_sf,
     ):
-        # Setup DB mocks
-        mock_conn = AsyncMock()
-        mock_engine_inst = MagicMock()
-        mock_engine.return_value = mock_engine_inst
-        mock_engine_inst.begin = MagicMock(return_value=mock_conn)
-        mock_conn.__aenter__ = AsyncMock(return_value=mock_conn)
-        mock_conn.__aexit__ = AsyncMock(return_value=False)
-        mock_conn.run_sync = AsyncMock()
+        mock_db_scan = _setup_db_mocks(mock_engine, mock_sf)
 
-        mock_session = AsyncMock()
-        mock_session_ctx = AsyncMock()
-        mock_session_ctx.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session_ctx.__aexit__ = AsyncMock(return_value=False)
+        from scanner.core.orchestrator import run_scan
 
-        mock_begin_ctx = AsyncMock()
-        mock_begin_ctx.__aenter__ = AsyncMock(return_value=None)
-        mock_begin_ctx.__aexit__ = AsyncMock(return_value=False)
-        mock_session.begin = MagicMock(return_value=mock_begin_ctx)
-
-        mock_db_scan = MagicMock()
-        mock_db_scan.id = 1
-        mock_session.add = MagicMock()
-        mock_session.flush = AsyncMock()
-        mock_session.execute = AsyncMock()
-
-        mock_sf.return_value = MagicMock(return_value=mock_session_ctx)
-        mock_engine_inst.dispose = AsyncMock()
-
-        # Patch ScanResult constructor to return our mock
-        with patch("scanner.core.orchestrator.ScanResult", return_value=mock_db_scan):
-            from scanner.core.orchestrator import run_scan
-
-            result = await run_scan(settings, target_path="/tmp/test")
+        result = await run_scan(settings, target_path="/tmp/test")
 
         mock_enrich.assert_called_once()
         assert result.ai_cost_usd == 0.005
@@ -121,36 +127,11 @@ async def test_ai_skipped_in_scan_result():
         patch("scanner.core.orchestrator.create_engine") as mock_engine,
         patch("scanner.core.orchestrator.create_session_factory") as mock_sf,
     ):
-        mock_conn = AsyncMock()
-        mock_engine_inst = MagicMock()
-        mock_engine.return_value = mock_engine_inst
-        mock_engine_inst.begin = MagicMock(return_value=mock_conn)
-        mock_conn.__aenter__ = AsyncMock(return_value=mock_conn)
-        mock_conn.__aexit__ = AsyncMock(return_value=False)
-        mock_conn.run_sync = AsyncMock()
+        _setup_db_mocks(mock_engine, mock_sf)
 
-        mock_session = AsyncMock()
-        mock_session_ctx = AsyncMock()
-        mock_session_ctx.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session_ctx.__aexit__ = AsyncMock(return_value=False)
-        mock_begin_ctx = AsyncMock()
-        mock_begin_ctx.__aenter__ = AsyncMock(return_value=None)
-        mock_begin_ctx.__aexit__ = AsyncMock(return_value=False)
-        mock_session.begin = MagicMock(return_value=mock_begin_ctx)
+        from scanner.core.orchestrator import run_scan
 
-        mock_db_scan = MagicMock()
-        mock_db_scan.id = 1
-        mock_session.add = MagicMock()
-        mock_session.flush = AsyncMock()
-        mock_session.execute = AsyncMock()
-
-        mock_sf.return_value = MagicMock(return_value=mock_session_ctx)
-        mock_engine_inst.dispose = AsyncMock()
-
-        with patch("scanner.core.orchestrator.ScanResult", return_value=mock_db_scan):
-            from scanner.core.orchestrator import run_scan
-
-            result = await run_scan(settings, target_path="/tmp/test")
+        result = await run_scan(settings, target_path="/tmp/test")
 
         assert result.ai_skipped is True
         assert result.ai_skip_reason == "No API key"
@@ -183,36 +164,11 @@ async def test_compound_risk_gate_fails_on_critical():
         patch("scanner.core.orchestrator.create_engine") as mock_engine,
         patch("scanner.core.orchestrator.create_session_factory") as mock_sf,
     ):
-        mock_conn = AsyncMock()
-        mock_engine_inst = MagicMock()
-        mock_engine.return_value = mock_engine_inst
-        mock_engine_inst.begin = MagicMock(return_value=mock_conn)
-        mock_conn.__aenter__ = AsyncMock(return_value=mock_conn)
-        mock_conn.__aexit__ = AsyncMock(return_value=False)
-        mock_conn.run_sync = AsyncMock()
+        _setup_db_mocks(mock_engine, mock_sf)
 
-        mock_session = AsyncMock()
-        mock_session_ctx = AsyncMock()
-        mock_session_ctx.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session_ctx.__aexit__ = AsyncMock(return_value=False)
-        mock_begin_ctx = AsyncMock()
-        mock_begin_ctx.__aenter__ = AsyncMock(return_value=None)
-        mock_begin_ctx.__aexit__ = AsyncMock(return_value=False)
-        mock_session.begin = MagicMock(return_value=mock_begin_ctx)
+        from scanner.core.orchestrator import run_scan
 
-        mock_db_scan = MagicMock()
-        mock_db_scan.id = 1
-        mock_session.add = MagicMock()
-        mock_session.flush = AsyncMock()
-        mock_session.execute = AsyncMock()
-
-        mock_sf.return_value = MagicMock(return_value=mock_session_ctx)
-        mock_engine_inst.dispose = AsyncMock()
-
-        with patch("scanner.core.orchestrator.ScanResult", return_value=mock_db_scan):
-            from scanner.core.orchestrator import run_scan
-
-            result = await run_scan(settings, target_path="/tmp/test")
+        result = await run_scan(settings, target_path="/tmp/test")
 
         assert result.gate_passed is False
 
@@ -244,36 +200,11 @@ async def test_compound_risk_gate_passes_on_medium():
         patch("scanner.core.orchestrator.create_engine") as mock_engine,
         patch("scanner.core.orchestrator.create_session_factory") as mock_sf,
     ):
-        mock_conn = AsyncMock()
-        mock_engine_inst = MagicMock()
-        mock_engine.return_value = mock_engine_inst
-        mock_engine_inst.begin = MagicMock(return_value=mock_conn)
-        mock_conn.__aenter__ = AsyncMock(return_value=mock_conn)
-        mock_conn.__aexit__ = AsyncMock(return_value=False)
-        mock_conn.run_sync = AsyncMock()
+        _setup_db_mocks(mock_engine, mock_sf)
 
-        mock_session = AsyncMock()
-        mock_session_ctx = AsyncMock()
-        mock_session_ctx.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session_ctx.__aexit__ = AsyncMock(return_value=False)
-        mock_begin_ctx = AsyncMock()
-        mock_begin_ctx.__aenter__ = AsyncMock(return_value=None)
-        mock_begin_ctx.__aexit__ = AsyncMock(return_value=False)
-        mock_session.begin = MagicMock(return_value=mock_begin_ctx)
+        from scanner.core.orchestrator import run_scan
 
-        mock_db_scan = MagicMock()
-        mock_db_scan.id = 1
-        mock_session.add = MagicMock()
-        mock_session.flush = AsyncMock()
-        mock_session.execute = AsyncMock()
-
-        mock_sf.return_value = MagicMock(return_value=mock_session_ctx)
-        mock_engine_inst.dispose = AsyncMock()
-
-        with patch("scanner.core.orchestrator.ScanResult", return_value=mock_db_scan):
-            from scanner.core.orchestrator import run_scan
-
-            result = await run_scan(settings, target_path="/tmp/test")
+        result = await run_scan(settings, target_path="/tmp/test")
 
         assert result.gate_passed is True
 
@@ -301,37 +232,11 @@ async def test_run_scan_succeeds_when_ai_unavailable():
         patch("scanner.core.orchestrator.create_engine") as mock_engine,
         patch("scanner.core.orchestrator.create_session_factory") as mock_sf,
     ):
-        mock_conn = AsyncMock()
-        mock_engine_inst = MagicMock()
-        mock_engine.return_value = mock_engine_inst
-        mock_engine_inst.begin = MagicMock(return_value=mock_conn)
-        mock_conn.__aenter__ = AsyncMock(return_value=mock_conn)
-        mock_conn.__aexit__ = AsyncMock(return_value=False)
-        mock_conn.run_sync = AsyncMock()
+        _setup_db_mocks(mock_engine, mock_sf)
 
-        mock_session = AsyncMock()
-        mock_session_ctx = AsyncMock()
-        mock_session_ctx.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session_ctx.__aexit__ = AsyncMock(return_value=False)
-        mock_begin_ctx = AsyncMock()
-        mock_begin_ctx.__aenter__ = AsyncMock(return_value=None)
-        mock_begin_ctx.__aexit__ = AsyncMock(return_value=False)
-        mock_session.begin = MagicMock(return_value=mock_begin_ctx)
+        from scanner.core.orchestrator import run_scan
 
-        mock_db_scan = MagicMock()
-        mock_db_scan.id = 1
-        mock_session.add = MagicMock()
-        mock_session.flush = AsyncMock()
-        mock_session.execute = AsyncMock()
+        result = await run_scan(settings, target_path="/tmp/test")
 
-        mock_sf.return_value = MagicMock(return_value=mock_session_ctx)
-        mock_engine_inst.dispose = AsyncMock()
-
-        with patch("scanner.core.orchestrator.ScanResult", return_value=mock_db_scan):
-            from scanner.core.orchestrator import run_scan
-
-            result = await run_scan(settings, target_path="/tmp/test")
-
-        # No exception raised - scan completed
         assert result.status == "completed"
         assert result.ai_skipped is True
