@@ -1,11 +1,13 @@
 """FastAPI application factory with lifespan management."""
 
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
 from scanner.api.router import api_router
 from scanner.config import ScannerSettings
+from scanner.core.scan_queue import ScanQueue
 from scanner.db.session import create_engine, create_session_factory
 from scanner.models.base import Base
 
@@ -19,8 +21,10 @@ async def lifespan(app: FastAPI):
     - Create async SQLite engine with WAL mode
     - Create all tables (Phase 1 approach; Alembic for later phases)
     - Store engine, session factory, and settings on app.state
+    - Start background scan queue worker
 
     On shutdown:
+    - Cancel scan queue worker
     - Dispose engine and release connections
     """
     settings = ScannerSettings()
@@ -34,8 +38,17 @@ async def lifespan(app: FastAPI):
     app.state.session_factory = create_session_factory(engine)
     app.state.settings = settings
 
+    # Start background scan queue
+    scan_queue = ScanQueue()
+    app.state.scan_queue = scan_queue
+    await scan_queue.recover_stuck_scans(app)
+    worker_task = asyncio.create_task(scan_queue.worker(app))
+
     yield
 
+    # Shutdown: cancel worker, dispose engine
+    worker_task.cancel()
+    await asyncio.gather(worker_task, return_exceptions=True)
     await engine.dispose()
 
 
