@@ -23,3 +23,6 @@ build/
 # Virtual environments
 .venv/
 venv/
+
+# Generated reports
+reports/

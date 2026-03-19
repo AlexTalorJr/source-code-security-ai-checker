@@ -1,8 +1,12 @@
 FROM python:3.12-slim AS base
 
-# System deps (curl for healthcheck, git for Phase 2 repo cloning)
+# System deps (curl for healthcheck, git for Phase 2 repo cloning,
+# libpango/libharfbuzz for WeasyPrint PDF generation)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libharfbuzz-subset0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Non-root user for security
