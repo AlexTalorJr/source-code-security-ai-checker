@@ -32,9 +32,9 @@
 
 ### Quality Gate
 
-- [ ] **GATE-01**: Scanner returns non-zero exit code when Critical or High findings exist
-- [ ] **GATE-02**: Severity thresholds configurable in config.yml
-- [ ] **GATE-03**: Quality gate decision included in scan output and reports
+- [x] **GATE-01**: Scanner returns non-zero exit code when Critical or High findings exist
+- [x] **GATE-02**: Severity thresholds configurable in config.yml
+- [x] **GATE-03**: Quality gate decision included in scan output and reports
 
 ### Notifications
 
@@ -44,8 +44,8 @@
 
 ### Scan History
 
-- [ ] **HIST-01**: All scan results stored in SQLite database with full finding details
-- [ ] **HIST-02**: Delta comparison between current and previous scan (new/fixed/persisting findings)
+- [x] **HIST-01**: All scan results stored in SQLite database with full finding details
+- [x] **HIST-02**: Delta comparison between current and previous scan (new/fixed/persisting findings)
 - [ ] **HIST-03**: User can mark findings as false positive, suppressed across future scans
 - [ ] **HIST-04**: Scan history queryable via API (list scans, get scan details, get finding trends)
 
@@ -140,14 +140,14 @@
 | RPT-02 | Phase 4 | Pending |
 | RPT-03 | Phase 4 | Pending |
 | RPT-04 | Phase 4 | Pending |
-| GATE-01 | Phase 4 | Pending |
-| GATE-02 | Phase 4 | Pending |
-| GATE-03 | Phase 4 | Pending |
+| GATE-01 | Phase 4 | Complete |
+| GATE-02 | Phase 4 | Complete |
+| GATE-03 | Phase 4 | Complete |
 | NOTF-01 | Phase 5 | Pending |
 | NOTF-02 | Phase 5 | Pending |
 | NOTF-03 | Phase 5 | Pending |
-| HIST-01 | Phase 4 | Pending |
-| HIST-02 | Phase 4 | Pending |
+| HIST-01 | Phase 4 | Complete |
+| HIST-02 | Phase 4 | Complete |
 | HIST-03 | Phase 5 | Pending |
 | HIST-04 | Phase 5 | Pending |
 | API-01 | Phase 5 | Pending |
