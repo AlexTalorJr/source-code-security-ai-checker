@@ -458,4 +458,6 @@ class TestAnalyzeComponentCalls:
             findings, _, _ = await analyzer.analyze([finding])
 
         fp_z = next(f for f in findings if f.fingerprint == "z" * 64)
-        assert fp_z.ai_analysis == "Test risk"
+        # fix_suggestion is null but recommendation exists, so ai_analysis includes it
+        assert "Test risk" in fp_z.ai_analysis
+        assert fp_z.ai_analysis is not None
