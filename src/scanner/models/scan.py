@@ -40,9 +40,13 @@ class ScanResult(Base):
     scanner_version = Column(String(20), nullable=True)
     tool_versions = Column(Text, nullable=True)  # JSON blob of tool versions
     error_message = Column(Text, nullable=True)
+    ai_cost_usd = Column(Float, nullable=True, default=None)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
     findings = relationship(
         "Finding", back_populates="scan", cascade="all, delete-orphan"
+    )
+    compound_risks = relationship(
+        "CompoundRisk", back_populates="scan", cascade="all, delete-orphan"
     )
