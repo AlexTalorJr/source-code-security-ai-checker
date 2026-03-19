@@ -7,6 +7,7 @@ from fastapi import FastAPI
 
 from scanner.api.router import api_router
 from scanner.config import ScannerSettings
+from scanner.dashboard.router import router as dashboard_router
 from scanner.core.scan_queue import ScanQueue
 from scanner.db.session import create_engine, create_session_factory
 from scanner.models.base import Base
@@ -60,6 +61,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     app.include_router(api_router, prefix="/api")
+    app.include_router(dashboard_router, prefix="/dashboard")
     return app
 
 
