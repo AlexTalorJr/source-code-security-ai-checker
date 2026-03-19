@@ -67,7 +67,7 @@ def scan(
     settings = ScannerSettings()
 
     try:
-        result = asyncio.run(
+        result, findings, compound_risks = asyncio.run(
             run_scan(
                 settings,
                 target_path=path,

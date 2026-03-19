@@ -1,5 +1,7 @@
 """Scanner configuration with YAML file loading and env var overrides."""
 
+from __future__ import annotations
+
 import os
 
 from pydantic import BaseModel, Field
@@ -9,6 +11,8 @@ from pydantic_settings import (
     SettingsConfigDict,
     YamlConfigSettingsSource,
 )
+
+from scanner.schemas.severity import Severity
 
 
 class ScannerToolConfig(BaseModel):
@@ -36,6 +40,36 @@ class AIConfig(BaseModel):
     model: str = "claude-sonnet-4-6"
     max_findings_per_batch: int = 50
     max_tokens_per_response: int = 4096
+
+
+class GateConfig(BaseModel):
+    """Quality gate configuration."""
+
+    fail_on: list[str] = ["critical", "high"]
+    include_compound_risks: bool = True
+
+    def evaluate(
+        self,
+        severity_counts: dict[Severity, int],
+        compound_risks: list,
+    ) -> tuple[bool, list[str]]:
+        """Evaluate gate. Returns (passed, fail_reasons)."""
+        reasons: list[str] = []
+        for sev_name in self.fail_on:
+            sev = Severity[sev_name.upper()]
+            count = severity_counts.get(sev, 0)
+            if count > 0:
+                reasons.append(f"{count} {sev.name} finding(s)")
+        if self.include_compound_risks:
+            for cr in compound_risks:
+                cr_sev = (
+                    Severity(cr.severity)
+                    if isinstance(cr.severity, int)
+                    else Severity[cr.severity.upper()]
+                )
+                if cr_sev.name.lower() in self.fail_on:
+                    reasons.append(f"Compound risk: {cr.title} ({cr_sev.name})")
+        return (len(reasons) == 0, reasons)
 
 
 class ScannerSettings(BaseSettings):
@@ -80,6 +114,9 @@ class ScannerSettings(BaseSettings):
 
     # AI analysis
     ai: AIConfig = AIConfig()
+
+    # Quality gate
+    gate: GateConfig = GateConfig()
 
     # Git auth
     git_token: str = Field(

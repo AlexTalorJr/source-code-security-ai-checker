@@ -99,7 +99,7 @@ async def test_ai_enrichment_in_orchestrator():
 
         from scanner.core.orchestrator import run_scan
 
-        result = await run_scan(settings, target_path="/tmp/test")
+        result, _, _ = await run_scan(settings, target_path="/tmp/test")
 
         mock_enrich.assert_called_once()
         assert result.ai_cost_usd == 0.005
@@ -131,7 +131,7 @@ async def test_ai_skipped_in_scan_result():
 
         from scanner.core.orchestrator import run_scan
 
-        result = await run_scan(settings, target_path="/tmp/test")
+        result, _, _ = await run_scan(settings, target_path="/tmp/test")
 
         assert result.ai_skipped is True
         assert result.ai_skip_reason == "No API key"
@@ -168,7 +168,7 @@ async def test_compound_risk_gate_fails_on_critical():
 
         from scanner.core.orchestrator import run_scan
 
-        result = await run_scan(settings, target_path="/tmp/test")
+        result, _, _ = await run_scan(settings, target_path="/tmp/test")
 
         assert result.gate_passed is False
 
@@ -204,7 +204,7 @@ async def test_compound_risk_gate_passes_on_medium():
 
         from scanner.core.orchestrator import run_scan
 
-        result = await run_scan(settings, target_path="/tmp/test")
+        result, _, _ = await run_scan(settings, target_path="/tmp/test")
 
         assert result.gate_passed is True
 
@@ -236,7 +236,7 @@ async def test_run_scan_succeeds_when_ai_unavailable():
 
         from scanner.core.orchestrator import run_scan
 
-        result = await run_scan(settings, target_path="/tmp/test")
+        result, _, _ = await run_scan(settings, target_path="/tmp/test")
 
         assert result.status == "completed"
         assert result.ai_skipped is True

@@ -37,3 +37,10 @@ ai:
   model: "claude-sonnet-4-6"
   max_findings_per_batch: 50
   max_tokens_per_response: 4096
+
+# Quality gate
+gate:
+  fail_on:
+    - critical
+    - high
+  include_compound_risks: true

@@ -87,7 +87,7 @@ async def test_run_scan_local_path(settings):
     test_findings = [_make_finding(fingerprint="f1", tool="semgrep")]
     adapters = _patch_all_adapters({"semgrep": test_findings})
     with patch("scanner.core.orchestrator.ALL_ADAPTERS", adapters):
-        result = await run_scan(settings, target_path="/tmp/test")
+        result, findings, compound_risks = await run_scan(settings, target_path="/tmp/test")
 
     assert result.status == "completed"
     assert result.total_findings == 1
@@ -108,7 +108,7 @@ async def test_run_scan_with_repo_url(settings, tmp_path):
         ) as mock_clone,
         patch("scanner.core.orchestrator.cleanup_clone") as mock_cleanup,
     ):
-        result = await run_scan(
+        result, findings, compound_risks = await run_scan(
             settings, repo_url="https://example.com/repo.git", branch="main"
         )
 
@@ -128,7 +128,7 @@ async def test_timeout_graceful_degradation(settings):
     )
 
     with patch("scanner.core.orchestrator.ALL_ADAPTERS", adapters):
-        result = await run_scan(settings, target_path="/tmp/test")
+        result, _, _ = await run_scan(settings, target_path="/tmp/test")
 
     assert result.status == "completed"
     assert result.error_message is not None
@@ -146,7 +146,7 @@ async def test_adapter_crash_graceful_degradation(settings):
     )
 
     with patch("scanner.core.orchestrator.ALL_ADAPTERS", adapters):
-        result = await run_scan(settings, target_path="/tmp/test")
+        result, _, _ = await run_scan(settings, target_path="/tmp/test")
 
     assert result.status == "completed"
     assert "segfault" in result.error_message
@@ -160,7 +160,7 @@ async def test_gate_fails_on_critical(settings):
     )
 
     with patch("scanner.core.orchestrator.ALL_ADAPTERS", adapters):
-        result = await run_scan(settings, target_path="/tmp/test")
+        result, _, _ = await run_scan(settings, target_path="/tmp/test")
 
     assert result.gate_passed is False
 
@@ -172,7 +172,7 @@ async def test_gate_passes_on_medium_only(settings):
     )
 
     with patch("scanner.core.orchestrator.ALL_ADAPTERS", adapters):
-        result = await run_scan(settings, target_path="/tmp/test")
+        result, _, _ = await run_scan(settings, target_path="/tmp/test")
 
     assert result.gate_passed is True
 
@@ -185,7 +185,7 @@ async def test_disabled_adapter_not_run(settings):
     settings.scanners.semgrep.enabled = False
 
     with patch("scanner.core.orchestrator.ALL_ADAPTERS", adapters):
-        result = await run_scan(settings, target_path="/tmp/test")
+        result, _, _ = await run_scan(settings, target_path="/tmp/test")
 
     # semgrep adapter's run should never be called
     semgrep_instance = adapters[0].return_value

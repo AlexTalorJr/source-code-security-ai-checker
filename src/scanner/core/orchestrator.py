@@ -102,7 +102,7 @@ async def run_scan(
     target_path: str | None = None,
     repo_url: str | None = None,
     branch: str | None = None,
-) -> ScanResultSchema:
+) -> tuple[ScanResultSchema, list[FindingSchema], list[CompoundRiskSchema]]:
     """Run all enabled scanners against a target, deduplicate, and persist.
 
     Either ``target_path`` or ``repo_url`` (with ``branch``) must be provided,
@@ -115,8 +115,8 @@ async def run_scan(
         branch: Git branch (required when repo_url is provided).
 
     Returns:
-        ScanResultSchema populated with findings summary, gate result,
-        and database ID.
+        Tuple of (ScanResultSchema, list[FindingSchema], list[CompoundRiskSchema])
+        populated with findings summary, gate result, and database ID.
 
     Raises:
         ValueError: If arguments are invalid (both/neither target and repo).
@@ -202,12 +202,9 @@ async def run_scan(
         for f in enriched_findings:
             counts[f.severity] += 1
 
-        # Quality gate: check individual findings AND compound risks
-        gate_passed = (counts[Severity.CRITICAL] + counts[Severity.HIGH]) == 0
-        for cr in compound_risks:
-            if cr.severity >= Severity.HIGH.value:
-                gate_passed = False
-                break
+        # Quality gate: configurable via settings.gate
+        gate_config = settings.gate
+        gate_passed, fail_reasons = gate_config.evaluate(counts, compound_risks)
 
         # Build result schema
         completed_at = datetime.utcnow()
@@ -311,7 +308,7 @@ async def run_scan(
 
         await engine.dispose()
 
-        return scan_result
+        return (scan_result, enriched_findings, compound_risks)
 
     finally:
         if clone_path is not None:
@@ -319,13 +316,16 @@ async def run_scan(
 
 
 def format_summary_table(
-    scan_result: ScanResultSchema, warnings: list[str]
+    scan_result: ScanResultSchema,
+    warnings: list[str],
+    fail_reasons: list[str] | None = None,
 ) -> str:
     """Format a plain-text summary table for scan results.
 
     Args:
         scan_result: Completed scan result.
         warnings: List of warning messages from failed adapters.
+        fail_reasons: Optional list of gate failure reasons.
 
     Returns:
         Formatted summary string.
@@ -356,5 +356,9 @@ def format_summary_table(
     )
     gate_label = "PASSED" if scan_result.gate_passed else "FAILED"
     lines.append(f"  Gate:     {gate_label}")
+
+    if fail_reasons:
+        for reason in fail_reasons:
+            lines.append(f"    - {reason}")
 
     return "\n".join(lines)

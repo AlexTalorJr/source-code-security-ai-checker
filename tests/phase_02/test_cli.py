@@ -38,7 +38,7 @@ def _make_scan_result(**overrides) -> ScanResultSchema:
 @patch("scanner.cli.main.run_scan", new_callable=AsyncMock)
 def test_scan_local_path_flag(mock_run_scan):
     """Scan with --path flag runs and exits 0."""
-    mock_run_scan.return_value = _make_scan_result()
+    mock_run_scan.return_value = (_make_scan_result(), [], [])
 
     result = runner.invoke(app, ["scan", "--path", "/tmp/test"])
 
@@ -57,7 +57,7 @@ def test_scan_repo_url_requires_branch():
 @patch("scanner.cli.main.run_scan", new_callable=AsyncMock)
 def test_scan_json_output(mock_run_scan):
     """--json flag outputs valid JSON with status field."""
-    mock_run_scan.return_value = _make_scan_result()
+    mock_run_scan.return_value = (_make_scan_result(), [], [])
 
     result = runner.invoke(app, ["scan", "--path", "/tmp/test", "--json"])
 
@@ -69,11 +69,11 @@ def test_scan_json_output(mock_run_scan):
 @patch("scanner.cli.main.run_scan", new_callable=AsyncMock)
 def test_scan_exit_code_1_on_critical(mock_run_scan):
     """Exit code 1 when gate_passed is False (Critical/High found)."""
-    mock_run_scan.return_value = _make_scan_result(
+    mock_run_scan.return_value = (_make_scan_result(
         gate_passed=False,
         critical_count=1,
         total_findings=1,
-    )
+    ), [], [])
 
     result = runner.invoke(app, ["scan", "--path", "/tmp/test"])
 
@@ -83,7 +83,7 @@ def test_scan_exit_code_1_on_critical(mock_run_scan):
 @patch("scanner.cli.main.run_scan", new_callable=AsyncMock)
 def test_scan_exit_code_0_on_clean(mock_run_scan):
     """Exit code 0 when gate_passed is True."""
-    mock_run_scan.return_value = _make_scan_result(gate_passed=True)
+    mock_run_scan.return_value = (_make_scan_result(gate_passed=True), [], [])
 
     result = runner.invoke(app, ["scan", "--path", "/tmp/test"])
 
@@ -93,9 +93,9 @@ def test_scan_exit_code_0_on_clean(mock_run_scan):
 @patch("scanner.cli.main.run_scan", new_callable=AsyncMock)
 def test_scan_shows_warning_banner(mock_run_scan):
     """Warning banner appears in stderr when error_message present."""
-    mock_run_scan.return_value = _make_scan_result(
+    mock_run_scan.return_value = (_make_scan_result(
         error_message="cppcheck: timed out after 120s"
-    )
+    ), [], [])
 
     result = runner.invoke(app, ["scan", "--path", "/tmp/test"])
 
