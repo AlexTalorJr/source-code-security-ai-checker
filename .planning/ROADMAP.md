@@ -47,11 +47,12 @@ Plans:
   3. Duplicate findings across tools are collapsed into single entries with source tool attribution
   4. If any scanner tool hangs or crashes, the scan completes with partial results and a warning (no scan-level failure)
   5. Total scan time for a typical aipix release branch stays under 10 minutes
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md -- Base adapter ABC, config extension, git clone module, test fixtures
+- [ ] 02-02-PLAN.md -- Five scanner adapters (Semgrep, cppcheck, Gitleaks, Trivy, Checkov)
+- [ ] 02-03-PLAN.md -- Orchestrator (parallel exec, dedup, persistence) and CLI scan command
 
 ### Phase 3: AI Analysis
 **Goal**: Scan findings are enriched with AI-powered semantic analysis that identifies business logic risks and provides actionable fix suggestions
@@ -125,7 +126,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation and Data Models | 3/3 | Complete   | 2026-03-18 |
-| 2. Scanner Adapters and Orchestration | 0/0 | Not started | - |
+| 2. Scanner Adapters and Orchestration | 0/3 | Not started | - |
 | 3. AI Analysis | 0/0 | Not started | - |
 | 4. Reports and Quality Gate | 0/0 | Not started | - |
 | 5. API, Dashboard, CI, and Notifications | 0/0 | Not started | - |
