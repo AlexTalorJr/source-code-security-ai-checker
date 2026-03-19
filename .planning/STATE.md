@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-03-19T04:49:33.132Z"
+status: phase-complete
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-03-19T04:57:00.000Z"
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -23,23 +23,23 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 
 ## Current Position
 
-Phase: 02 (scanner-adapters-and-orchestration) — EXECUTING
-Plan: 3 of 3
+Phase: 02 (scanner-adapters-and-orchestration) — COMPLETE
+Plan: 3 of 3 (all complete)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 5
-- Average duration: 5.0min
-- Total execution time: 0.42 hours
+- Total plans completed: 6
+- Average duration: 5.2min
+- Total execution time: 0.52 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 3 | 17min | 5.7min |
-| 02 | 2 | 8min | 4min |
+| 02 | 3 | 14min | 4.7min |
 
 **Recent Trend:**
 
@@ -67,6 +67,9 @@ Recent decisions affecting current work:
 - [02-01]: config.yml.example updated (not config.yml which is gitignored) with scanners section
 - [02-01]: ScannerAdapter.tool_name as abstract property for cleaner ABC contract
 - [Phase 02]: unittest.mock.AsyncMock used directly (no pytest-mock dependency) for adapter _execute mocking
+- [02-03]: Typer callback for subcommand mode so scan is a proper subcommand
+- [02-03]: Per-adapter error isolation via _run_adapter wrapper for asyncio.gather
+- [02-03]: Gitleaks forces shallow=False on clone when enabled (needs full git history)
 
 ### Pending Todos
 
@@ -78,6 +81,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19T04:49:33.126Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-03-19T04:57:00Z
+Stopped at: Completed 02-03-PLAN.md (Phase 02 complete)
 Resume file: None
