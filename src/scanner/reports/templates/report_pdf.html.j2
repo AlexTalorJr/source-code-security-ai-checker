@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Security Scan Report</title>
+<style>
+  @page {
+    size: A4;
+    margin: 20mm;
+    @bottom-center {
+      content: "aipix-security-scanner -- Page " counter(page) " of " counter(pages);
+      font-size: 8pt;
+      color: #6c757d;
+    }
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 10pt;
+    font-weight: 400;
+    line-height: 1.4;
+    color: #212529;
+  }
+
+  h1 {
+    font-size: 24pt;
+    font-weight: 600;
+    line-height: 1.1;
+    margin-bottom: 4px;
+  }
+
+  h2 {
+    font-size: 16pt;
+    font-weight: 600;
+    line-height: 1.2;
+    margin-top: 24px;
+    margin-bottom: 12px;
+  }
+
+  .subtitle {
+    font-size: 16pt;
+    font-weight: 400;
+    color: #6c757d;
+    margin-bottom: 16px;
+  }
+
+  .gate-banner {
+    width: 100%;
+    padding: 16px;
+    border-radius: 4px;
+    font-size: 14pt;
+    font-weight: 600;
+    margin-bottom: 24px;
+  }
+
+  .gate-passed {
+    background-color: #d4edda;
+    color: #155724;
+  }
+
+  .gate-failed {
+    background-color: #f8d7da;
+    color: #721c24;
+  }
+
+  .executive-summary {
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+
+  .delta-summary {
+    margin-bottom: 16px;
+    font-style: italic;
+    color: #495057;
+  }
+
+  .charts-container {
+    display: flex;
+    justify-content: space-around;
+    margin: 16px 0 24px 0;
+  }
+
+  .charts-container img {
+    width: 80mm;
+    height: 80mm;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 16px;
+  }
+
+  th, td {
+    padding: 6px 8px;
+    border: 1px solid #dee2e6;
+    text-align: left;
+    font-size: 9pt;
+  }
+
+  th {
+    background-color: #e9ecef;
+    font-weight: 600;
+  }
+
+  tr:nth-child(even) {
+    background: #f8f9fa;
+  }
+
+  .severity-critical { color: #dc3545; font-weight: 600; }
+  .severity-high { color: #fd7e14; font-weight: 600; }
+  .severity-medium { color: #ffc107; font-weight: 600; }
+  .severity-low { color: #28a745; }
+  .severity-info { color: #6c757d; }
+
+  .metadata-table {
+    margin-bottom: 16px;
+  }
+
+  .metadata-table td:first-child {
+    font-weight: 600;
+    width: 140px;
+  }
+
+  .note {
+    font-size: 8pt;
+    color: #6c757d;
+    font-style: italic;
+    margin-top: 24px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Security Scan Report</h1>
+<div class="subtitle">{{ target }} &mdash; {{ scan_date }}</div>
+
+{% if gate_passed %}
+<div class="gate-banner gate-passed">
+  Quality Gate: PASSED
+</div>
+{% else %}
+<div class="gate-banner gate-failed">
+  Quality Gate: FAILED &mdash; {{ fail_reasons | length }} blocking issue(s) found
+</div>
+{% endif %}
+
+<h2>Executive Summary</h2>
+<p class="executive-summary">{{ executive_summary }}</p>
+
+{% if delta_summary %}
+<p class="delta-summary">{{ delta_summary }}</p>
+{% else %}
+<p class="delta-summary">No previous scan available for comparison.</p>
+{% endif %}
+
+{% if pie_chart or bar_chart %}
+<div class="charts-container">
+  {% if pie_chart %}
+  <img src="{{ pie_chart }}" alt="Severity Distribution">
+  {% endif %}
+  {% if bar_chart %}
+  <img src="{{ bar_chart }}" alt="Findings by Tool">
+  {% endif %}
+</div>
+{% endif %}
+
+<h2>Scan Metadata</h2>
+<table class="metadata-table">
+  <tr><td>Target</td><td>{{ scan.target_path or scan.repo_url or "N/A" }}</td></tr>
+  <tr><td>Branch</td><td>{{ scan.branch or "N/A" }}</td></tr>
+  {% if scan.commit_hash %}
+  <tr><td>Commit</td><td>{{ scan.commit_hash }}</td></tr>
+  {% endif %}
+  <tr><td>Date</td><td>{{ scan_date }}</td></tr>
+  <tr><td>Duration</td><td>{{ scan.duration_seconds }}s</td></tr>
+  <tr><td>Total Findings</td><td>{{ scan.total_findings }}</td></tr>
+  {% if scan.tool_versions %}
+  <tr><td>Tools</td><td>{% for tool, ver in scan.tool_versions.items() %}{{ tool }} {{ ver }}{% if not loop.last %}, {% endif %}{% endfor %}</td></tr>
+  {% endif %}
+</table>
+
+<h2>Finding Details</h2>
+{% if findings %}
+<table>
+  <thead>
+    <tr>
+      <th>Severity</th>
+      <th>File</th>
+      <th>Rule</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for f in findings %}
+    <tr>
+      <td class="severity-{{ f.severity.name | lower }}">{{ f.severity.name }}</td>
+      <td>{{ f.file_path }}{% if f.line_start %}:{{ f.line_start }}{% endif %}</td>
+      <td>{{ f.rule_id }}</td>
+      <td>{{ f.title }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No findings detected.</p>
+{% endif %}
+
+{% if compound_risks %}
+<h2>Compound Risks (AI-Identified)</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Severity</th>
+      <th>Title</th>
+      <th>Related Findings</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for risk in compound_risks %}
+    <tr>
+      <td>{{ risk.severity }}</td>
+      <td>{{ risk.title }}<br><small>{{ risk.description }}</small></td>
+      <td>{{ risk.finding_fingerprints | length }} finding(s)</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<p class="note">For interactive filtering and full code context, see the HTML report.</p>
+
+</body>
+</html>
