@@ -4,12 +4,12 @@ milestone: v1.0
 milestone_name: milestone
 status: unknown
 stopped_at: Phase 2 context gathered
-last_updated: "2026-03-18T21:42:30.153Z"
+last_updated: "2026-03-19T04:43:04.284Z"
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 6
+  completed_plans: 4
 ---
 
 # Project State
@@ -19,26 +19,27 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Every release branch is automatically scanned for security vulnerabilities before deployment, and no code with Critical or High severity findings reaches production.
-**Current focus:** Phase 01 complete — ready for Phase 02
+**Current focus:** Phase 02 — scanner-adapters-and-orchestration
 
 ## Current Position
 
-Phase: 01 (foundation-and-data-models) — COMPLETE
-Plan: 3 of 3 (all complete)
+Phase: 02 (scanner-adapters-and-orchestration) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 3
-- Average duration: 5.7min
-- Total execution time: 0.28 hours
+- Total plans completed: 4
+- Average duration: 5.3min
+- Total execution time: 0.35 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 3 | 17min | 5.7min |
+| 02 | 1 | 4min | 4min |
 
 **Recent Trend:**
 
@@ -63,6 +64,8 @@ Recent decisions affecting current work:
 - [01-03]: python:3.12-slim base (not alpine) to avoid musl C extension issues
 - [01-03]: Non-root scanner user and named volume for SQLite persistence
 - [01-03]: Secrets via environment variables only (SCANNER_API_KEY, SCANNER_CLAUDE_API_KEY)
+- [02-01]: config.yml.example updated (not config.yml which is gitignored) with scanners section
+- [02-01]: ScannerAdapter.tool_name as abstract property for cleaner ABC contract
 
 ### Pending Todos
 
@@ -74,6 +77,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T21:42:30.146Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-scanner-adapters-and-orchestration/02-CONTEXT.md
+Last session: 2026-03-19T04:42:17Z
+Stopped at: Completed 02-01-PLAN.md
+Resume file: .planning/phases/02-scanner-adapters-and-orchestration/02-01-SUMMARY.md
