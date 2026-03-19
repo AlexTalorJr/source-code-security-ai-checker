@@ -18,11 +18,11 @@ Every release branch is automatically scanned for security vulnerabilities befor
 
 ### Active
 
-- [ ] Multi-tool security scanning (Semgrep, Gitleaks, Trivy, Checkov, cppcheck)
+- [x] Multi-tool security scanning (Semgrep, Gitleaks, Trivy, Checkov, cppcheck) — *Validated in Phase 02: Scanner Adapters and Orchestration*
 - [ ] AI-powered semantic analysis via Claude API (business logic, authorization, fix suggestions)
 - [ ] HTML interactive reports with code diffs and fix examples
 - [ ] PDF formal reports for management and telecom operators
-- [ ] Quality Gate — block Jenkins builds on Critical/High findings
+- [x] Quality Gate — block Jenkins builds on Critical/High findings — *Validated in Phase 02: Scanner Adapters and Orchestration (CLI exit code)*
 - [ ] FastAPI REST API for triggering scans and fetching reports
 - [ ] Live web dashboard with scan history and release comparison
 - [ ] Jenkins pipeline integration as a stage
@@ -30,7 +30,7 @@ Every release branch is automatically scanned for security vulnerabilities befor
 - [x] Full Docker containerization with single docker-compose up
 - [x] SQLite local scan history database
 - [ ] Custom Semgrep rules for aipix platform (RTSP auth, VMS API, webhooks)
-- [ ] Dual-mode scan input — local path (Jenkins) or repo URL (API-triggered)
+- [x] Dual-mode scan input — local path (Jenkins) or repo URL (API-triggered) — *Validated in Phase 02: git clone module*
 - [ ] Multi-arch support (Linux x86_64, ARM64)
 - [ ] Bilingual documentation suite (Russian/English, separate files)
 - [ ] Portability — migration scripts, backup/restore, packaging
@@ -101,13 +101,13 @@ Every release branch is automatically scanned for security vulnerabilities befor
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | FastAPI over Flask | Async support, auto OpenAPI docs, modern Python — fits REST API + dashboard well | Confirmed — Phase 01 |
-| cppcheck alongside Semgrep for C++ | Semgrep has limited C++ support; cppcheck provides proper static analysis for Mediaserver | — Pending |
+| cppcheck alongside Semgrep for C++ | Semgrep has limited C++ support; cppcheck provides proper static analysis for Mediaserver | Confirmed — Phase 02 |
 | SQLite over PostgreSQL | Simplifies portability — single file, no external DB, easy backup/transfer | Confirmed — Phase 01 |
-| Dual-mode scan input (path + URL) | Local path for Jenkins pipeline, repo URL for API-triggered standalone scans | — Pending |
+| Dual-mode scan input (path + URL) | Local path for Jenkins pipeline, repo URL for API-triggered standalone scans | Confirmed — Phase 02 |
 | Separate bilingual doc files | docs/en/ + docs/ru/ — clean separation, easier maintenance | — Pending |
 | Apache 2.0 license | Patent protection, explicit contributor terms — better for enterprise/partner sharing | — Pending |
 | API key auth | Simple shared secret in env var — appropriate for internal tool, Jenkins passes in headers | — Pending |
 | Configurable notifications | Slack and email both optional via config.yml toggles — teams choose what fits | — Pending |
 
 ---
-*Last updated: 2026-03-18 — Phase 01 complete: project skeleton, config, schemas, ORM, async SQLite/WAL, FastAPI health, Docker packaging*
+*Last updated: 2026-03-19 — Phase 02 complete: five scanner adapters, parallel orchestrator, dedup, CLI with quality gate, git clone module*
