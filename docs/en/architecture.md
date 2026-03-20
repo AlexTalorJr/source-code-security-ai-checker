@@ -2,7 +2,7 @@
 
 ## Overview
 
-aipix-security-scanner is a multi-layer security scanning pipeline for the aipix.ai VSaaS platform. It scans source code repositories for vulnerabilities using five parallel static analysis tools, enriches findings with AI-powered analysis via Claude, and produces actionable reports with fix suggestions. A configurable quality gate can block deployments when critical issues are found.
+Security AI Scanner is a multi-layer security scanning pipeline for the aipix.ai VSaaS platform. It scans source code repositories for vulnerabilities using five parallel static analysis tools, enriches findings with AI-powered analysis via Claude, and produces actionable reports with fix suggestions. A configurable quality gate can block deployments when critical issues are found.
 
 ## Component Diagram
 

@@ -1,6 +1,6 @@
 # User Guide
 
-## What is aipix-security-scanner?
+## What is Security AI Scanner?
 
 A security scanning tool that analyzes source code for vulnerabilities using five parallel static analysis tools, enriches findings with AI analysis via Claude, and produces actionable reports with fix suggestions.
 

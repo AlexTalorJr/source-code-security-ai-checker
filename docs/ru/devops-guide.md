@@ -170,7 +170,7 @@ make restore BACKUP=backups/backup-20260320_143000.tar.gz
 ```bash
 # Сборка для amd64 + arm64, сохранение как OCI-архив
 make docker-multiarch
-# Результат: aipix-security-scanner-{version}-multiarch.tar
+# Результат: Security AI Scanner-{version}-multiarch.tar
 
 # Сборка и отправка в реестр контейнеров
 make docker-push REGISTRY=your-registry.example.com

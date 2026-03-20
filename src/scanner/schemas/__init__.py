@@ -1,4 +1,4 @@
-"""Pydantic schemas for the aipix-security-scanner."""
+"""Pydantic schemas for the Security AI Scanner."""
 
 from scanner.schemas.severity import Severity
 from scanner.schemas.finding import FindingSchema

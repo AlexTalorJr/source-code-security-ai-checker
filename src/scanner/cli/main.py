@@ -19,7 +19,7 @@ from scanner.schemas.severity import Severity
 
 app = typer.Typer(
     name="scanner",
-    help="aipix-security-scanner CLI",
+    help="Source Code Security AI Scanner CLI",
     invoke_without_command=True,
 )
 console = Console()
@@ -28,7 +28,7 @@ err_console = Console(stderr=True)
 
 @app.callback()
 def main() -> None:
-    """aipix-security-scanner: scan code for security vulnerabilities."""
+    """Source Code Security AI Scanner: scan code for security vulnerabilities."""
 
 _SEVERITY_STYLES = {
     Severity.CRITICAL: "bold red",

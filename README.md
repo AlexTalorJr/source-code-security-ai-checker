@@ -1,6 +1,6 @@
-# aipix-security-scanner
+# Source Code Security AI Scanner
 
-AI-powered security vulnerability scanner for the aipix.ai VSaaS platform.
+AI-powered security vulnerability scanner for source code analysis.
 
 ## Quick Start
 

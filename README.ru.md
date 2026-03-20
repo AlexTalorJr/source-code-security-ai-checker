@@ -1,6 +1,6 @@
-# aipix-security-scanner
+# Source Code Security AI Scanner
 
-Сканер безопасности с ИИ-анализом для платформы aipix.ai VSaaS.
+Сканер безопасности исходного кода с ИИ-анализом.
 
 > English documentation: [README.md](README.md)
 

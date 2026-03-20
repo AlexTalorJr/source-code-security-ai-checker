@@ -58,6 +58,6 @@ def test_package_target_includes_required_files(makefile_content: str) -> None:
 
 
 def test_package_name_uses_version(makefile_content: str) -> None:
-    assert "aipix-security-scanner-$(VERSION)" in makefile_content, (
-        "Package name must use VERSION variable: aipix-security-scanner-$(VERSION)"
+    assert "security-ai-scanner-$(VERSION)" in makefile_content, (
+        "Package name must use VERSION variable: security-ai-scanner-$(VERSION)"
     )

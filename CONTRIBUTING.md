@@ -1,6 +1,6 @@
-# Contributing to aipix-security-scanner
+# Contributing to Security AI Scanner
 
-Thank you for your interest in contributing to the aipix-security-scanner project. This document provides guidelines for development setup, code style, and the pull request process.
+Thank you for your interest in contributing to the Security AI Scanner project. This document provides guidelines for development setup, code style, and the pull request process.
 
 ## Development Setup
 

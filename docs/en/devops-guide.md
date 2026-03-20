@@ -170,7 +170,7 @@ Build Docker images for both `amd64` and `arm64` architectures using Docker Buil
 ```bash
 # Build for amd64 + arm64, save as OCI archive
 make docker-multiarch
-# Output: aipix-security-scanner-{version}-multiarch.tar
+# Output: Security AI Scanner-{version}-multiarch.tar
 
 # Build and push to a container registry
 make docker-push REGISTRY=your-registry.example.com

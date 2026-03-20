@@ -1,7 +1,7 @@
 VERSION := $(shell python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])" 2>/dev/null || grep -m1 'version' pyproject.toml | cut -d'"' -f2)
-PACKAGE_NAME := aipix-security-scanner-$(VERSION)
+PACKAGE_NAME := security-ai-scanner-$(VERSION)
 REGISTRY ?= localhost
-IMAGE_NAME ?= aipix-security-scanner
+IMAGE_NAME ?= security-ai-scanner
 BACKUP_DIR := backups
 TIMESTAMP := $(shell date +%Y%m%d_%H%M%S)
 
@@ -61,7 +61,7 @@ package: ## Create distributable archive
 clean: ## Remove build artifacts and caches
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name '*.pyc' -delete 2>/dev/null || true
-	rm -f aipix-security-scanner-*.tar.gz
+	rm -f security-ai-scanner-*.tar.gz
 
 docker-multiarch: ## Build multi-arch images (amd64 + arm64)
 	docker buildx create --name multiarch --driver docker-container --use 2>/dev/null || docker buildx use multiarch

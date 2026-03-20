@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide covers migrating aipix-security-scanner to a new server, handing the project to a new team, or setting up a fresh installation.
+This guide covers migrating Security AI Scanner to a new server, handing the project to a new team, or setting up a fresh installation.
 
 **What gets transferred:**
 - SQLite database (scan history, findings, suppressions)

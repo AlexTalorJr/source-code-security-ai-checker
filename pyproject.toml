@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "aipix-security-scanner"
+name = "security-ai-scanner"
 version = "0.1.0"
 description = "AI-powered security vulnerability scanner"
 requires-python = ">=3.12"

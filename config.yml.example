@@ -1,4 +1,4 @@
-# aipix-security-scanner configuration
+# Security AI Scanner configuration
 # Copy to config.yml and customize. Secrets should use env vars instead.
 host: "0.0.0.0"
 port: 8000

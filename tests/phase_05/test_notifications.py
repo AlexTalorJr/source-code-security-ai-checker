@@ -199,7 +199,7 @@ def test_email_notification_html_contains_gate_banner_passed(
     """Rendered email HTML contains 'Quality Gate: PASSED' for passing scan."""
     html = render_email_html(scan_result_passed, None, "http://dash")
     assert "Quality Gate: PASSED" in html
-    assert "aipix-security-scanner" in html
+    assert "Security AI Scanner" in html
     assert "background-color:#0d6efd" in html
     assert "Configure notifications in config.yml" in html
 

@@ -70,7 +70,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(
-        title="aipix-security-scanner",
+        title="Source Code Security AI Scanner",
         version="0.1.0",
         lifespan=lifespan,
     )
