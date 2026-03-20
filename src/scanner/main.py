@@ -18,11 +18,22 @@ def _apply_schema_updates(connection) -> None:
     from sqlalchemy import inspect, text
 
     inspector = inspect(connection)
+    if "scans" not in inspector.get_table_names():
+        return
+
     scans_cols = {c["name"] for c in inspector.get_columns("scans")}
-    if "skip_ai" not in scans_cols:
-        connection.execute(
-            text("ALTER TABLE scans ADD COLUMN skip_ai BOOLEAN NOT NULL DEFAULT 0")
-        )
+
+    migrations = {
+        "ai_cost_usd": "ALTER TABLE scans ADD COLUMN ai_cost_usd FLOAT",
+        "skip_ai": "ALTER TABLE scans ADD COLUMN skip_ai BOOLEAN NOT NULL DEFAULT 0",
+        "scanner_version": "ALTER TABLE scans ADD COLUMN scanner_version VARCHAR(20)",
+        "tool_versions": "ALTER TABLE scans ADD COLUMN tool_versions TEXT",
+        "created_at": "ALTER TABLE scans ADD COLUMN created_at DATETIME DEFAULT (datetime('now'))",
+    }
+
+    for col, sql in migrations.items():
+        if col not in scans_cols:
+            connection.execute(text(sql))
 
 
 @asynccontextmanager
