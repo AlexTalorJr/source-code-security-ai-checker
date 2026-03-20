@@ -29,6 +29,10 @@
 **Goal**: Produce a comprehensive research report on available security scanning tools, their optimal configurations, and recommendations for expanding the scanner — so we can make informed decisions about what to add and how
 **Depends on**: Phase 6 (v1.0 complete)
 **Requirements**: SCAN-01, SCAN-02, SCAN-03, SCAN-04, SCAN-05, SCAN-06, SCAN-07
+**Plans:** 2 plans
+Plans:
+- [ ] 07-01-PLAN.md — Per-language SAST research, SCA comparison, DAST feasibility, secrets scanning
+- [ ] 07-02-PLAN.md — Plugin architecture, SARIF evaluation, orchestration improvements, priority matrix + human review
 **Success Criteria** (what must be TRUE):
   1. Every major language has a researched list of applicable SAST/SCA tools with pros/cons
   2. Configuration best practices documented for reducing false positives per tool
@@ -47,4 +51,4 @@
 | 4. Reports and Quality Gate | v1.0 | 4/4 | Complete | 2026-03-19 |
 | 5. API, Dashboard, CI, and Notifications | v1.0 | 4/4 | Complete | 2026-03-19 |
 | 6. Packaging, Portability, and Documentation | v1.0 | 4/4 | Complete | 2026-03-20 |
-| 7. Security Scanner Ecosystem Research | v2.0 | 0/? | Not started | — |
+| 7. Security Scanner Ecosystem Research | v2.0 | 0/2 | Planning | — |
