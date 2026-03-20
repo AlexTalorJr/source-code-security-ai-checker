@@ -1,20 +1,22 @@
-# DevOps Guide / Руководство по деплою
+# DevOps Guide
 
-## Docker Deployment / Деплой через Docker
+## Docker Deployment
 
-### Quick Start / Быстрый старт
+### Quick Start
 
 ```bash
 cp config.yml.example config.yml
+cp .env.example .env
+# Edit .env with real secrets
 docker compose up -d
 ```
 
 ### Dockerfile
 
 Multi-stage build based on `python:3.12-slim`:
-- Non-root user `scanner` for security / Пользователь `scanner` (не root) для безопасности
-- `curl` installed for health checks / `curl` для проверок состояния
-- Package installed via `pip install .` with hatchling / Пакет установлен через `pip install .`
+- Non-root user `scanner` for security
+- `curl` installed for health checks
+- Package installed via `pip install .` with hatchling build backend
 
 ### docker-compose.yml
 
@@ -44,10 +46,9 @@ volumes:
   scanner_data:  # Named volume for SQLite persistence
 ```
 
-### Environment Variables / Переменные окружения
+### Environment Variables
 
 Pass secrets via `.env` file (not committed to git):
-Передавайте секреты через `.env` файл (не коммитится в git):
 
 ```bash
 # .env
@@ -56,71 +57,83 @@ SCANNER_CLAUDE_API_KEY=sk-ant-...
 SCANNER_PORT=8000
 ```
 
-### Health Checks / Проверки состояния
+### Health Checks
 
 Docker health check runs every 30 seconds:
 
 ```bash
-# Check container health / Проверить здоровье контейнера
+# Check container health
 docker compose ps
 
-# Manual check / Ручная проверка
+# Manual check
 curl http://localhost:8000/api/health
 ```
 
-### Logs / Логи
+### Logs
 
 ```bash
-# Tail logs / Просмотр логов
+# Tail logs
 docker compose logs -f scanner
 
-# Last 100 lines / Последние 100 строк
+# Last 100 lines
 docker compose logs scanner --tail 100
 ```
 
-### Rebuild / Пересборка
+### Rebuild
 
 ```bash
 docker compose down
 docker compose up -d --build
 ```
 
-### Data Persistence / Сохранение данных
+### Data Persistence
 
 SQLite database is stored in a named Docker volume `scanner_data` mounted at `/data`. Data survives container restarts and rebuilds.
 
-БД SQLite хранится в именованном Docker volume `scanner_data`, примонтированном к `/data`. Данные сохраняются при перезапусках и пересборках контейнера.
-
 ```bash
-# Inspect volume / Информация о volume
+# Inspect volume
 docker volume inspect naveksoft-security_scanner_data
 
-# Backup / Резервное копирование
+# Backup
 docker cp naveksoft-security-scanner-1:/data/scanner.db ./backup/scanner.db
 
-# Restore / Восстановление
+# Restore
 docker cp ./backup/scanner.db naveksoft-security-scanner-1:/data/scanner.db
 docker compose restart
 ```
 
-### Port Configuration / Настройка порта
+### Port Configuration
 
 ```bash
-# Change external port / Изменить внешний порт
+# Change external port
 SCANNER_PORT=9000 docker compose up -d
 ```
 
-## Jenkins Integration / Интеграция с Jenkins
+## Jenkins Integration
 
-*(Phase 6 — planned / планируется)*
+The scanner integrates with Jenkins pipelines via a Jenkinsfile stage that triggers a scan and checks the quality gate. Uses the Jenkins `httpRequest` plugin for API calls.
 
-Will be added as a Jenkins pipeline stage that triggers scans and checks the quality gate.
+```groovy
+stage('Security Scan') {
+    steps {
+        script {
+            def response = httpRequest(
+                url: "${SCANNER_URL}/api/scans",
+                httpMode: 'POST',
+                customHeaders: [[name: 'X-API-Key', value: "${SCANNER_API_KEY}"]],
+                contentType: 'APPLICATION_JSON',
+                requestBody: """{"repo_url": "${GIT_URL}", "branch": "${GIT_BRANCH}"}"""
+            )
+            def scanId = readJSON(text: response.content).id
+            // Poll for completion, then check quality gate
+        }
+    }
+}
+```
 
-Будет добавлено как стадия Jenkins pipeline, запускающая сканирование и проверяющая quality gate.
+## Backup Strategy
 
-## Backup Strategy / Стратегия резервного копирования
-
-### Automated Backup Script / Скрипт автоматического бэкапа
+### Automated Backup Script
 
 ```bash
 #!/bin/bash
@@ -139,24 +152,24 @@ cp config.yml "$BACKUP_DIR/"
 echo "Backup saved to $BACKUP_DIR"
 ```
 
-Add to cron / Добавить в cron:
+Add to cron:
 ```bash
 0 2 * * * /path/to/backup-scanner.sh
 ```
 
-## Local Development / Локальная разработка
+## Local Development
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 
-# Run all tests / Запуск всех тестов
+# Run all tests
 python -m pytest tests/ -v
 
-# Run specific phase / Тесты конкретной фазы
+# Run specific phase tests
 python -m pytest tests/phase_01/ -v
 
-# Start dev server / Запуск dev-сервера
+# Start dev server
 SCANNER_DB_PATH=./dev.db uvicorn scanner.main:app --reload
 ```

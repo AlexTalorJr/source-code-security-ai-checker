@@ -1,41 +1,40 @@
 # aipix-security-scanner
 
-**AI-powered security vulnerability scanner for the aipix.ai VSaaS platform.**
+AI-powered security vulnerability scanner for the aipix.ai VSaaS platform.
 
-*Сканер безопасности с ИИ-анализом для платформы aipix.ai VSaaS.*
+## Quick Start
 
----
+Get your first scan running in under 5 minutes.
 
-## Quick Start / Быстрый старт
-
-### Prerequisites / Требования
+### Prerequisites
 
 - Docker & Docker Compose
-- (Optional) Python 3.12+ for local development
+- An Anthropic API key (for AI analysis)
 
-### 5 minutes to first launch / 5 минут до первого запуска
+### Setup
 
 ```bash
-# 1. Clone / Клонировать
+# 1. Clone
 git clone https://github.com/AlexTalorJr/naveksoft-security.git
 cd naveksoft-security
 
-# 2. Configure / Настроить
+# 2. Configure
 cp config.yml.example config.yml
-# Edit config.yml as needed / Отредактируйте config.yml по необходимости
+cp .env.example .env
 
-# 3. Set secrets / Установить секреты
-export SCANNER_API_KEY="your-api-key"
-export SCANNER_CLAUDE_API_KEY="your-claude-key"
+# 3. Set secrets in .env
+#    SCANNER_API_KEY=<your-api-key>
+#    SCANNER_CLAUDE_API_KEY=<your-anthropic-key>
 
-# 4. Launch / Запустить
+# 4. Launch
 docker compose up -d
 
-# 5. Verify / Проверить
+# 5. Verify
 curl http://localhost:8000/api/health
 ```
 
-Expected response / Ожидаемый ответ:
+Expected response:
+
 ```json
 {
   "status": "healthy",
@@ -45,58 +44,68 @@ Expected response / Ожидаемый ответ:
 }
 ```
 
-### Local Development / Локальная разработка
+### Run a Scan
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-
-# Run tests / Запуск тестов
-python -m pytest tests/ -v
-
-# Run specific phase tests / Тесты конкретной фазы
-python -m pytest tests/phase_01/ -v
-
-# Start dev server / Запуск dev-сервера
-uvicorn scanner.main:app --reload
+curl -X POST http://localhost:8000/api/scans \
+  -H "X-API-Key: $SCANNER_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"repo_url": "https://github.com/your-org/your-repo.git", "branch": "main"}'
 ```
 
-## Project Status / Статус проекта
+## Features
+
+- **5 parallel security scanners** -- Semgrep, cppcheck, Gitleaks, Trivy, Checkov
+- **AI-powered analysis** -- Claude reviews findings for context, compound risks, and fix suggestions
+- **Interactive HTML and PDF reports** -- filterable findings with code context and charts
+- **Configurable quality gate** -- block deployments on Critical/High severity findings
+- **REST API with web dashboard** -- scan management, history, suppression controls
+- **Slack and email notifications** -- real-time alerts on scan completion
+- **Jenkins CI integration** -- pipeline stage with quality gate checks
+- **Scan history with delta comparison** -- track new, fixed, and persisting findings
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Architecture](docs/en/architecture.md) | System design, component diagram, data flow |
+| [Database Schema](docs/en/database-schema.md) | SQLite schema, ER diagram, indexes |
+| [API Reference](docs/en/api.md) | REST API endpoints and authentication |
+| [User Guide](docs/en/user-guide.md) | Reports, findings, quality gate, suppressions |
+| [Admin Guide](docs/en/admin-guide.md) | Configuration, environment variables, tuning |
+| [DevOps Guide](docs/en/devops-guide.md) | Docker deployment, Jenkins, backups |
+| [Transfer Guide](docs/en/transfer-guide.md) | Server migration procedures |
+| [Custom Rules](docs/en/custom-rules.md) | Writing Semgrep rules for aipix |
+
+## Project Status
 
 | Phase | Description | Status |
-|-------|------------|--------|
+|-------|-------------|--------|
 | 1 | Foundation & Data Models | Done |
-| 2 | Scanner Adapters & Orchestration | Planned |
-| 3 | AI Analysis (Claude API) | Planned |
-| 4 | Report Generation (HTML/PDF) | Planned |
-| 5 | Dashboard & Quality Gate | Planned |
-| 6 | CI/CD Integration (Jenkins) | Planned |
+| 2 | Scanner Adapters & Orchestration | Done |
+| 3 | AI Analysis (Claude API) | Done |
+| 4 | Report Generation (HTML/PDF) | Done |
+| 5 | Dashboard, Notifications & Quality Gate | Done |
+| 6 | Packaging, Portability & Documentation | In Progress |
 
-## Documentation / Документация
+## Tech Stack
 
-| Document | Description / Описание |
-|----------|----------------------|
-| [Architecture](docs/architecture.md) | System design, data flow / Архитектура, потоки данных |
-| [Database Schema](docs/database-schema.md) | SQLite schema, ER diagram / Схема БД, ER-диаграмма |
-| [API Reference](docs/api.md) | REST API endpoints / Справочник API |
-| [User Guide](docs/user-guide.md) | Reports, findings / Отчёты, результаты |
-| [Admin Guide](docs/admin-guide.md) | Configuration, tuning / Настройка, конфигурация |
-| [DevOps Guide](docs/devops-guide.md) | Docker, Jenkins, backups / Деплой, бэкапы |
-| [Transfer Guide](docs/transfer-guide.md) | Migration to new server / Миграция на новый сервер |
-| [Custom Rules](docs/custom-rules.md) | Writing Semgrep rules / Написание правил Semgrep |
-| [Changelog](CHANGELOG.md) | Version history / История версий |
+- **Python 3.12** -- core language
+- **FastAPI** -- REST API and web dashboard
+- **SQLAlchemy 2.0** -- async ORM with SQLite
+- **SQLite (WAL mode)** -- embedded database
+- **Pydantic v2** -- data validation and settings
+- **Docker** -- containerization
+- **Alembic** -- database migrations
+- **Anthropic Claude** -- AI-powered vulnerability analysis
+- **WeasyPrint** -- PDF report generation
+- **Jinja2** -- HTML templating for reports and dashboard
+- **Typer** -- CLI interface
 
-## Tech Stack / Стек технологий
-
-- **Python 3.12** — core language
-- **FastAPI** — REST API + web dashboard
-- **SQLAlchemy 2.0** — async ORM
-- **SQLite (WAL mode)** — local database
-- **Pydantic v2** — data validation & settings
-- **Docker** — containerization
-- **Alembic** — database migrations
-
-## License / Лицензия
+## License
 
 Apache 2.0
+
+---
+
+Russian documentation: [README.ru.md](README.ru.md)

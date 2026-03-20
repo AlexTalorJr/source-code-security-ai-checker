@@ -1,96 +1,173 @@
-# Architecture / Архитектура
+# Architecture
 
-## Overview / Обзор
+## Overview
 
-aipix-security-scanner is a multi-layer security scanning pipeline. It scans source code for vulnerabilities using static analysis tools, enriches findings with AI analysis, and produces reports with fix suggestions.
+aipix-security-scanner is a multi-layer security scanning pipeline for the aipix.ai VSaaS platform. It scans source code repositories for vulnerabilities using five parallel static analysis tools, enriches findings with AI-powered analysis via Claude, and produces actionable reports with fix suggestions. A configurable quality gate can block deployments when critical issues are found.
 
-aipix-security-scanner — многоуровневый конвейер сканирования безопасности. Сканирует исходный код на уязвимости с помощью инструментов статического анализа, обогащает результаты ИИ-анализом и генерирует отчёты с предложениями по исправлению.
-
-## Component Diagram / Диаграмма компонентов
+## Component Diagram
 
 ```mermaid
 graph TB
     subgraph Docker Container
         API[FastAPI API Server<br/>:8000]
+
         subgraph Core
             CFG[Config System<br/>YAML + Env vars]
             FP[Fingerprint Module<br/>SHA-256 dedup]
+            QUEUE[Scan Queue<br/>asyncio.Queue]
         end
-        subgraph Schemas
-            SEV[Severity Enum<br/>CRITICAL..INFO]
-            FS[FindingSchema]
-            SS[ScanResultSchema]
+
+        subgraph Scanner Orchestrator
+            ORCH[Orchestrator<br/>parallel execution]
+            SEM[Semgrep Adapter]
+            CPP[cppcheck Adapter]
+            GLK[Gitleaks Adapter]
+            TRV[Trivy Adapter]
+            CHK[Checkov Adapter]
         end
+
+        subgraph AI Analysis
+            AI[AI Analyzer<br/>Claude API]
+            CR[Compound Risk<br/>Detection]
+        end
+
+        subgraph Reports
+            HTML[HTML Report<br/>Jinja2 template]
+            PDF[PDF Report<br/>WeasyPrint]
+            CHARTS[Charts<br/>matplotlib]
+        end
+
+        subgraph Quality Gate
+            GATE[Gate Evaluator<br/>severity thresholds]
+        end
+
+        subgraph Dashboard
+            DASH[Web Dashboard<br/>scan history + controls]
+        end
+
+        subgraph Notifications
+            NOTIF[Notification Dispatcher]
+            SLACK[Slack Webhook]
+            EMAIL[Email SMTP]
+        end
+
         subgraph Persistence
-            ORM[SQLAlchemy ORM<br/>Finding, ScanResult]
+            ORM[SQLAlchemy ORM<br/>async sessions]
             DB[(SQLite<br/>WAL mode)]
             ALM[Alembic<br/>Migrations]
         end
+
         API --> CFG
+        API --> QUEUE
+        QUEUE --> ORCH
+        ORCH --> SEM
+        ORCH --> CPP
+        ORCH --> GLK
+        ORCH --> TRV
+        ORCH --> CHK
+        ORCH --> AI
+        AI --> CR
+        ORCH --> GATE
+        ORCH --> HTML
+        ORCH --> PDF
+        HTML --> CHARTS
+        PDF --> CHARTS
+        ORCH --> NOTIF
+        NOTIF --> SLACK
+        NOTIF --> EMAIL
+        API --> DASH
         API --> ORM
         ORM --> DB
-        FS --> SEV
-        ORM --> FS
+        ALM --> DB
     end
 
     User([User / Jenkins]) -->|HTTP| API
-    API -->|GET /api/health| DB
+    CLI([CLI<br/>Typer]) -->|Direct call| ORCH
 
     style Docker Container fill:#f0f4ff,stroke:#3366cc
     style DB fill:#fff3cd,stroke:#ffc107
 ```
 
-## Data Flow / Поток данных
+## Data Flow
+
+The scan lifecycle from API trigger to notification:
 
 ```mermaid
 sequenceDiagram
     participant U as User/Jenkins
     participant API as FastAPI
+    participant Q as Scan Queue
+    participant O as Orchestrator
+    participant S as Scanners (x5)
+    participant AI as AI Analyzer
+    participant G as Quality Gate
+    participant R as Report Generator
+    participant N as Notifications
     participant DB as SQLite
 
-    Note over API: Planned for Phase 2+
     U->>API: POST /api/scans (trigger scan)
     API->>DB: Create ScanResult (status=pending)
-    Note over API: Run scanner tools in parallel
-    API->>DB: Insert Finding records
-    API->>DB: Update ScanResult (status=completed)
+    API->>Q: Enqueue scan job
+    API-->>U: 202 Accepted (scan_id)
+
+    Q->>O: Dequeue and execute
+    O->>DB: Update status=running
+    O->>S: Run 5 tools in parallel (asyncio.gather)
+    S-->>O: Raw findings per tool
+    O->>O: Normalize + fingerprint + deduplicate
+    O->>DB: Insert Finding records
+
+    O->>AI: Send findings batch to Claude
+    AI-->>O: AI analysis + fix suggestions + compound risks
+    O->>DB: Update findings with AI data
+    O->>DB: Insert CompoundRisk records
+
+    O->>G: Evaluate quality gate
+    G-->>O: pass/fail
+    O->>DB: Update gate_passed, counts, status=completed
+
+    O->>R: Generate HTML + PDF reports
+    O->>N: Send Slack/email notifications
+
     U->>API: GET /api/scans/{id}
     API->>DB: Query results
-    API-->>U: ScanResult + Findings
-
-    Note over U,DB: Currently implemented (Phase 1)
-    U->>API: GET /api/health
-    API->>DB: SELECT 1 (probe)
-    API-->>U: {"status": "healthy"}
+    API-->>U: ScanResult + Findings + CompoundRisks
 ```
 
-## Layered Scanning Approach / Многоуровневый подход
+## Technology Choices
 
-| Layer / Уровень | Tools / Инструменты | Time / Время | Status / Статус |
-|-------|-------|------|--------|
-| 1 — Static Analysis | Semgrep, cppcheck, Gitleaks, Trivy, Checkov | 2-4 min | Planned (Phase 2) |
-| 2 — AI Analysis | Claude API (semantic review) | 1-2 min | Planned (Phase 3) |
-| 3 — Reporting | Jinja2 + WeasyPrint (HTML/PDF) | <30s | Planned (Phase 4) |
-| Quality Gate | Severity threshold check | <1s | Planned (Phase 5) |
+| Technology | Purpose | Rationale |
+|-----------|---------|-----------|
+| SQLite (WAL) | Database | Portability -- single file, no external dependencies, concurrent reads |
+| Async SQLAlchemy | ORM | Non-blocking DB operations for FastAPI async handlers |
+| Pydantic v2 | Validation | Strict typing at API boundary, separate from ORM models |
+| FastAPI | API + Dashboard | Async support, auto-generated OpenAPI docs, dependency injection |
+| asyncio.gather | Scanner parallelism | Run 5 tools concurrently without threading overhead |
+| Fingerprinting | Dedup | SHA-256 hash of path+rule+snippet for cross-scan deduplication |
+| WeasyPrint | PDF generation | Pure Python, CSS-based layout for report PDFs |
+| Jinja2 PackageLoader | Templates | Discover templates within installed scanner package |
+| matplotlib (Agg) | Charts | Headless server-side chart rendering as base64 PNG data URIs |
+| Typer | CLI | Subcommand-based CLI for direct scan execution |
 
-## Current State (Phase 1) / Текущее состояние (Фаза 1)
+## Security Model
 
-Implemented / Реализовано:
-- **Config system** — YAML file + environment variable overrides (SCANNER_* prefix)
-- **Pydantic schemas** — FindingSchema, ScanResultSchema, Severity enum
-- **Fingerprint module** — deterministic SHA-256 hashing for finding deduplication
-- **SQLAlchemy ORM** — Finding and ScanResult models with async SQLite/WAL
-- **FastAPI** — application factory with health endpoint (`GET /api/health`)
-- **Alembic** — migration skeleton (tables auto-created on startup for now)
-- **Docker** — single `docker compose up` deployment
+- **API key authentication** -- all scan endpoints require `X-API-Key` header, validated with `secrets.compare_digest` for timing-safe comparison
+- **Non-root Docker user** -- the `scanner` user runs the application inside the container
+- **Secrets via environment** -- API keys and SMTP passwords are never stored in config files; they use `SCANNER_*` environment variables
+- **Read-only config mount** -- `config.yml` is mounted as read-only in Docker
 
-## Key Design Decisions / Ключевые архитектурные решения
+## Configuration
 
-| Decision / Решение | Rationale / Обоснование |
-|---------|-----------|
-| SQLite over PostgreSQL | Portability — single file, no external dependencies / Портативность — один файл, без внешних зависимостей |
-| WAL mode | Allows concurrent reads during writes / Параллельное чтение при записи |
-| Async SQLAlchemy | Non-blocking DB operations for FastAPI / Неблокирующие операции с БД |
-| Pydantic v2 schemas | Validation at API boundary, separate from ORM models / Валидация на границе API, отдельно от ORM |
-| Deterministic fingerprints | Dedup findings across scans by normalizing path+rule+snippet / Дедупликация находок между сканами |
-| Non-root Docker user | Security best practice / Практика безопасности |
+All settings follow a priority chain: constructor arguments > environment variables (`SCANNER_*` prefix) > `.env` file > Docker secrets > `config.yml` (lowest priority).
+
+Key environment variables:
+
+| Variable | Purpose |
+|----------|---------|
+| `SCANNER_API_KEY` | API authentication key |
+| `SCANNER_CLAUDE_API_KEY` | Anthropic API key for AI analysis |
+| `SCANNER_DB_PATH` | SQLite database file path |
+| `SCANNER_PORT` | Server listen port |
+| `SCANNER_CONFIG_PATH` | Path to YAML config file |
+
+See the [Admin Guide](admin-guide.md) for complete configuration reference.

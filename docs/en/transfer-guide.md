@@ -1,124 +1,118 @@
-# Transfer Guide / Руководство по миграции
+# Transfer Guide
 
-## Overview / Обзор
+## Overview
 
 This guide covers migrating aipix-security-scanner to a new server or datacenter. The scanner is fully self-contained in Docker, making transfers straightforward.
 
-Это руководство описывает миграцию aipix-security-scanner на новый сервер или в новый дата-центр. Сканер полностью автономен в Docker, что делает перенос простым.
-
-## Prerequisites on Target Server / Требования к целевому серверу
+## Prerequisites on Target Server
 
 - Docker Engine 20.10+
 - Docker Compose v2+
-- 2 GB RAM minimum / минимум
-- 10 GB disk space / дискового пространства
+- 2 GB RAM minimum
+- 10 GB disk space
 
-## Step-by-Step Migration / Пошаговая миграция
+## Step-by-Step Migration
 
-### Step 1: Backup on Source Server / Шаг 1: Бэкап на исходном сервере
+### Step 1: Backup on Source Server
 
 ```bash
-# On source server / На исходном сервере
+# On source server
 cd /path/to/naveksoft-security
 
 # Stop scanner (ensures clean DB state)
-# Остановите сканер (чистое состояние БД)
 docker compose down
 
-# Create transfer archive / Создать архив для переноса
+# Create transfer archive
 mkdir -p /tmp/scanner-transfer
 cp -r . /tmp/scanner-transfer/source/
 docker cp naveksoft-security-scanner-1:/data/scanner.db /tmp/scanner-transfer/ 2>/dev/null || true
 
 # If scanner was already stopped, extract from volume
-# Если сканер уже остановлен, извлечь из volume
 docker run --rm -v naveksoft-security_scanner_data:/data -v /tmp/scanner-transfer:/backup \
   alpine cp /data/scanner.db /backup/
 
 tar czf /tmp/scanner-transfer.tar.gz -C /tmp scanner-transfer/
 ```
 
-### Step 2: Transfer to Target / Шаг 2: Перенос на целевой сервер
+### Step 2: Transfer to Target
 
 ```bash
-# Copy archive to target server / Скопировать архив на целевой сервер
+# Copy archive to target server
 scp /tmp/scanner-transfer.tar.gz user@target-server:/tmp/
 ```
 
-### Step 3: Deploy on Target / Шаг 3: Деплой на целевом сервере
+### Step 3: Deploy on Target
 
 ```bash
-# On target server / На целевом сервере
+# On target server
 cd /opt  # or preferred location
 tar xzf /tmp/scanner-transfer.tar.gz
 mv scanner-transfer/source naveksoft-security
 cd naveksoft-security
 
-# Restore database / Восстановить базу данных
+# Restore database
 mkdir -p /tmp/scanner-data
 cp /tmp/scanner-transfer/scanner.db /tmp/scanner-data/ 2>/dev/null || true
 
-# Configure / Настроить
+# Configure
 cp config.yml.example config.yml
-# Edit config.yml as needed / Отредактируйте config.yml
+# Edit config.yml as needed
 
-# Set environment / Установить окружение
+# Set environment
 cat > .env << 'EOF'
 SCANNER_API_KEY=your-api-key
 SCANNER_CLAUDE_API_KEY=sk-ant-...
 EOF
 
-# Build and start / Собрать и запустить
+# Build and start
 docker compose up -d --build
 
-# Verify / Проверить
+# Verify
 curl http://localhost:8000/api/health
 ```
 
-### Step 4: Restore Database / Шаг 4: Восстановить БД
+### Step 4: Restore Database
 
 ```bash
 # Copy database into container volume
-# Скопировать БД в volume контейнера
 docker cp /tmp/scanner-data/scanner.db naveksoft-security-scanner-1:/data/scanner.db
 
 # Restart to pick up restored data
-# Перезапустить для подхвата данных
 docker compose restart
 
-# Verify data / Проверить данные
+# Verify data
 curl http://localhost:8000/api/health
 ```
 
-### Step 5: Cleanup Source / Шаг 5: Очистка исходного сервера
+### Step 5: Cleanup Source
 
-After verifying the target works / После проверки работы на целевом сервере:
+After verifying the target works:
 
 ```bash
-# On source server / На исходном сервере
-docker compose down -v  # Removes volumes too / Удаляет и volumes
+# On source server
+docker compose down -v  # Removes volumes too
 rm -rf /tmp/scanner-transfer*
 ```
 
-## Files to Transfer / Файлы для переноса
+## Files to Transfer
 
-| File/Dir | Required | Description / Описание |
-|----------|----------|----------------------|
-| `docker-compose.yml` | Yes | Service definition / Определение сервиса |
-| `Dockerfile` | Yes | Build instructions / Инструкции сборки |
-| `src/` | Yes | Application source / Исходный код |
-| `pyproject.toml` | Yes | Python dependencies / Зависимости |
-| `config.yml` | Yes | Configuration / Конфигурация |
-| `.env` | Yes | Secrets (create new!) / Секреты (создать новый!) |
-| `alembic/` | Yes | Database migrations / Миграции БД |
-| `alembic.ini` | Yes | Alembic config / Конфиг Alembic |
-| `scanner.db` | Optional | Existing scan data / Существующие данные |
-| `tests/` | Optional | Test suite / Тесты |
-| `docs/` | Optional | Documentation / Документация |
+| File/Dir | Required | Description |
+|----------|----------|-------------|
+| `docker-compose.yml` | Yes | Service definition |
+| `Dockerfile` | Yes | Build instructions |
+| `src/` | Yes | Application source |
+| `pyproject.toml` | Yes | Python dependencies |
+| `config.yml` | Yes | Configuration |
+| `.env` | Yes | Secrets (create new!) |
+| `alembic/` | Yes | Database migrations |
+| `alembic.ini` | Yes | Alembic config |
+| `scanner.db` | Optional | Existing scan data |
+| `tests/` | Optional | Test suite |
+| `docs/` | Optional | Documentation |
 
-## Quick Transfer (Git-based) / Быстрый перенос (через Git)
+## Quick Transfer (Git-based)
 
-If the target has internet access / Если на целевом сервере есть интернет:
+If the target has internet access:
 
 ```bash
 git clone https://github.com/AlexTalorJr/naveksoft-security.git
@@ -129,9 +123,8 @@ docker compose up -d
 ```
 
 Database must still be transferred separately.
-Базу данных всё равно нужно перенести отдельно.
 
-## Troubleshooting / Устранение проблем
+## Troubleshooting
 
 | Problem | Solution |
 |---------|----------|

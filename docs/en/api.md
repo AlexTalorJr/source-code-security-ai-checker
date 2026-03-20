@@ -1,4 +1,4 @@
-# API Reference / Справочник API
+# API Reference
 
 ## Base URL
 
@@ -6,18 +6,23 @@
 http://localhost:8000/api
 ```
 
-## Endpoints / Эндпоинты
+## Authentication
 
-### Health Check / Проверка состояния
+All endpoints except health check require an API key in the `X-API-Key` header. The key is validated using timing-safe comparison (`secrets.compare_digest`).
+
+```bash
+curl -H "X-API-Key: your-key" http://localhost:8000/api/scans
+```
+
+## Endpoints
+
+### Health Check
 
 ```
 GET /api/health
 ```
 
-Checks application and database health.
-Проверяет состояние приложения и базы данных.
-
-**Authentication:** None required / Аутентификация не требуется
+Checks application and database health. No authentication required.
 
 **Response 200:**
 
@@ -30,68 +35,117 @@ Checks application and database health.
 }
 ```
 
-**Response fields / Поля ответа:**
+| Field | Type | Description |
+|-------|------|-------------|
+| status | string | `"healthy"` or `"degraded"` |
+| version | string | Scanner version |
+| uptime_seconds | float | Seconds since startup |
+| database | string | `"ok"` or `"error"` |
 
-| Field | Type | Description (EN) | Описание (RU) |
-|-------|------|-------------------|---------------|
-| status | string | `"healthy"` or `"degraded"` | `"healthy"` или `"degraded"` |
-| version | string | Scanner version | Версия сканера |
-| uptime_seconds | float | Seconds since startup | Секунды с момента запуска |
-| database | string | `"ok"` or `"error"` | `"ok"` или `"error"` |
+### Trigger Scan
 
-**Status logic / Логика статуса:**
-- `healthy` — application running, database accessible / приложение работает, БД доступна
-- `degraded` — application running, database unreachable / приложение работает, БД недоступна
-
-**Example / Пример:**
-
-```bash
-curl -s http://localhost:8000/api/health | python3 -m json.tool
+```
+POST /api/scans
 ```
 
----
+Start a new security scan. Returns immediately with scan ID; scan runs asynchronously.
 
-## Planned Endpoints (Phase 2+) / Планируемые эндпоинты (Фаза 2+)
+**Request body:**
 
-These endpoints will be implemented in future phases.
-Эти эндпоинты будут реализованы в следующих фазах.
-
-### Scans / Сканирования
-
-| Method | Endpoint | Description | Phase |
-|--------|----------|-------------|-------|
-| POST | `/api/scans` | Trigger a new scan | 2 |
-| GET | `/api/scans` | List all scans | 2 |
-| GET | `/api/scans/{id}` | Get scan details | 2 |
-| GET | `/api/scans/{id}/findings` | Get findings for a scan | 2 |
-
-### Reports / Отчёты
-
-| Method | Endpoint | Description | Phase |
-|--------|----------|-------------|-------|
-| GET | `/api/scans/{id}/report/html` | Download HTML report | 4 |
-| GET | `/api/scans/{id}/report/pdf` | Download PDF report | 4 |
-
-### Quality Gate / Контроль качества
-
-| Method | Endpoint | Description | Phase |
-|--------|----------|-------------|-------|
-| GET | `/api/scans/{id}/gate` | Get quality gate result | 5 |
-
-## Authentication / Аутентификация
-
-API key authentication will be added in Phase 5.
-Аутентификация по API-ключу будет добавлена в Фазе 5.
-
-```bash
-# Future usage / Будущее использование:
-curl -H "X-API-Key: your-key" http://localhost:8000/api/scans
+```json
+{
+  "repo_url": "https://github.com/org/repo.git",
+  "branch": "main"
+}
 ```
 
-## OpenAPI / Swagger
+**Response 202:**
 
-FastAPI auto-generates OpenAPI documentation:
-FastAPI автоматически генерирует документацию OpenAPI:
+```json
+{
+  "id": 1,
+  "status": "pending",
+  "repo_url": "https://github.com/org/repo.git",
+  "branch": "main"
+}
+```
+
+### List Scans
+
+```
+GET /api/scans
+```
+
+Returns all scans ordered by creation date (newest first).
+
+### Get Scan Details
+
+```
+GET /api/scans/{id}
+```
+
+Returns scan metadata, severity counts, and quality gate result.
+
+### Get Scan Findings
+
+```
+GET /api/scans/{id}/findings
+```
+
+Returns all findings for a scan, including AI analysis and fix suggestions.
+
+### Download HTML Report
+
+```
+GET /api/scans/{id}/report/html
+```
+
+Returns the interactive HTML report for a completed scan.
+
+### Download PDF Report
+
+```
+GET /api/scans/{id}/report/pdf
+```
+
+Returns the PDF report for a completed scan.
+
+### Quality Gate Result
+
+```
+GET /api/scans/{id}/gate
+```
+
+Returns the quality gate evaluation result for a scan.
+
+### Create Suppression
+
+```
+POST /api/suppressions
+```
+
+Mark a finding fingerprint as a false positive.
+
+**Request body:**
+
+```json
+{
+  "fingerprint": "abc123...",
+  "reason": "False positive: test fixture"
+}
+```
+
+### Delete Suppression
+
+```
+DELETE /api/suppressions/{fingerprint}
+```
+
+Remove a suppression to re-enable the finding.
+
+## OpenAPI Documentation
+
+FastAPI auto-generates interactive API documentation:
 
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
