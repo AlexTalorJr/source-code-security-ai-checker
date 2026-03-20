@@ -34,13 +34,13 @@ class SemgrepAdapter(ScannerAdapter):
         cmd = [
             "semgrep",
             "--json",
-            "--config",
-            "p/security-audit",
-            "--config",
-            "p/secrets",
+            "--config", "auto",
+            "--no-git-ignore",
             "--exclude", ".venv",
             "--exclude", "node_modules",
             "--exclude", ".git",
+            "--exclude", "vendor",
+            "--exclude", "storage",
             target_path,
         ]
         if extra_args:

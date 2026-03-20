@@ -56,6 +56,27 @@ class PsalmAdapter(ScannerAdapter):
             return []
 
         has_config = self._has_psalm_config(target_path)
+        tmp_config = None
+
+        if not has_config:
+            # Generate a minimal psalm.xml for basic analysis
+            app_dir = Path(target_path) / "app"
+            src_dir = Path(target_path) / "src"
+            scan_dir = "app" if app_dir.exists() else ("src" if src_dir.exists() else ".")
+
+            import tempfile
+            tmp_config = Path(tempfile.gettempdir()) / "psalm-scanner-tmp.xml"
+            abs_scan_dir = str(Path(target_path) / scan_dir)
+            abs_vendor = str(Path(target_path) / "vendor")
+            tmp_config.write_text(f"""<?xml version="1.0"?>
+<psalm errorLevel="3"
+       xmlns="https://getpsalm.org/schema/config">
+    <projectFiles>
+        <directory name="{abs_scan_dir}" />
+        <ignoreFiles><directory name="{abs_vendor}" /></ignoreFiles>
+    </projectFiles>
+</psalm>
+""")
 
         cmd = [
             "psalm",
@@ -65,11 +86,9 @@ class PsalmAdapter(ScannerAdapter):
         ]
 
         if has_config:
-            # Full taint analysis when psalm.xml exists
             cmd.append("--taint-analysis")
         else:
-            # Basic analysis without config — security-relevant checks only
-            cmd.extend(["--no-config", "--show-info=false"])
+            cmd.extend([f"--config={tmp_config}"])
         if extra_args:
             cmd.extend(extra_args)
 
@@ -78,6 +97,9 @@ class PsalmAdapter(ScannerAdapter):
         except FileNotFoundError:
             logger.warning("Psalm not installed, skipping")
             return []
+        finally:
+            if tmp_config and tmp_config.exists():
+                tmp_config.unlink(missing_ok=True)
 
         if not stdout or not stdout.strip():
             return []
