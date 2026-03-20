@@ -82,12 +82,12 @@
 - [x] **DOC-03**: docs/en/database-schema.md — SQLite schema with Mermaid ER diagram
 - [x] **DOC-04**: docs/en/user-guide.md — how to read reports, interpret findings
 - [x] **DOC-05**: docs/en/admin-guide.md — configuration, thresholds, rule management
-- [ ] **DOC-06**: docs/en/devops-guide.md — deployment, Docker, Jenkins integration, backups
-- [ ] **DOC-07**: docs/en/api.md — REST API reference
-- [ ] **DOC-08**: docs/en/transfer-guide.md — migration to new server, onboarding checklist
+- [x] **DOC-06**: docs/en/devops-guide.md — deployment, Docker, Jenkins integration, backups
+- [x] **DOC-07**: docs/en/api.md — REST API reference
+- [x] **DOC-08**: docs/en/transfer-guide.md — migration to new server, onboarding checklist
 - [x] **DOC-09**: docs/en/custom-rules.md — writing custom Semgrep rules
 - [ ] **DOC-10**: All docs available in Russian (docs/ru/) as separate files
-- [ ] **DOC-11**: CHANGELOG.md, LICENSE (Apache 2.0), CONTRIBUTING.md, .env.example
+- [x] **DOC-11**: CHANGELOG.md, LICENSE (Apache 2.0), CONTRIBUTING.md, .env.example
 
 ## v2 Requirements
 
@@ -172,12 +172,12 @@
 | DOC-03 | Phase 6 | Complete |
 | DOC-04 | Phase 6 | Complete |
 | DOC-05 | Phase 6 | Complete |
-| DOC-06 | Phase 6 | Pending |
-| DOC-07 | Phase 6 | Pending |
-| DOC-08 | Phase 6 | Pending |
+| DOC-06 | Phase 6 | Complete |
+| DOC-07 | Phase 6 | Complete |
+| DOC-08 | Phase 6 | Complete |
 | DOC-09 | Phase 6 | Complete |
 | DOC-10 | Phase 6 | Pending |
-| DOC-11 | Phase 6 | Pending |
+| DOC-11 | Phase 6 | Complete |
 
 **Coverage:**
 - v1 requirements: 54 total

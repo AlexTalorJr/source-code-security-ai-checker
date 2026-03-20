@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 06-02-PLAN.md
-last_updated: "2026-03-20T08:13:46.370Z"
+stopped_at: Completed 06-03-PLAN.md
+last_updated: "2026-03-20T08:19:15.688Z"
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 21
-  completed_plans: 19
+  completed_plans: 20
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 ## Current Position
 
 Phase: 06 (packaging-portability-and-documentation) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Plan: 3 of 4
 | Phase 05 P04 | 3min | 2 tasks | 2 files |
 | Phase 06 P01 | 2min | 2 tasks | 5 files |
 | Phase 06 P02 | 5min | 1 tasks | 10 files |
+| Phase 06 P03 | 4min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,8 @@ Recent decisions affecting current work:
 - [Phase 06]: sqlite3 .backup command for WAL-safe database backup inside container
 - [Phase 06]: VERSION extracted from pyproject.toml via tomllib with grep fallback
 - [Phase 06]: All 8 docs moved to docs/en/ via git mv to preserve history
+- [Phase 06]: API docs follow endpoint-per-section format with curl examples and JSON schemas
+- [Phase 06]: Transfer guide uses make backup/restore targets instead of manual docker cp instructions
 
 ### Pending Todos
 
@@ -125,6 +128,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T08:13:46.363Z
-Stopped at: Completed 06-02-PLAN.md
+Last session: 2026-03-20T08:19:15.682Z
+Stopped at: Completed 06-03-PLAN.md
 Resume file: None
