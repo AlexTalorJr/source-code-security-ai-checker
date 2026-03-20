@@ -28,19 +28,16 @@ Every code change is automatically scanned for security vulnerabilities before d
 - ✓ PHP/Laravel scanners (Psalm, Enlightn, PHP Security Checker) — v1.0
 - ✓ Auto-detect languages and enable scanners accordingly — v1.0
 
-### Active (v2.0)
+### Validated (v2.0)
 
-- [x] Research security scanner ecosystem — tools, configurations, best practices per language — Validated in Phase 7
+- ✓ Research security scanner ecosystem — tools, configurations, best practices per language — v2.0
+
+### Active
+
 - [ ] Scanner plugin architecture — add/configure scanners without code changes
 - [ ] Advanced scanner configuration UI — manage scanner settings from dashboard
 - [ ] DAST (dynamic application security testing) capabilities
 - [ ] Role-based access control (admin, viewer, scanner roles)
-
-## Current Milestone: v2.0 Scanner Ecosystem
-
-**Goal:** Research and improve the security scanning capabilities — discover which tools work best for each language, how to configure them optimally, and how to make scanner management extensible.
-
-**Phase 7 (research) — COMPLETE:** Produced 1416-line scanner ecosystem report covering 9 languages, 13 tools evaluated, 9 recommended across 3 priority tiers. Key outcomes: config-driven plugin registry, optional SARIF helper, incremental scanning pattern. Implementation roadmap: Phase 8 (Tier 1 tools), Phase 9 (SARIF + Tier 2), Phase 10 (incremental + DAST).
 
 ### Out of Scope
 
@@ -48,10 +45,12 @@ Every code change is automatically scanned for security vulnerabilities before d
 - SaaS-hosted scanner — fully self-hosted only
 - Real-time code monitoring — scan-on-demand and CI-triggered only
 - Windows host support — Linux containers only
+- Commercial/paid scanner integration — open-source tools only
 
 ## Context
 
 **v1.0 shipped** — 6 phases, 21 plans, 150 commits, 5400+ LOC Python, 320 tests passing.
+**v2.0 shipped** — 1 phase, 2 plans. Research-only milestone producing scanner ecosystem report with priority-ranked tool recommendations.
 
 **Scanner tech stack:**
 - Python 3.12 (orchestrator, FastAPI, reports)
@@ -66,6 +65,12 @@ Every code change is automatically scanned for security vulnerabilities before d
 - Layer 2: Parallel scanner execution (8 tools)
 - Layer 3: AI enrichment (Claude API) — optional per scan
 - Layer 4: Report generation + quality gate + notifications
+
+**Research outcomes (v2.0):**
+- 9 new tools evaluated, 4 Tier-1 recommended: gosec, Brakeman, Bandit, cargo-audit
+- Config-driven plugin registry architecture recommended
+- SARIF helper pattern for 8/13 tools with native support
+- Incremental scanning feasible for 5 tools (Semgrep, Bandit, gosec, Brakeman, Gitleaks)
 
 ## Constraints
 
@@ -82,12 +87,16 @@ Every code change is automatically scanned for security vulnerabilities before d
 |----------|-----------|---------|
 | FastAPI over Flask | Async support, auto OpenAPI docs | ✓ Confirmed |
 | SQLite over PostgreSQL | Portability — single file, easy backup | ✓ Confirmed |
-| `--config auto` for Semgrep | Covers all languages automatically | ✓ Confirmed v1.2 |
-| Language auto-detection | Scanners enable/disable based on project content | ✓ Confirmed v1.2 |
-| PHP scanners (Psalm, Enlightn, php-security-checker) | Laravel/PHP platform needs dedicated tools | ✓ Confirmed v1.2 |
+| `--config auto` for Semgrep | Covers all languages automatically | ✓ Confirmed v1.0 |
+| Language auto-detection | Scanners enable/disable based on project content | ✓ Confirmed v1.0 |
+| PHP scanners (Psalm, Enlightn, php-security-checker) | Laravel/PHP platform needs dedicated tools | ✓ Confirmed v1.0 |
 | Apache 2.0 license | Enterprise/partner sharing | ✓ Confirmed |
 | Separate bilingual doc files | docs/{en,ru,fr,es,it}/ — clean separation | ✓ Confirmed |
 | Skip AI per scan | Cost control, faster scans when AI not needed | ✓ Confirmed |
+| Config-driven plugin registry | Extends config.yml with adapter_class — no stevedore needed | ✓ Confirmed v2.0 |
+| Keep Semgrep CE, monitor Opengrep | Opengrep fork immature, cross-function taint moved to commercial | ✓ Confirmed v2.0 |
+| Keep Gitleaks over TruffleHog | Speed and simplicity win for CI/CD; TruffleHog as optional complement | ✓ Confirmed v2.0 |
+| Nuclei over ZAP for DAST | CLI-friendly, template-based, 30MB vs 500MB+ | ✓ Confirmed v2.0 |
 
 ---
-*Last updated: 2026-03-20 — Phase 7 complete. Scanner ecosystem research delivered.*
+*Last updated: 2026-03-20 after v2.0 milestone*
