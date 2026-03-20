@@ -13,6 +13,18 @@ from scanner.db.session import create_engine, create_session_factory
 from scanner.models.base import Base
 
 
+def _apply_schema_updates(connection) -> None:
+    """Add missing columns to existing tables (lightweight migration)."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(connection)
+    scans_cols = {c["name"] for c in inspector.get_columns("scans")}
+    if "skip_ai" not in scans_cols:
+        connection.execute(
+            text("ALTER TABLE scans ADD COLUMN skip_ai BOOLEAN NOT NULL DEFAULT 0")
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown logic for the FastAPI application.
@@ -31,9 +43,11 @@ async def lifespan(app: FastAPI):
     settings = ScannerSettings()
     engine = create_engine(settings.db_path)
 
-    # Create tables (Phase 1 only; alembic migrations in later phases)
+    # Create tables and apply schema migrations
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Add columns that may be missing in existing databases
+        await conn.run_sync(_apply_schema_updates)
 
     app.state.engine = engine
     app.state.session_factory = create_session_factory(engine)
