@@ -22,6 +22,10 @@
 2. [SCA (Software Composition Analysis) Tools](#sca-software-composition-analysis-tools)
 3. [DAST (Dynamic Application Security Testing) Feasibility](#dast-dynamic-application-security-testing-feasibility)
 4. [Secrets Scanning Comparison](#secrets-scanning-comparison)
+5. [SARIF Evaluation](#sarif-evaluation)
+6. [Plugin Architecture Patterns](#plugin-architecture-patterns)
+7. [Orchestration Improvements](#orchestration-improvements)
+8. [Final Priority Matrix and Recommendations](#final-priority-matrix-and-recommendations)
 
 ---
 
@@ -1096,3 +1100,317 @@ scanners:
 **Verdict:** Keep Gitleaks as the primary secrets scanner. Its speed, simplicity, and offline operation make it ideal for CI/CD integration where fast feedback is critical. TruffleHog's credential verification is valuable -- it can confirm whether a detected secret is actually live and exploitable -- but it adds network dependency and slower execution. TruffleHog is best used as an optional complement for periodic deep security audits rather than on every scan.
 
 **Note on AGPL-3.0:** TruffleHog's AGPL license may have implications for some deployment models. Gitleaks' MIT license is more permissive.
+
+---
+
+## SARIF Evaluation
+
+SARIF (Static Analysis Results Interchange Format) is an OASIS standard (v2.1.0) for representing static analysis tool output as structured JSON. Adopting SARIF as an intermediate format could reduce per-adapter parsing boilerplate for tools that support it. This section assesses SARIF support across all 13 tools evaluated in this report.
+
+### SARIF Support Matrix
+
+| Tool | SARIF Support | Flag/Method | Notes |
+|------|:------------:|-------------|-------|
+| Semgrep/Opengrep | Yes | `--sarif` | Native support, well-formed output |
+| gosec | Yes | `-fmt=sarif` | Native support since early versions |
+| Bandit | Yes | `-f sarif` | Native support |
+| Brakeman | Yes | `-f sarif` | Native support |
+| SpotBugs | Yes | `-sarif` | Native since SpotBugs 4.5.0 |
+| security-code-scan | Yes | `--export=report.sarif` | SARIF is the primary/native output format |
+| Trivy | Yes | `--format sarif` | Native support |
+| Grype | Yes | `-o sarif` | Native support |
+| cargo-audit | **No** | -- | JSON only; would need custom JSON parsing |
+| Cppcheck | **No** | -- | XML only; current adapter already handles XML |
+| eslint-plugin-security | **No** | -- | ESLint JSON format (custom); SARIF requires separate ESLint formatter adapter |
+| Gitleaks | **No** | -- | Custom JSON format; not SARIF-compatible |
+| Checkov | **No** | -- | Custom JSON format |
+
+**Summary:** 8 of 13 tools support SARIF natively. 5 tools require custom parsing regardless.
+
+### SARIF Schema Overview
+
+SARIF v2.1.0 results map cleanly to the existing `FindingSchema`:
+
+| SARIF Field | FindingSchema Field | Mapping |
+|-------------|-------------------|---------|
+| `results[].ruleId` | `rule_id` | Direct mapping |
+| `results[].level` | `severity` | `error` -> HIGH, `warning` -> MEDIUM, `note` -> LOW |
+| `results[].locations[].physicalLocation.artifactLocation.uri` | `file_path` | Normalize via `_normalize_path()` |
+| `results[].locations[].physicalLocation.region.startLine` | `line_start` | Direct mapping |
+| `results[].locations[].physicalLocation.region.endLine` | `line_end` | Direct mapping (if present) |
+| `results[].locations[].physicalLocation.region.snippet.text` | `snippet` | Direct mapping |
+| `results[].message.text` | `title` / `description` | Split or use as description |
+| `tool.driver.rules[].shortDescription.text` | `title` | Rule-level metadata |
+
+### Recommendation
+
+**Introduce an optional SARIF parsing path alongside existing JSON parsing.**
+
+- Create a shared `parse_sarif()` helper function that converts SARIF `results[]` into `FindingSchema` objects
+- SARIF-capable tools can use this helper to reduce per-adapter boilerplate -- instead of writing custom JSON parsing logic, the adapter calls `parse_sarif(sarif_json, tool_name)` and gets back a list of `FindingSchema`
+- Non-SARIF tools (cargo-audit, Cppcheck, Gitleaks, Checkov) keep their existing custom parsers
+- The helper is optional -- existing adapters (Semgrep, Trivy) can continue using their current JSON parsers if preferred
+- New adapters for SARIF-capable tools (gosec, Bandit, Brakeman, Grype, security-code-scan) should prefer the SARIF path to minimize parsing code
+
+**Effort estimate:** M -- the shared helper itself is straightforward (SARIF is well-documented JSON with a known schema), but retrofitting existing adapters is optional and can be done incrementally.
+
+**Note:** The `sarif-tools` pip package exists for SARIF manipulation, but direct JSON parsing via the standard library is sufficient. SARIF is just JSON with a defined schema -- no external library needed.
+
+---
+
+## Plugin Architecture Patterns
+
+The scanner currently uses a hard-coded `ALL_ADAPTERS` list in `src/scanner/adapters/__init__.py` to register available adapters. Adding a new scanner requires modifying this file and importing the adapter class. This section evaluates plugin architecture patterns to make scanner registration more extensible.
+
+### Current Architecture
+
+```python
+# src/scanner/adapters/__init__.py (current)
+ALL_ADAPTERS = [
+    SemgrepAdapter, CppcheckAdapter, GitleaksAdapter,
+    TrivyAdapter, CheckovAdapter, PsalmAdapter,
+    EnlightnAdapter, PhpSecurityCheckerAdapter,
+]
+```
+
+Adding a new scanner currently requires:
+1. Creating a Python file in `src/scanner/adapters/`
+2. Importing the adapter class in `__init__.py`
+3. Adding it to the `ALL_ADAPTERS` list
+4. Adding a `ScannerToolConfig` field to `ScannersConfig` in `config.py`
+5. Adding a `SCANNER_LANGUAGES` entry in `language_detect.py`
+
+### Pattern Comparison
+
+| Approach | Mechanism | Pros | Cons | Fit for This Project |
+|----------|-----------|------|------|---------------------|
+| **stevedore** | setuptools entry_points with namespace isolation | Battle-tested (OpenStack), lazy loading, namespace isolation, plugin groups | Extra dependency, overkill for <20 plugins, setuptools-centric | Overkill |
+| **importlib entry_points** | Python stdlib `importlib.metadata.entry_points()` (3.9+) | No extra dependencies, standard Python pattern, widely understood | Less helper infrastructure than stevedore, requires packaging/setup | Good but not best fit |
+| **Config-driven registry** | YAML config maps tool names to adapter class paths | Simplest approach, matches existing `config.yml` pattern, no dynamic discovery overhead, explicit | No auto-discovery, requires config entry per scanner | **Best fit** |
+| **Directory scanning** | Auto-discover adapter classes in `adapters/` folder | Zero config for new adapters, convention-over-configuration | Implicit behavior, harder to control ordering, harder to disable | Acceptable |
+
+### Recommendation: Config-Driven Registry
+
+**The config-driven registry pattern is the best fit for this project.** Justification:
+
+1. **Matches existing patterns:** The project already uses `config.yml` for scanner enablement (`scanners.{name}.enabled/timeout/extra_args`). Extending this to include the adapter class path is a natural evolution.
+
+2. **Explicit over implicit:** Every scanner is declared in config -- no surprises from auto-discovery.
+
+3. **No new dependencies:** Unlike stevedore, no additional package needed.
+
+4. **Simple workflow for adding new scanners:**
+   - Step 1: Create a Python file in `src/scanner/adapters/` implementing `ScannerAdapter`
+   - Step 2: Add an entry in `config.yml` with `adapter_class`, `enabled`, `timeout`, `extra_args`
+   - Step 3: Add a language mapping in `SCANNER_LANGUAGES` (in `language_detect.py`)
+
+5. **Project scale is right:** With fewer than 20 scanners (currently 8, planning to add 4-5 more), the overhead of stevedore or entry_points is not justified.
+
+### Extended Config Example
+
+```yaml
+scanners:
+  # Existing scanners (backward-compatible -- adapter_class is optional for built-in adapters)
+  semgrep:
+    enabled: true
+    timeout: 180
+    extra_args: ["--exclude", ".venv", "--exclude", "node_modules"]
+
+  # New scanner with explicit adapter class path
+  gosec:
+    adapter_class: "scanner.adapters.gosec.GosecAdapter"
+    enabled: "auto"
+    timeout: 120
+    extra_args: ["-exclude=G101"]
+
+  brakeman:
+    adapter_class: "scanner.adapters.brakeman.BrakemanAdapter"
+    enabled: "auto"
+    timeout: 120
+    extra_args: ["--no-exit-on-warn"]
+
+  bandit:
+    adapter_class: "scanner.adapters.bandit.BanditAdapter"
+    enabled: "auto"
+    timeout: 120
+    extra_args: ["-ll", "--exclude", ".venv"]
+
+  cargo_audit:
+    adapter_class: "scanner.adapters.cargo_audit.CargoAuditAdapter"
+    enabled: "auto"
+    timeout: 60
+    extra_args: []
+```
+
+### Migration Path
+
+The config-driven registry can coexist with the current hard-coded `ALL_ADAPTERS` list during transition:
+
+1. **Phase 1:** Add `adapter_class` field to `ScannerToolConfig` (optional, defaults to `None`)
+2. **Phase 2:** Modify `orchestrator.py` to dynamically import adapters from config when `adapter_class` is specified, falling back to `ALL_ADAPTERS` for built-in scanners
+3. **Phase 3:** Gradually move existing adapters to config-driven registration
+4. **Phase 4:** Remove `ALL_ADAPTERS` hard-coded list once all adapters are config-driven
+
+### Implementation Sketch
+
+```python
+# In ScannersConfig or orchestrator.py
+import importlib
+
+def load_adapter(tool_name: str, adapter_class_path: str) -> ScannerAdapter:
+    """Dynamically load an adapter class from its dotted path."""
+    module_path, class_name = adapter_class_path.rsplit(".", 1)
+    module = importlib.import_module(module_path)
+    adapter_cls = getattr(module, class_name)
+    return adapter_cls()
+```
+
+This is approximately 5 lines of code for the core loading mechanism. The orchestrator would check if `adapter_class` is specified in the scanner config and use dynamic loading; otherwise, fall back to the `ALL_ADAPTERS` registry.
+
+---
+
+## Orchestration Improvements
+
+The current orchestrator (`src/scanner/core/orchestrator.py`) provides a solid foundation with `asyncio.gather`-based parallel execution, fingerprint-based deduplication, and AI enrichment. This section evaluates potential improvements.
+
+### Parallel Execution
+
+**Status: Already implemented. No changes needed.**
+
+The orchestrator runs all enabled adapters concurrently via `asyncio.gather`:
+
+```python
+# Current pattern in orchestrator.py
+tasks = [_run_adapter(adapter, target_path, ...) for adapter in enabled_adapters]
+results = await asyncio.gather(*tasks)
+```
+
+Each adapter runs its CLI tool as an async subprocess, so all scanners execute in parallel. Error isolation is handled per-adapter -- if one scanner fails, others continue. This pattern is well-suited for the current scale (8 adapters) and will scale to 12-15 adapters without modification.
+
+### Incremental Scanning (Changed-Files-Only)
+
+**Concept:** In CI/CD pipelines, scanning only changed files (from a git diff) provides faster feedback on pull requests. Instead of scanning the entire project directory, the orchestrator passes a list of changed files to each scanner.
+
+**Tools that support file-list input (can do incremental scanning):**
+
+| Tool | How to Pass File List | Notes |
+|------|----------------------|-------|
+| Semgrep | `--include` flag with file patterns | Can target specific files |
+| Bandit | Pass individual files as positional args | Accepts file paths directly |
+| gosec | Pass specific package paths as args | Targets Go packages, not individual files |
+| Brakeman | `--only-files` flag | Accepts comma-separated file paths |
+| Gitleaks | `--no-git` with specific directory/file paths | Can target specific paths |
+
+**Tools that require full project context (cannot safely do incremental scanning):**
+
+| Tool | Reason | Risk of Incremental |
+|------|--------|-------------------|
+| SpotBugs | Needs compiled bytecode of full project | Missing class dependencies cause false negatives |
+| Trivy | Needs complete lockfiles for dependency resolution | Lockfiles are project-level, not file-level |
+| Checkov | Needs full IaC context for relationship analysis | Missing related resources cause false negatives |
+| cargo-audit | Needs `Cargo.lock` (project-level) | Lockfile is project-level, not file-level |
+| Cppcheck | Benefits from full project context for cross-file analysis | May miss cross-file issues, but can work on single files |
+
+**Recommendation:** Implement opt-in incremental mode in the orchestrator.
+
+- The orchestrator accepts an optional `changed_files: list[str]` parameter
+- For tools that support file-list input, pass only the changed files
+- For tools that need full project context, fall back to full scan automatically
+- This is opt-in -- callers that do not provide `changed_files` get the current full-scan behavior
+
+**Effort estimate:** M -- the orchestrator change is straightforward, but each adapter needs a way to accept file lists, and testing across all tools takes time.
+
+### Deduplication Improvements
+
+**Current state:** Fingerprint-based deduplication (`file_path + rule_id + snippet`). This works well for same-tool duplicates.
+
+**Challenge:** When multiple tools scan the same codebase, they may report the same underlying vulnerability with different `rule_id` values. For example:
+- Semgrep reports a SQL injection as `python.sqlalchemy.security.audit.raw-query.raw-query`
+- Bandit reports the same SQL injection as `B608` (hardcoded_sql_expressions)
+- Both point to the same file and line, but have different fingerprints
+
+**Recommendation:** Add a cross-tool deduplication layer that groups findings by `(file_path, line_range, vulnerability_class)`. This would:
+
+1. Map tool-specific rule IDs to a normalized vulnerability class (e.g., "sql-injection", "xss", "command-injection")
+2. Group findings by file path and overlapping line ranges
+3. Within each group, keep the finding with the highest severity and most detailed analysis
+4. Mark deduplicated findings as "also detected by: [tool1, tool2]"
+
+**Effort estimate:** M -- the grouping logic is straightforward, but building the rule-to-vulnerability-class mapping requires cataloging rules from each tool.
+
+**Recommendation:** Defer cross-tool deduplication to the implementation phase. The current fingerprint-based deduplication handles same-tool duplicates well. Cross-tool deduplication is a refinement that becomes more valuable as more scanners are added.
+
+---
+
+## Final Priority Matrix and Recommendations
+
+This section consolidates all per-language and cross-cutting recommendations into a priority-ranked implementation plan.
+
+### Tier 1 -- High Value, Low Effort (Implement First)
+
+These tools fill significant coverage gaps, have clean JSON/SARIF output, small Docker footprints, and straightforward adapter implementation.
+
+| Priority | Tool | Type | Language | Effort | Docker Size | SARIF | Justification |
+|:--------:|------|------|----------|:------:|:-----------:|:-----:|---------------|
+| 1 | gosec | SAST | Go | S | ~15MB | Yes | Clean JSON/SARIF, single binary, fills major Go gap, 70+ security checks |
+| 2 | Brakeman | SAST | Ruby | S | ~5MB + Ruby | Yes | Clean JSON/SARIF, zero-config Rails scanning, 33 vulnerability types |
+| 3 | Bandit | SAST | Python | S | ~5MB | Yes | Complements Semgrep with 47 Python-specific checks, pip install, SARIF support |
+| 4 | cargo-audit | SCA | Rust | S | ~10MB | No | Simple JSON output, fills Rust SCA gap, RustSec advisory database |
+
+### Tier 2 -- Medium Value, Medium Effort
+
+These tools add valuable capabilities but come with heavier dependencies or different integration paradigms.
+
+| Priority | Tool | Type | Language | Effort | Docker Size | SARIF | Justification |
+|:--------:|------|------|----------|:------:|:-----------:|:-----:|---------------|
+| 5 | Grype | SCA | All | S | ~30MB | Yes | Superior risk scoring (EPSS + KEV) over Trivy, complements existing SCA |
+| 6 | security-code-scan | SAST | C# | M | ~200MB (.NET SDK) | Yes | SARIF-native output, deep Roslyn-based C# analysis, but heavy SDK dependency |
+| 7 | Nuclei | DAST | Web apps | M | ~30MB | Yes | Template-based, CLI-friendly, 11,000+ templates, but requires running target app |
+
+### Tier 3 -- High Value but High Effort
+
+These tools provide the deepest analysis in their domain but come with significant integration challenges.
+
+| Priority | Tool | Type | Language | Effort | Docker Size | SARIF | Justification |
+|:--------:|------|------|----------|:------:|:-----------:|:-----:|---------------|
+| 8 | SpotBugs + FindSecBugs | SAST | Java | L | ~200MB+ (JVM) | Yes | Deepest Java security analysis (144 vuln types), but requires JVM + compiled bytecode |
+| 9 | ZAP | DAST | Web apps | L | ~500MB+ (JVM) | Via plugins | Most comprehensive open-source DAST, but massive footprint and complex setup |
+
+### Not Recommended
+
+| Tool | Reason |
+|------|--------|
+| eslint-plugin-security | Only 14 rules vs Semgrep's 100+ JS/TS rules; Node.js runtime adds ~100MB for marginal value |
+| OWASP Dependency-Check | Higher false positive rate than Trivy/Grype (CPE matching); JVM dependency; XML-only reliable output |
+| Nikto | Server-level only; Nuclei covers same checks plus CVEs, panels, and far more |
+| TruffleHog (as Gitleaks replacement) | Gitleaks is faster and simpler for CI/CD; TruffleHog's verification is valuable but adds network dependency and AGPL license concern. Keep Gitleaks as primary. |
+
+### Architecture Recommendations Summary
+
+| Area | Recommendation | Effort | Details |
+|------|---------------|:------:|---------|
+| **Plugin system** | Config-driven registry | M | Extend `config.yml` with `adapter_class` field; no new dependencies |
+| **SARIF parsing** | Optional `parse_sarif()` helper | M | Shared helper for SARIF-capable tools; non-SARIF tools keep custom parsers |
+| **Incremental scanning** | Opt-in changed-files mode | M | Orchestrator accepts `changed_files` list; tools that need full context fall back automatically |
+| **Opengrep** | Monitor, do not switch | -- | Semgrep CE works well; Opengrep is a drop-in replacement if cross-function taint becomes critical |
+| **Cross-tool dedup** | Defer to implementation phase | M | Normalize rule IDs to vulnerability classes; group by (file, line, class) |
+
+### Suggested Implementation Order
+
+| Phase | Scope | Tools/Features |
+|:-----:|-------|---------------|
+| **Phase 8** | Tier 1 tools + plugin registry | gosec, Brakeman, Bandit, cargo-audit adapters + config-driven plugin registry pattern |
+| **Phase 9** | SARIF helper + Tier 2 tools | `parse_sarif()` shared helper + Grype adapter + security-code-scan adapter |
+| **Phase 10** | Incremental scanning + DAST exploration | Orchestrator incremental mode + Nuclei adapter (if DAST is approved) |
+| **Future** | Tier 3 (if demand justifies) | SpotBugs + FindSecBugs (only if Java coverage demand justifies JVM dependency) |
+
+### Total Effort Estimate
+
+- **Tier 1 (4 tools):** 4x S = approximately 2 phases of work
+- **Plugin registry:** M = included in Phase 8
+- **SARIF helper:** M = included in Phase 9
+- **Tier 2 (3 tools):** S + M + M = approximately 1-2 phases
+- **Incremental scanning:** M = included in Phase 10
+- **Tier 3 (2 tools):** L + L = significant effort, deferred
+
+The Tier 1 tools and plugin registry should be the immediate next focus after this research phase closes, as they deliver the highest value-to-effort ratio.
