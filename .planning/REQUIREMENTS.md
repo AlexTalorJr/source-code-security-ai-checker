@@ -11,9 +11,9 @@
 - [x] **SCAN-02**: Research SCA (Software Composition Analysis) tools for dependency vulnerability detection
 - [x] **SCAN-03**: Research DAST tools applicable to web applications and APIs
 - [x] **SCAN-04**: Evaluate scanner configuration best practices — optimal rulesets, severity tuning, false positive reduction
-- [ ] **SCAN-05**: Research scanner plugin/adapter patterns — how to add new scanners without code changes
+- [x] **SCAN-05**: Research scanner plugin/adapter patterns — how to add new scanners without code changes
 - [x] **SCAN-06**: Document integration requirements per tool (installation, CLI interface, output format, licensing)
-- [ ] **SCAN-07**: Produce actionable recommendations with priority ranking
+- [x] **SCAN-07**: Produce actionable recommendations with priority ranking
 
 ## Future Requirements
 
@@ -42,9 +42,9 @@
 | SCAN-02 | Phase 7 | Complete |
 | SCAN-03 | Phase 7 | Complete |
 | SCAN-04 | Phase 7 | Complete |
-| SCAN-05 | Phase 7 | Pending |
+| SCAN-05 | Phase 7 | Complete |
 | SCAN-06 | Phase 7 | Complete |
-| SCAN-07 | Phase 7 | Pending |
+| SCAN-07 | Phase 7 | Complete |
 
 **Coverage:**
 - v2.0 requirements: 7 total
