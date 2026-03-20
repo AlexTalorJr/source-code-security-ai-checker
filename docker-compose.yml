@@ -6,6 +6,7 @@ services:
     volumes:
       - scanner_data:/data
       - ./config.yml:/app/config.yml:ro
+      - /home:/home:ro  # Mount host /home for local path scanning
     environment:
       - SCANNER_DB_PATH=/data/scanner.db
       - SCANNER_API_KEY=${SCANNER_API_KEY:-}
