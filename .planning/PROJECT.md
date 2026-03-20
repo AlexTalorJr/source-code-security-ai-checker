@@ -1,113 +1,87 @@
-# aipix-security-scanner
+# Source Code Security AI Scanner
 
 ## What This Is
 
-An automated security scanning pipeline for the aipix.ai VSaaS (Video Surveillance as a Service) platform. It scans source code of release and pre-release branches for security vulnerabilities using a multi-layer approach — static analysis, secrets detection, infrastructure scanning, and AI-powered semantic analysis — then generates detailed HTML/PDF reports with fix suggestions and blocks deployment on Critical/High findings. Fully self-contained and portable via Docker, designed to be transferred to other teams and partners with minimal setup effort.
+A multi-language security scanning platform that analyzes source code using 8 parallel scanners with AI-powered analysis. Auto-detects project languages (Python, PHP/Laravel, C/C++, JavaScript, Go, Rust, Java, C#, Ruby) and enables relevant scanners. Generates HTML/PDF reports with fix suggestions, blocks deployments via configurable quality gate, and integrates with Jenkins CI + Slack/email notifications. Fully self-contained via Docker.
 
 ## Core Value
 
-Every release branch is automatically scanned for security vulnerabilities before deployment, and no code with Critical or High severity findings reaches production.
+Every code change is automatically scanned for security vulnerabilities before deployment, with AI-powered context analysis to reduce false positives and prioritize real risks.
 
 ## Requirements
 
-### Validated
+### Validated (v1.0)
 
-- [x] Full Docker containerization with single docker-compose up — *Validated in Phase 01: Foundation and Data Models*
-- [x] SQLite local scan history database — *Validated in Phase 01: Foundation and Data Models (async SQLite/WAL)*
-- [x] Health check endpoint — *Validated in Phase 01: Foundation and Data Models*
+- ✓ Multi-tool security scanning (8 scanners with auto-detection) — v1.0
+- ✓ AI-powered semantic analysis via Claude API — v1.0
+- ✓ HTML interactive + PDF formal reports with delta comparison — v1.0
+- ✓ Configurable quality gate (block on Critical/High) — v1.0
+- ✓ FastAPI REST API + live web dashboard — v1.0
+- ✓ Jenkins CI integration as pipeline stage — v1.0
+- ✓ Slack and email notifications with scan identification — v1.0
+- ✓ Full Docker containerization with all scanner tools — v1.0
+- ✓ Multi-arch support (x86_64, ARM64) — v1.0
+- ✓ Bilingual documentation (EN, RU, FR, ES, IT) — v1.0
+- ✓ Backup/restore, packaging, migration tooling — v1.0
+- ✓ Skip AI option per scan (API + dashboard) — v1.0
+- ✓ Copy AI Prompt from scan results — v1.0
+- ✓ PHP/Laravel scanners (Psalm, Enlightn, PHP Security Checker) — v1.0
+- ✓ Auto-detect languages and enable scanners accordingly — v1.0
 
-### Active
+### Active (v2.0)
 
-- [x] Multi-tool security scanning (Semgrep, Gitleaks, Trivy, Checkov, cppcheck) — *Validated in Phase 02: Scanner Adapters and Orchestration*
-- [x] AI-powered semantic analysis via Claude API (business logic, authorization, fix suggestions) — *Validated in Phase 03: AI Analysis*
-- [x] HTML interactive reports with code diffs and fix examples — *Validated in Phase 04: Reports and Quality Gate*
-- [x] PDF formal reports for management and telecom operators — *Validated in Phase 04: Reports and Quality Gate*
-- [x] Quality Gate — block Jenkins builds on Critical/High findings — *Validated in Phase 04: Reports and Quality Gate (configurable severity thresholds via GateConfig)*
-- [x] FastAPI REST API for triggering scans and fetching reports — *Validated in Phase 05: API and Dashboard*
-- [x] Live web dashboard with scan history and release comparison — *Validated in Phase 05: API and Dashboard*
-- [x] Jenkins pipeline integration as a stage — *Validated in Phase 05: CI/CD and Notifications*
-- [x] Configurable Slack and email notifications on findings — *Validated in Phase 05: CI/CD and Notifications*
-- [x] Full Docker containerization with single docker-compose up
-- [x] SQLite local scan history database
-- [x] Custom Semgrep rules for aipix platform (RTSP auth, VMS API, webhooks) — *Validated in Phase 05: Custom Rules*
-- [x] Dual-mode scan input — local path (Jenkins) or repo URL (API-triggered) — *Validated in Phase 02: git clone module*
-- [x] Multi-arch support (Linux x86_64, ARM64) — *Validated in Phase 06: Makefile docker-multiarch target*
-- [x] Bilingual documentation suite (Russian/English, separate files) — *Validated in Phase 06: docs/en/ + docs/ru/*
-- [x] Portability — migration scripts, backup/restore, packaging — *Validated in Phase 06: Makefile backup/restore/package targets*
-- [x] Health check endpoint
-- [x] API key authentication for API/dashboard access — *Validated in Phase 05: API Key Auth*
+- [ ] Scanner plugin architecture — add/configure scanners without code changes
+- [ ] Advanced scanner configuration UI — manage scanner settings from dashboard
+- [ ] Research and integrate additional security tools per language
+- [ ] DAST (dynamic application security testing) capabilities
+- [ ] Role-based access control (admin, viewer, scanner roles)
 
 ### Out of Scope
 
 - PostgreSQL/MySQL support — SQLite only for portability
 - SaaS-hosted scanner — fully self-hosted only
 - Real-time code monitoring — scan-on-demand and CI-triggered only
-- DAST (dynamic application security testing) — static analysis only for v1
-- Mobile app scanning (Flutter/Dart analysis) — deferred, focus on server-side first
-- Windows host support — Linux containers only (Docker Desktop not targeted)
+- Windows host support — Linux containers only
 
 ## Context
 
-**Platform being scanned:**
-- PHP/Laravel — VMS (Video Management System), REST API, user portal
-- C++ — Mediaserver (RTSP/RTP/HLS/ONVIF streaming server)
-- C# — Windows desktop client
-- Flutter — mobile apps (iOS/Android)
-- Kubernetes + Helm, Docker Compose — infrastructure
-- MinIO S3, InfluxDB, Prometheus — supporting services
-
-**Key security concerns for this platform:**
-- Unauthorized RTSP stream access (camera feed theft)
-- API token exposure and hardcoded secrets in configs
-- Broken authorization in VMS multi-tenant user portal
-- Webhook endpoint validation (no signature verification)
-- Kubernetes misconfigurations (exposed services, weak RBAC)
-- C++ Mediaserver memory safety (buffer overflows, format strings)
-- Insecure direct object references on video archive endpoints
+**v1.0 shipped** — 6 phases, 21 plans, 150 commits, 5400+ LOC Python, 320 tests passing.
 
 **Scanner tech stack:**
-- Python 3.11+ (orchestrator, report generator, FastAPI web server)
-- Semgrep (static analysis — PHP, C#, C++)
-- cppcheck (dedicated C++ static analysis for Mediaserver)
-- Gitleaks (secrets detection in code and git history)
-- Trivy (Docker images, K8s manifests, CVE scanning)
-- Checkov (IaC — Helm charts, docker-compose)
-- Claude API claude-sonnet-4-6 (AI semantic analysis)
+- Python 3.12 (orchestrator, FastAPI, reports)
+- 8 scanners: Semgrep, cppcheck, Gitleaks, Trivy, Checkov, Psalm, Enlightn, PHP Security Checker
+- Claude API (AI semantic analysis)
 - Jinja2 + WeasyPrint (HTML/PDF reports)
-- FastAPI (REST API + live dashboard)
-- SQLite (local scan history)
-- Jenkins + Bitbucket (CI/CD integration)
-- Docker + docker-compose (full containerization)
+- SQLite/WAL (scan history)
+- Docker + docker-compose (containerization)
 
-**Architecture — layered scanning approach:**
-- Layer 1 (parallel): Semgrep + cppcheck + Gitleaks + Trivy + Checkov — 2-4 min
-- Layer 2: Claude AI analysis on aggregated findings — semantic business logic review
-- Layer 3: Report generation (HTML, PDF) + notifications
-- Quality Gate: final pass/fail decision based on severity thresholds
+**Architecture — layered scanning:**
+- Layer 1: Language auto-detection → enable relevant scanners
+- Layer 2: Parallel scanner execution (8 tools)
+- Layer 3: AI enrichment (Claude API) — optional per scan
+- Layer 4: Report generation + quality gate + notifications
 
 ## Constraints
 
-- **CI time**: Must not slow down Jenkins CI more than 10 minutes total
-- **AI cost**: Claude API cost target under $5 per release scan
-- **Database**: SQLite only — no external DB dependencies
-- **Secrets**: All secrets via environment variables, never in committed config files
-- **Dependencies**: No SaaS dependencies — runs entirely on self-hosted infrastructure
-- **Portability**: Single docker-compose up to start entire stack
+- **CI time**: Under 10 minutes total scan time
+- **AI cost**: Claude API target under $5 per scan
+- **Database**: SQLite only — no external DB
+- **Secrets**: All secrets via environment variables
+- **Portability**: Single docker-compose up
 - **License**: Apache 2.0
-- **Auth**: API key-based authentication for REST API and dashboard
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| FastAPI over Flask | Async support, auto OpenAPI docs, modern Python — fits REST API + dashboard well | Confirmed — Phase 01 |
-| cppcheck alongside Semgrep for C++ | Semgrep has limited C++ support; cppcheck provides proper static analysis for Mediaserver | Confirmed — Phase 02 |
-| SQLite over PostgreSQL | Simplifies portability — single file, no external DB, easy backup/transfer | Confirmed — Phase 01 |
-| Dual-mode scan input (path + URL) | Local path for Jenkins pipeline, repo URL for API-triggered standalone scans | Confirmed — Phase 02 |
-| Separate bilingual doc files | docs/en/ + docs/ru/ — clean separation, easier maintenance | Confirmed — Phase 06 |
-| Apache 2.0 license | Patent protection, explicit contributor terms — better for enterprise/partner sharing | Confirmed — Phase 06 |
-| API key auth | Simple shared secret in env var — appropriate for internal tool, Jenkins passes in headers | Confirmed — Phase 05 |
-| Configurable notifications | Slack and email both optional via config.yml toggles — teams choose what fits | Confirmed — Phase 05 |
+| FastAPI over Flask | Async support, auto OpenAPI docs | ✓ Confirmed |
+| SQLite over PostgreSQL | Portability — single file, easy backup | ✓ Confirmed |
+| `--config auto` for Semgrep | Covers all languages automatically | ✓ Confirmed v1.2 |
+| Language auto-detection | Scanners enable/disable based on project content | ✓ Confirmed v1.2 |
+| PHP scanners (Psalm, Enlightn, php-security-checker) | Laravel/PHP platform needs dedicated tools | ✓ Confirmed v1.2 |
+| Apache 2.0 license | Enterprise/partner sharing | ✓ Confirmed |
+| Separate bilingual doc files | docs/{en,ru,fr,es,it}/ — clean separation | ✓ Confirmed |
+| Skip AI per scan | Cost control, faster scans when AI not needed | ✓ Confirmed |
 
 ---
-*Last updated: 2026-03-20 — Phase 06 complete: All 6 phases delivered. Makefile automation, multi-arch Docker, bilingual docs (en/ru), Apache 2.0 license, complete packaging for team transfer.*
+*Last updated: 2026-03-20 — v1.0 milestone complete. 6 phases, 21 plans, 8 scanners, 5 languages documentation.*
