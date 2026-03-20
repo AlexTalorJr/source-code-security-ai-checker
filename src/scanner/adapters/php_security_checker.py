@@ -1,9 +1,12 @@
 """PHP Security Checker adapter -- CVE detection in composer dependencies."""
 
 import json
+import logging
 from pathlib import Path
 
 from scanner.adapters.base import ScannerAdapter
+
+logger = logging.getLogger(__name__)
 from scanner.core.fingerprint import compute_fingerprint
 from scanner.schemas.finding import FindingSchema
 from scanner.schemas.severity import Severity
@@ -43,7 +46,11 @@ class PhpSecurityCheckerAdapter(ScannerAdapter):
         if extra_args:
             cmd.extend(extra_args)
 
-        stdout, stderr, returncode = await self._execute(cmd, timeout)
+        try:
+            stdout, stderr, returncode = await self._execute(cmd, timeout)
+        except FileNotFoundError:
+            logger.warning("local-php-security-checker not installed, skipping")
+            return []
 
         if not stdout or not stdout.strip():
             return []

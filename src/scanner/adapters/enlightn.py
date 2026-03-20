@@ -1,9 +1,14 @@
 """Enlightn scanner adapter -- Laravel-specific security checks."""
 
+import asyncio
 import json
+import logging
 from pathlib import Path
 
 from scanner.adapters.base import ScannerAdapter
+from scanner.core.exceptions import ScannerTimeoutError
+
+logger = logging.getLogger(__name__)
 from scanner.core.fingerprint import compute_fingerprint
 from scanner.schemas.finding import FindingSchema
 from scanner.schemas.severity import Severity
@@ -49,9 +54,15 @@ class EnlightnAdapter(ScannerAdapter):
         if not self._is_laravel_project(target_path):
             return []
 
+        # Check that enlightn package is installed in the project
+        vendor_enlightn = Path(target_path) / "vendor" / "enlightn" / "enlightn"
+        if not vendor_enlightn.exists():
+            logger.info("Enlightn skipped: package not installed in %s", target_path)
+            return []
+
         cmd = [
             "php",
-            "artisan",
+            str(Path(target_path) / "artisan"),
             "enlightn",
             "--json",
             "--no-interaction",
@@ -59,7 +70,25 @@ class EnlightnAdapter(ScannerAdapter):
         if extra_args:
             cmd.extend(extra_args)
 
-        stdout, stderr, returncode = await self._execute(cmd, timeout)
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=target_path,
+            )
+            stdout_bytes, stderr_bytes = await asyncio.wait_for(
+                proc.communicate(), timeout=timeout
+            )
+            stdout = stdout_bytes.decode()
+            stderr = stderr_bytes.decode()
+            returncode = proc.returncode
+        except asyncio.TimeoutError:
+            logger.warning("Enlightn timed out after %ds", timeout)
+            return []
+        except FileNotFoundError:
+            logger.warning("PHP not installed, skipping Enlightn")
+            return []
 
         if not stdout or not stdout.strip():
             return []

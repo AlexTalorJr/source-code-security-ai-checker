@@ -1,6 +1,7 @@
 """Psalm scanner adapter -- taint analysis for PHP/Laravel projects."""
 
 import json
+import logging
 from pathlib import Path
 
 from scanner.adapters.base import ScannerAdapter
@@ -8,12 +9,15 @@ from scanner.core.fingerprint import compute_fingerprint
 from scanner.schemas.finding import FindingSchema
 from scanner.schemas.severity import Severity
 
+logger = logging.getLogger(__name__)
+
 PSALM_SEVERITY_MAP: dict[str, Severity] = {
     "error": Severity.HIGH,
     "info": Severity.MEDIUM,
 }
 
 _PHP_EXTENSIONS = frozenset({".php"})
+_SKIP_DIRS = frozenset({".venv", "venv", "node_modules", ".git", "vendor"})
 
 
 class PsalmAdapter(ScannerAdapter):
@@ -29,13 +33,18 @@ class PsalmAdapter(ScannerAdapter):
     @staticmethod
     def _has_php_files(target_path: str) -> bool:
         """Check whether the target directory contains PHP files."""
-        skip_dirs = {".venv", "venv", "node_modules", ".git", "vendor"}
         for p in Path(target_path).rglob("*"):
-            if any(part in skip_dirs for part in p.parts):
+            if any(part in _SKIP_DIRS for part in p.parts):
                 continue
             if p.suffix in _PHP_EXTENSIONS:
                 return True
         return False
+
+    @staticmethod
+    def _has_psalm_config(target_path: str) -> bool:
+        """Check if psalm.xml or psalm.xml.dist exists."""
+        root = Path(target_path)
+        return (root / "psalm.xml").exists() or (root / "psalm.xml.dist").exists()
 
     async def run(
         self,
@@ -46,19 +55,27 @@ class PsalmAdapter(ScannerAdapter):
         if not self._has_php_files(target_path):
             return []
 
+        # Psalm requires a config file for taint analysis
+        if not self._has_psalm_config(target_path):
+            logger.info("Psalm skipped: no psalm.xml in %s", target_path)
+            return []
+
         cmd = [
             "psalm",
             "--output-format=json",
             "--taint-analysis",
             "--no-cache",
-            target_path,
+            f"--root={target_path}",
         ]
         if extra_args:
             cmd.extend(extra_args)
 
-        stdout, stderr, returncode = await self._execute(cmd, timeout)
+        try:
+            stdout, stderr, returncode = await self._execute(cmd, timeout)
+        except FileNotFoundError:
+            logger.warning("Psalm not installed, skipping")
+            return []
 
-        # Psalm exit code 1 = issues found, 2 = error
         if not stdout or not stdout.strip():
             return []
 
