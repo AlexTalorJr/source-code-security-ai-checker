@@ -161,7 +161,8 @@ Consultare la [Guida DevOps](docs/it/devops-guide.md) per i dettagli completi su
 
 ## Funzionalità
 
-- **5 scanner di sicurezza in parallelo** -- Semgrep, cppcheck, Gitleaks, Trivy, Checkov
+- **8 scanner di sicurezza con rilevamento automatico** -- gli scanner vengono attivati automaticamente in base ai linguaggi del progetto
+- **Supporto multi-linguaggio** -- Python, PHP/Laravel, C/C++, JavaScript/TypeScript, Go, Rust, Java, C#, Ruby
 - **Analisi basata su AI** -- Claude esamina i risultati per contesto, rischi composti e suggerimenti di correzione
 - **Report interattivi HTML e PDF** -- risultati filtrabili con contesto del codice e grafici
 - **Quality gate configurabile** -- blocco del deployment in caso di risultati Critical/High
@@ -171,6 +172,21 @@ Consultare la [Guida DevOps](docs/it/devops-guide.md) per i dettagli completi su
 - **Integrazione CI con Jenkins** -- stage pipeline con controlli quality gate
 - **Cronologia scansioni con confronto delta** -- tracciamento di risultati nuovi, risolti e persistenti
 - **Skip AI per scansione** -- esecuzione senza API Claude quando la velocità o il costo sono prioritari
+
+## Scanner Supportati
+
+Gli scanner vengono attivati automaticamente in base ai linguaggi rilevati (`enabled: auto`). È possibile sovrascrivere la configurazione per ogni scanner in `config.yml`.
+
+| Scanner | Linguaggi | Cosa rileva |
+|---------|-----------|-------------|
+| **Semgrep** | Python, PHP, JS/TS, Go, Java, Ruby, C#, Rust | SAST — injection, problemi di autenticazione, pattern non sicuri |
+| **cppcheck** | C/C++ | Sicurezza della memoria, buffer overflow, comportamento indefinito |
+| **Gitleaks** | Qualsiasi | Segreti hardcoded, chiavi API, token nel codice e nella cronologia git |
+| **Trivy** | Docker, Terraform, K8s | CVE nelle immagini container e configurazioni errate IaC |
+| **Checkov** | Docker, Terraform, CI configs | Best practice di sicurezza per Infrastructure-as-code |
+| **Psalm** | PHP | Taint analysis — SQL injection, XSS tramite tracciamento del flusso di dati |
+| **Enlightn** | Laravel | CSRF, mass assignment, modalità debug, .env esposto (oltre 120 controlli) |
+| **PHP Security Checker** | PHP (composer) | CVE noti nelle dipendenze composer |
 
 ## Documentazione
 

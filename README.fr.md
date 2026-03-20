@@ -161,7 +161,8 @@ Consultez le [Guide DevOps](docs/fr/devops-guide.md) pour les détails complets 
 
 ## Fonctionnalités
 
-- **5 scanners de sécurité parallèles** -- Semgrep, cppcheck, Gitleaks, Trivy, Checkov
+- **8 scanners de sécurité avec détection automatique** -- les scanners sont activés automatiquement selon les langages du projet
+- **Support multi-langages** -- Python, PHP/Laravel, C/C++, JavaScript/TypeScript, Go, Rust, Java, C#, Ruby
 - **Analyse alimentée par l'IA** -- Claude examine les résultats pour le contexte, les risques composés et les suggestions de correction
 - **Rapports HTML et PDF interactifs** -- résultats filtrables avec contexte de code et graphiques
 - **Quality gate configurable** -- blocage des déploiements sur les résultats de sévérité Critical/High
@@ -171,6 +172,21 @@ Consultez le [Guide DevOps](docs/fr/devops-guide.md) pour les détails complets 
 - **Intégration CI Jenkins** -- étape de pipeline avec vérification de la quality gate
 - **Historique des scans avec comparaison delta** -- suivi des nouveaux résultats, des résultats corrigés et persistants
 - **Skip AI par scan** -- exécution sans API Claude quand la vitesse ou le coût l'exige
+
+## Scanners supportés
+
+Les scanners sont activés automatiquement selon les langages détectés (`enabled: auto`). Il est possible de les remplacer individuellement dans `config.yml`.
+
+| Scanner | Langages | Ce qu'il détecte |
+|---------|----------|-----------------|
+| **Semgrep** | Python, PHP, JS/TS, Go, Java, Ruby, C#, Rust | SAST — injections, problèmes d'authentification, patterns non sécurisés |
+| **cppcheck** | C/C++ | Sécurité mémoire, débordements de tampon, comportement indéfini |
+| **Gitleaks** | Tous | Secrets codés en dur, clés API, tokens dans le code et l'historique git |
+| **Trivy** | Docker, Terraform, K8s | CVE dans les images de conteneurs et erreurs de configuration IaC |
+| **Checkov** | Docker, Terraform, CI configs | Bonnes pratiques de sécurité Infrastructure-as-code |
+| **Psalm** | PHP | Analyse de contamination — injection SQL, XSS via suivi du flux de données |
+| **Enlightn** | Laravel | CSRF, mass assignment, mode debug, .env exposé (plus de 120 vérifications) |
+| **PHP Security Checker** | PHP (composer) | CVE connues dans les dépendances composer |
 
 ## Documentation
 

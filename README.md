@@ -161,7 +161,8 @@ See [DevOps Guide](docs/en/devops-guide.md) for full Jenkins integration details
 
 ## Features
 
-- **5 parallel security scanners** -- Semgrep, cppcheck, Gitleaks, Trivy, Checkov
+- **8 security scanners with auto-detection** -- scanners are enabled automatically based on project languages
+- **Multi-language support** -- Python, PHP/Laravel, C/C++, JavaScript/TypeScript, Go, Rust, Java, C#, Ruby
 - **AI-powered analysis** -- Claude reviews findings for context, compound risks, and fix suggestions
 - **Interactive HTML and PDF reports** -- filterable findings with code context and charts
 - **Configurable quality gate** -- block deployments on Critical/High severity findings
@@ -171,6 +172,21 @@ See [DevOps Guide](docs/en/devops-guide.md) for full Jenkins integration details
 - **Jenkins CI integration** -- pipeline stage with quality gate checks
 - **Scan history with delta comparison** -- track new, fixed, and persisting findings
 - **Skip AI per scan** -- run without Claude API when speed or cost matters
+
+## Supported Scanners
+
+Scanners are enabled automatically based on detected languages (`enabled: auto`). Override per scanner in `config.yml`.
+
+| Scanner | Languages | What it finds |
+|---------|-----------|---------------|
+| **Semgrep** | Python, PHP, JS/TS, Go, Java, Ruby, C#, Rust | SAST — injection, auth issues, insecure patterns |
+| **cppcheck** | C/C++ | Memory safety, buffer overflows, undefined behavior |
+| **Gitleaks** | Any | Hardcoded secrets, API keys, tokens in code and git history |
+| **Trivy** | Docker, Terraform, K8s | CVEs in container images and IaC misconfigurations |
+| **Checkov** | Docker, Terraform, CI configs | Infrastructure-as-code security best practices |
+| **Psalm** | PHP | Taint analysis — SQL injection, XSS via data flow tracking |
+| **Enlightn** | Laravel | CSRF, mass assignment, debug mode, exposed .env (120+ checks) |
+| **PHP Security Checker** | PHP (composer) | Known CVEs in composer dependencies |
 
 ## Documentation
 
