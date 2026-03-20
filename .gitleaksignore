@@ -1,0 +1,7 @@
+# Test fixtures and planning docs — contain fake/example API keys, not real secrets
+tests/phase_05/test_dashboard_auth.py
+tests/phase_05/conftest.py
+tests/phase_03/conftest.py
+tests/phase_02/fixtures/semgrep_output.json
+tests/phase_02/fixtures/gitleaks_output.json
+.planning/

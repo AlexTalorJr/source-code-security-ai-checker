@@ -19,6 +19,7 @@ dependencies = [
     "jinja2>=3.1.6",
     "weasyprint>=68.0",
     "matplotlib>=3.10.0",
+    "defusedxml>=0.7.1",
 ]
 
 [project.optional-dependencies]

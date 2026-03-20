@@ -1,6 +1,6 @@
 """cppcheck scanner adapter -- parses XML v2 output into FindingSchema."""
 
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 from pathlib import Path
 
 from scanner.adapters.base import ScannerAdapter

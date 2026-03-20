@@ -1,0 +1,42 @@
+# aipix-security-scanner configuration
+# Copy to config.yml and customize. Secrets should use env vars instead.
+host: "0.0.0.0"
+port: 8000
+db_path: "/data/scanner.db"
+api_key: ""  # Set via SCANNER_API_KEY env var
+claude_api_key: ""  # Set via SCANNER_CLAUDE_API_KEY env var
+slack_webhook_url: ""  # Set via SCANNER_SLACK_WEBHOOK_URL env var
+email_smtp_host: ""
+log_level: "info"
+scan_timeout: 600
+notifications:                                                                                                                                                                                       
+  slack:                                                                                                                                                                                             
+    enabled: true
+gate:
+      fail_on:
+              - high
+ai:
+    max_cost_per_scan: 1.0
+ai:                                                                                                                                                                                                  
+      min_severity: "high"
+scanners:
+  semgrep:
+    enabled: true
+    timeout: 180
+    extra_args: ["--exclude", ".venv", "--exclude", "node_modules"]
+  cppcheck:
+    enabled: true
+    timeout: 120
+    extra_args: ["-i.venv", "-inode_modules"]
+  gitleaks:
+    enabled: true
+    timeout: 120
+    extra_args: []
+  trivy:
+    enabled: true
+    timeout: 120
+    extra_args: []
+  checkov:
+    enabled: true
+    timeout: 120
+    extra_args: ["--skip-path", ".venv", "--skip-path", "node_modules"]
