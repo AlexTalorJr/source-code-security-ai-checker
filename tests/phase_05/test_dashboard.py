@@ -84,7 +84,7 @@ class TestDetailPage:
 
     @pytest.mark.asyncio
     async def test_detail_running_scan_has_refresh(self, test_env):
-        """Running scan page includes meta refresh tag."""
+        """Running scan page includes JS polling for auto-refresh."""
         async for client, app in _dashboard_client(test_env):
             async with app.state.session_factory() as session:
                 scan_id = await seed_scan(session, status="running")
@@ -92,7 +92,7 @@ class TestDetailPage:
 
             resp = await client.get(f"/dashboard/scans/{scan_id}")
             assert resp.status_code == 200
-            assert 'http-equiv="refresh"' in resp.text
+            assert "setInterval(poll" in resp.text
 
 
 class TestTrendsPage:

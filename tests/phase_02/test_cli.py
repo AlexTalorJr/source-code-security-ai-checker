@@ -139,6 +139,7 @@ def test_scan_shows_delta_line(mock_run_scan, _mock_html, _mock_pdf):
 @patch("scanner.cli.main.generate_pdf_report", return_value="/tmp/r.pdf")
 @patch("scanner.cli.main.generate_html_report", return_value="/tmp/r.html")
 @patch("scanner.cli.main.run_scan", new_callable=AsyncMock)
+@patch.dict("os.environ", {"SCANNER_CONFIG_PATH": "/nonexistent.yml"})
 def test_scan_shows_gate_fail_reasons(mock_run_scan, _mock_html, _mock_pdf):
     """Gate fail reasons displayed when gate fails."""
     from scanner.schemas.finding import FindingSchema

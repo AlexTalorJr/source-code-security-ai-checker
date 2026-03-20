@@ -142,7 +142,7 @@ class TestAiFixSuggestion:
         assert "new()" in html
 
     def test_no_ai_fix(self, tmp_path, sample_scan_result):
-        """Finding without ai_fix_suggestion shows unavailable message."""
+        """Finding without ai_fix_suggestion omits AI section."""
         finding = FindingSchema(
             fingerprint="test_nofix_fp",
             tool="trivy",
@@ -160,7 +160,9 @@ class TestAiFixSuggestion:
         out = tmp_path / "report.html"
         generate_html_report(data, str(out))
         html = out.read_text()
-        assert "AI analysis not available for this finding." in html
+        # AI sections should not appear as rendered content (only in CSS comments)
+        assert ">AI Fix Suggestion</div>" not in html
+        assert ">AI Analysis</div>" not in html
 
 
 class TestMetadata:

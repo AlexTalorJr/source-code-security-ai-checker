@@ -15,10 +15,25 @@ def _render_template(data: ReportData) -> str:
     from scanner.reports.charts import generate_severity_pie_chart, generate_tool_bar_chart
     from scanner.schemas.severity import Severity
 
+    import html as html_mod
+    import re
+    from markupsafe import Markup
+
     env = Environment(
         loader=PackageLoader("scanner.reports", "templates"),
         autoescape=select_autoescape(["html"]),
     )
+
+    def _format_ai_text_pdf(text):
+        if not text:
+            return ""
+        text = html_mod.escape(text)
+        text = re.sub(r'\((\d+)\)\s*', r'<br/><strong>\1.</strong> ', text)
+        text = re.sub(r'\n{2,}', '<br/><br/>', text)
+        text = text.replace('\n', '<br/>')
+        return Markup(text)
+
+    env.filters["ai_format"] = _format_ai_text_pdf
     template = env.get_template("report_pdf.html.j2")
     scan = data.scan_result
 
@@ -46,6 +61,13 @@ def _render_template(data: ReportData) -> str:
         )
     scan_date = scan.completed_at.strftime("%Y-%m-%d %H:%M") if scan.completed_at else datetime.utcnow().strftime("%Y-%m-%d %H:%M")
 
+    ai_analyses = {
+        f.fingerprint: f.ai_analysis
+        for f in data.findings
+        if f.ai_analysis
+    }
+    parsed_fixes = {}
+
     return template.render(
         scan=scan,
         findings=sorted_findings,
@@ -59,6 +81,8 @@ def _render_template(data: ReportData) -> str:
         executive_summary=executive_summary,
         scan_date=scan_date,
         target=target,
+        ai_analyses=ai_analyses,
+        parsed_fixes=parsed_fixes,
     )
 
 
