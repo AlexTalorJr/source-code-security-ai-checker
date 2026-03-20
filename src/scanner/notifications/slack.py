@@ -28,6 +28,10 @@ async def send_slack_notification(
         emoji = "\u2705" if gate_passed else "\u274c"
         gate_text = "PASSED" if gate_passed else "FAILED"
 
+        # Build target identifier
+        target = scan_result.repo_url or scan_result.target_path or "unknown"
+        branch = scan_result.branch or "local"
+
         duration = (
             f"{scan_result.duration_seconds:.0f}s"
             if scan_result.duration_seconds is not None
@@ -39,17 +43,24 @@ async def send_slack_notification(
                 "type": "header",
                 "text": {
                     "type": "plain_text",
-                    "text": f"{emoji} Security Scan {gate_text}",
+                    "text": f"{emoji} Security Scan #{scan_result.id} {gate_text}",
+                },
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Target:* `{target}`\n*Branch:* {branch}",
                 },
             },
             {
                 "type": "section",
                 "fields": [
+                    {"type": "mrkdwn", "text": f"*Duration:* {duration}"},
                     {
                         "type": "mrkdwn",
-                        "text": f"*Branch:* {scan_result.branch or 'local'}",
+                        "text": f"*Findings:* {scan_result.total_findings}",
                     },
-                    {"type": "mrkdwn", "text": f"*Duration:* {duration}"},
                     {
                         "type": "mrkdwn",
                         "text": f"*Critical:* {scan_result.critical_count}",

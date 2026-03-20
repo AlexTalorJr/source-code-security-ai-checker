@@ -83,9 +83,14 @@ async def test_slack_notification_includes_severity_fields(
         )
 
     payload = mock_post.call_args[1]["json"]
-    section = payload["blocks"][1]
-    assert section["type"] == "section"
-    field_texts = [f["text"] for f in section["fields"]]
+    # Block[1] is target info, block[2] is severity fields
+    target_section = payload["blocks"][1]
+    assert target_section["type"] == "section"
+    assert "Target:" in target_section["text"]["text"]
+
+    fields_section = payload["blocks"][2]
+    assert fields_section["type"] == "section"
+    field_texts = [f["text"] for f in fields_section["fields"]]
     assert any("*Critical:* 1" in t for t in field_texts)
     assert any("*High:* 2" in t for t in field_texts)
     assert any("*Medium:* 3" in t for t in field_texts)

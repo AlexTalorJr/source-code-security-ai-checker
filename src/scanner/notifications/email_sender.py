@@ -77,10 +77,12 @@ async def send_email_notification(
     """
     try:
         branch = scan_result.branch or "local"
+        target = scan_result.repo_url or scan_result.target_path or "unknown"
+        scan_label = f"#{scan_result.id} {target} ({branch})"
         if scan_result.gate_passed:
-            subject = f"Security Scan Passed -- {branch}"
+            subject = f"Security Scan Passed -- {scan_label}"
         else:
-            subject = f"SECURITY SCAN FAILED -- {branch}"
+            subject = f"SECURITY SCAN FAILED -- {scan_label}"
 
         html_body = render_email_html(scan_result, delta, dashboard_url)
 

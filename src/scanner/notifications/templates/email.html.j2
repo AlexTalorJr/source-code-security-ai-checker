@@ -33,9 +33,19 @@
           </tr>
           {% endif %}
 
+          <!-- Target info -->
+          <tr>
+            <td style="padding:16px 24px 4px 24px;">
+              <span style="font-size:14px; font-weight:600; color:#212529;">Scan #{{ scan_result.id }}</span>
+              <div style="font-size:13px; color:#495057; margin-top:4px; word-break:break-all;">
+                {{ scan_result.repo_url or scan_result.target_path or 'unknown' }}
+              </div>
+            </td>
+          </tr>
+
           <!-- Metadata row -->
           <tr>
-            <td style="padding:16px 24px 8px 24px;">
+            <td style="padding:4px 24px 8px 24px;">
               <span style="font-size:12px; color:#6c757d;">
                 Branch: {{ scan_result.branch or 'local' }}
                 {% if scan_result.commit_hash %} &middot; Commit: {{ scan_result.commit_hash[:8] }}{% endif %}
