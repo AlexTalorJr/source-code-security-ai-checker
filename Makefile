@@ -22,7 +22,7 @@ stop: ## Stop scanner
 	docker compose down
 
 test: ## Run test suite
-	python3 -m pytest tests/ -v
+	@if [ -f .venv/bin/pytest ]; then .venv/bin/pytest tests/ -v; elif python3 -c "import pytest" 2>/dev/null; then python3 -m pytest tests/ -v; else docker compose exec scanner python -m pytest tests/ -v; fi
 
 migrate: ## Run database migrations
 	docker compose exec scanner alembic upgrade head
