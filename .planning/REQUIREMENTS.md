@@ -3,53 +3,74 @@
 **Defined:** 2026-03-20
 **Core Value:** Every code change is automatically scanned for security vulnerabilities before deployment
 
-## v2.0 Requirements
+## v1.0.1 Requirements
 
-### Scanner Research
+### Plugin Architecture
 
-- [x] **SCAN-01**: Research available SAST tools per language (Python, PHP, JS/TS, Go, Rust, Java, C#, C/C++, Ruby)
-- [x] **SCAN-02**: Research SCA (Software Composition Analysis) tools for dependency vulnerability detection
-- [x] **SCAN-03**: Research DAST tools applicable to web applications and APIs
-- [x] **SCAN-04**: Evaluate scanner configuration best practices — optimal rulesets, severity tuning, false positive reduction
-- [x] **SCAN-05**: Research scanner plugin/adapter patterns — how to add new scanners without code changes
-- [x] **SCAN-06**: Document integration requirements per tool (installation, CLI interface, output format, licensing)
-- [x] **SCAN-07**: Produce actionable recommendations with priority ranking
+- [ ] **PLUG-01**: Scanner adapters can be registered via config.yml `adapter_class` field without code changes
+- [ ] **PLUG-02**: Existing hard-coded ALL_ADAPTERS list migrated to config-driven registration
+- [ ] **PLUG-03**: Config validation warns on missing or invalid adapter_class references
+- [ ] **PLUG-04**: SCANNER_LANGUAGES mapping extended for new scanner→language associations
+
+### Scanner Integration
+
+- [ ] **SCAN-01**: gosec adapter scans Go source code and produces FindingSchema-compatible results
+- [ ] **SCAN-02**: Bandit adapter scans Python source code and produces FindingSchema-compatible results
+- [ ] **SCAN-03**: Brakeman adapter scans Ruby/Rails applications and produces FindingSchema-compatible results
+- [ ] **SCAN-04**: cargo-audit adapter scans Rust dependencies via Cargo.lock and produces FindingSchema-compatible results
+
+### Infrastructure
+
+- [ ] **INFRA-01**: Docker image includes gosec, Bandit, Brakeman, and cargo-audit binaries
+- [ ] **INFRA-02**: Multi-arch build (x86_64, ARM64) works with new scanner binaries
+
+### Documentation
+
+- [ ] **DOCS-01**: Bilingual documentation updated with new scanners and plugin architecture (EN, RU, FR, ES, IT)
 
 ## Future Requirements
 
-### Scanner Architecture
-- **ARCH-01**: Plugin-based scanner registration (add scanners via config, not code)
-- **ARCH-02**: Scanner configuration management from web dashboard
-- **ARCH-03**: Per-scanner ruleset customization and severity mapping
+### SARIF & Tier 2 (v1.0.2)
+- **SARIF-01**: Shared parse_sarif() helper for SARIF-capable tools
+- **SCAN-05**: Grype adapter for SCA with EPSS+KEV risk scoring
+- **SCAN-06**: security-code-scan adapter for C# SAST
 
-### Platform
-- **PLAT-01**: Role-based access control (admin, viewer, scanner roles)
-- **PLAT-02**: DAST scanning capabilities for web applications
+### Incremental & DAST (v1.0.3)
+- **INCR-01**: Opt-in incremental scanning for tools supporting file-list input
+- **DAST-01**: Nuclei adapter for template-based DAST scanning
+- **DEDUP-01**: Cross-tool deduplication layer
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Commercial/paid scanner integration | Focus on open-source tools only |
-| Custom scanner development | Research existing tools, not build new ones |
-| Scanner performance benchmarking | Focus on capability, not speed comparisons |
+| Commercial/paid scanner integration | Open-source tools only |
+| SpotBugs (Java) | Requires JVM + compiled .class files — high effort, defer |
+| ZAP (DAST) | 500MB+ footprint, Nuclei preferred — defer to v1.0.3+ |
+| eslint-plugin-security | Only 14 rules, Semgrep covers JS/TS better |
+| OWASP Dependency-Check | Higher false positives than Trivy/Grype, XML-only |
+| TruffleHog (as Gitleaks replacement) | Gitleaks faster/simpler for CI/CD |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCAN-01 | Phase 7 | Complete |
-| SCAN-02 | Phase 7 | Complete |
-| SCAN-03 | Phase 7 | Complete |
-| SCAN-04 | Phase 7 | Complete |
-| SCAN-05 | Phase 7 | Complete |
-| SCAN-06 | Phase 7 | Complete |
-| SCAN-07 | Phase 7 | Complete |
+| PLUG-01 | — | Pending |
+| PLUG-02 | — | Pending |
+| PLUG-03 | — | Pending |
+| PLUG-04 | — | Pending |
+| SCAN-01 | — | Pending |
+| SCAN-02 | — | Pending |
+| SCAN-03 | — | Pending |
+| SCAN-04 | — | Pending |
+| INFRA-01 | — | Pending |
+| INFRA-02 | — | Pending |
+| DOCS-01 | — | Pending |
 
 **Coverage:**
-- v2.0 requirements: 7 total
-- Mapped to phases: 7
-- Unmapped: 0 ✓
+- v1.0.1 requirements: 11 total
+- Mapped to phases: 0
+- Unmapped: 11 ⚠️
 
 ---
 *Requirements defined: 2026-03-20*
