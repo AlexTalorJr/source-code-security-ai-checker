@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, Float, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from scanner.models.base import Base
@@ -18,6 +18,9 @@ class ScanResult(Base):
     repo_url = Column(String(500), nullable=True)
     branch = Column(String(200), nullable=True)
     commit_hash = Column(String(40), nullable=True)
+
+    # Options
+    skip_ai = Column(Boolean, nullable=False, default=False, server_default="0")
 
     # Status
     status = Column(String(20), nullable=False, default="pending")

@@ -574,6 +574,7 @@ async def start_scan(
     path: str = Form(default=""),
     repo_url: str = Form(default=""),
     branch: str = Form(default=""),
+    skip_ai: str = Form(default=""),
 ):
     """Create a new scan from the dashboard form."""
     redirect = await require_dashboard_auth(request)
@@ -585,6 +586,7 @@ async def start_scan(
             target_path=path or None,
             repo_url=repo_url or None,
             branch=branch or None,
+            skip_ai=bool(skip_ai),
             status="queued",
             created_at=datetime.utcnow(),
         )

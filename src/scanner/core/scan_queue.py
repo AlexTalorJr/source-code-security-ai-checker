@@ -73,6 +73,7 @@ class ScanQueue:
                     target_path = db_scan.target_path
                     repo_url = db_scan.repo_url
                     branch = db_scan.branch
+                    skip_ai = db_scan.skip_ai
 
                 # Progress callback
                 def _progress_cb(stage, details):
@@ -91,6 +92,7 @@ class ScanQueue:
                     branch=branch,
                     persist=False,
                     progress_callback=_progress_cb,
+                    skip_ai=skip_ai,
                 )
 
                 # Update DB record with results and persist findings

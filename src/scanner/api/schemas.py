@@ -14,6 +14,7 @@ class ScanRequest(BaseModel):
     path: str | None = None
     repo_url: str | None = None
     branch: str | None = None
+    skip_ai: bool = False
 
     @model_validator(mode="after")
     def validate_target(self) -> "ScanRequest":

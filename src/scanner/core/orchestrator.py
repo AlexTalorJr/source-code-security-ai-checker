@@ -109,6 +109,7 @@ async def run_scan(
     branch: str | None = None,
     persist: bool = True,
     progress_callback=None,
+    skip_ai: bool = False,
 ) -> tuple[ScanResultSchema, list[FindingSchema], list[CompoundRiskSchema]]:
     """Run all enabled scanners against a target, deduplicate, and persist.
 
@@ -225,14 +226,25 @@ async def run_scan(
         deduped_findings = deduplicate_findings(all_findings)
 
         # AI enrichment (graceful degradation)
-        if progress_callback:
-            progress_callback("ai_analysis", {
-                "total_findings": len(deduped_findings),
-                "skipped": not settings.claude_api_key,
-            })
-        enriched_findings, compound_risks, ai_result = await enrich_with_ai(
-            deduped_findings, settings
-        )
+        if skip_ai:
+            enriched_findings = deduped_findings
+            compound_risks: list[CompoundRiskSchema] = []
+            ai_result = AIAnalysisResult(skipped=True, skip_reason="Skipped by user request")
+            if progress_callback:
+                progress_callback("ai_analysis", {
+                    "total_findings": len(deduped_findings),
+                    "skipped": True,
+                })
+            logger.info("AI analysis skipped by user request")
+        else:
+            if progress_callback:
+                progress_callback("ai_analysis", {
+                    "total_findings": len(deduped_findings),
+                    "skipped": not settings.claude_api_key,
+                })
+            enriched_findings, compound_risks, ai_result = await enrich_with_ai(
+                deduped_findings, settings
+            )
         if progress_callback:
             progress_callback("finalizing", {})
 

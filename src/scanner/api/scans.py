@@ -69,6 +69,7 @@ async def trigger_scan(
                 target_path=body.path,
                 repo_url=body.repo_url,
                 branch=body.branch,
+                skip_ai=body.skip_ai,
                 status="queued",
             )
             session.add(db_scan)
