@@ -525,49 +525,77 @@
 </div>
 
 {% if findings %}
+<textarea id="ai-prompt-data" style="position:absolute;left:-9999px;">
+I ran a security scan on my project and found the following vulnerabilities.
+Please analyze each finding, explain the risk, and suggest specific code fixes.
+
+## Scan Info
+- **Target:** {{ scan.repo_url or scan.target_path or 'unknown' }}
+- **Branch:** {{ scan.branch or 'unknown' }}
+- **Total findings:** {{ findings | length }}
+- **Quality gate:** {{ gate_label or 'N/A' }}
+
+## Findings
+{% for f in findings %}
+### {{ loop.index }}. [{{ f.severity }}] {{ f.title }}
+- **File:** `{{ f.file_path }}{% if f.line_start %}:{{ f.line_start }}{% endif %}`
+- **Tool:** {{ f.tool }}
+- **Rule:** {{ f.rule_id }}
+{% if f.description %}- **Description:** {{ f.description | truncate(300) }}
+{% endif %}{% if f.snippet %}- **Code snippet:**
+```
+{{ f.snippet }}
+```
+{% endif %}
+{% endfor %}
+## What I need
+
+1. For each finding, explain whether it is a real vulnerability or a false positive
+2. For real vulnerabilities, provide a specific code fix (show the exact code change)
+3. Prioritize fixes by severity (Critical > High > Medium > Low)
+4. Group related findings that can be fixed together
+</textarea>
 <script>
 function copyAiPrompt() {
-  var target = {{ scan.repo_url | tojson }} || {{ scan.target_path | tojson }} || 'unknown project';
-  var branch = {{ scan.branch | tojson }} || 'unknown';
+  var textarea = document.getElementById('ai-prompt-data');
+  var btn = document.getElementById('copy-ai-prompt');
+  var text = textarea.value.trim();
 
-  var prompt = 'I ran a security scan on my project and found the following vulnerabilities.\n';
-  prompt += 'Please analyze each finding, explain the risk, and suggest specific code fixes.\n\n';
-  prompt += '## Scan Info\n';
-  prompt += '- **Target:** ' + target + '\n';
-  prompt += '- **Branch:** ' + branch + '\n';
-  prompt += '- **Total findings:** {{ findings | length }}\n';
-  prompt += '- **Quality gate:** {{ gate_label or "N/A" }}\n\n';
-  prompt += '## Findings\n\n';
-
-  {% for f in findings %}
-  prompt += '### {{ loop.index }}. [{{ f.severity }}] {{ f.title | replace("'", "\\'") | replace("\n", " ") }}\n';
-  prompt += '- **File:** `{{ f.file_path }}{% if f.line_start %}:{{ f.line_start }}{% endif %}`\n';
-  prompt += '- **Tool:** {{ f.tool }}\n';
-  prompt += '- **Rule:** {{ f.rule_id }}\n';
-  {% if f.description %}
-  prompt += '- **Description:** {{ f.description | replace("'", "\\'") | replace("\n", " ") | truncate(300) }}\n';
-  {% endif %}
-  {% if f.snippet %}
-  prompt += '- **Code snippet:**\n```\n{{ f.snippet | replace("'", "\\'") | replace("\n", "\\n") }}\n```\n';
-  {% endif %}
-  prompt += '\n';
-  {% endfor %}
-
-  prompt += '## What I need\n\n';
-  prompt += '1. For each finding, explain whether it is a real vulnerability or a false positive\n';
-  prompt += '2. For real vulnerabilities, provide a specific code fix (show the exact code change)\n';
-  prompt += '3. Prioritize fixes by severity (Critical > High > Medium > Low)\n';
-  prompt += '4. Group related findings that can be fixed together\n';
-
-  navigator.clipboard.writeText(prompt).then(function() {
-    var btn = document.getElementById('copy-ai-prompt');
+  function onSuccess() {
     btn.textContent = 'Copied!';
     btn.classList.add('copied');
     setTimeout(function() {
       btn.textContent = 'Copy AI Prompt';
       btn.classList.remove('copied');
     }, 2000);
-  });
+  }
+
+  // Try modern clipboard API first (works on HTTPS/localhost)
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(onSuccess).catch(fallback);
+  } else {
+    fallback();
+  }
+
+  function fallback() {
+    // Fallback for HTTP: use hidden textarea + execCommand
+    textarea.style.position = 'fixed';
+    textarea.style.left = '0';
+    textarea.style.top = '0';
+    textarea.style.opacity = '0.01';
+    textarea.select();
+    textarea.setSelectionRange(0, textarea.value.length);
+    try {
+      document.execCommand('copy');
+      onSuccess();
+    } catch(e) {
+      btn.textContent = 'Failed — use Ctrl+C';
+      setTimeout(function() { btn.textContent = 'Copy AI Prompt'; }, 3000);
+    }
+    textarea.style.position = 'absolute';
+    textarea.style.left = '-9999px';
+    textarea.style.opacity = '1';
+  }
 }
 </script>
 {% endif %}
