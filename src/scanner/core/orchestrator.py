@@ -155,12 +155,21 @@ async def run_scan(
             )
             target_path = clone_path
 
+        # Auto-detect languages for smart scanner selection
+        from scanner.core.language_detect import detect_languages, should_enable_scanner
+
+        detected_langs = detect_languages(target_path)
+        logger.info("Detected languages: %s", detected_langs or "none")
+
         # Build enabled adapters
         enabled_adapters: list[ScannerAdapter] = []
         for adapter_cls in ALL_ADAPTERS:
             instance = adapter_cls()
             tool_config = getattr(settings.scanners, instance.tool_name)
-            if tool_config.enabled:
+            if tool_config.enabled == "auto":
+                if should_enable_scanner(instance.tool_name, detected_langs):
+                    enabled_adapters.append(instance)
+            elif tool_config.enabled:
                 enabled_adapters.append(instance)
 
         # Notify: scanning stage with tool list

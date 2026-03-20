@@ -10,38 +10,39 @@ email_smtp_host: ""
 log_level: "info"
 scan_timeout: 600
 
+# Scanners: enabled can be true, false, or "auto" (default)
+# "auto" enables scanners based on detected languages in the target project
 scanners:
   semgrep:
-    enabled: true
+    enabled: auto  # Python, PHP, JS/TS, Go, Java, Ruby, C#, Rust
     timeout: 180
     extra_args: ["--exclude", ".venv", "--exclude", "node_modules"]
   cppcheck:
-    enabled: true
+    enabled: auto  # C/C++ projects
     timeout: 120
     extra_args: ["-i.venv", "-inode_modules"]
   gitleaks:
-    enabled: true
+    enabled: auto  # Always runs (secrets in any language)
     timeout: 120
     extra_args: []
   trivy:
-    enabled: true
+    enabled: auto  # Docker, Terraform, Kubernetes
     timeout: 120
     extra_args: []
   checkov:
-    enabled: true
+    enabled: auto  # Docker, Terraform, CI configs
     timeout: 120
     extra_args: ["--skip-path", ".venv", "--skip-path", "node_modules"]
-  # PHP/Laravel scanners (enable for PHP projects)
   psalm:
-    enabled: false  # Psalm taint analysis (SQL injection, XSS via data flow)
+    enabled: auto  # PHP projects (taint analysis for SQL injection, XSS)
     timeout: 300
     extra_args: []
   enlightn:
-    enabled: false  # Laravel-specific checks (CSRF, mass assignment, debug mode)
+    enabled: auto  # Laravel projects (CSRF, mass assignment, debug mode)
     timeout: 120
     extra_args: []
   php_security_checker:
-    enabled: false  # CVE detection in composer.lock dependencies
+    enabled: auto  # PHP projects with composer.lock (CVE detection)
     timeout: 30
     extra_args: []
 

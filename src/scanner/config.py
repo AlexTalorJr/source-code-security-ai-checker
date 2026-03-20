@@ -16,9 +16,15 @@ from scanner.schemas.severity import Severity
 
 
 class ScannerToolConfig(BaseModel):
-    """Per-tool scanner configuration."""
+    """Per-tool scanner configuration.
 
-    enabled: bool = True
+    enabled can be:
+      - true: always run this scanner
+      - false: never run this scanner
+      - "auto": run only if target contains matching languages (default)
+    """
+
+    enabled: bool | str = "auto"
     timeout: int = 180
     extra_args: list[str] = []
 
@@ -31,9 +37,9 @@ class ScannersConfig(BaseModel):
     gitleaks: ScannerToolConfig = ScannerToolConfig(timeout=120)
     trivy: ScannerToolConfig = ScannerToolConfig(timeout=120)
     checkov: ScannerToolConfig = ScannerToolConfig(timeout=120)
-    psalm: ScannerToolConfig = ScannerToolConfig(enabled=False, timeout=300)
-    enlightn: ScannerToolConfig = ScannerToolConfig(enabled=False, timeout=120)
-    php_security_checker: ScannerToolConfig = ScannerToolConfig(enabled=False, timeout=30)
+    psalm: ScannerToolConfig = ScannerToolConfig(timeout=300)
+    enlightn: ScannerToolConfig = ScannerToolConfig(timeout=120)
+    php_security_checker: ScannerToolConfig = ScannerToolConfig(timeout=30)
 
 
 class AIConfig(BaseModel):

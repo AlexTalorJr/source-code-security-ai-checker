@@ -65,6 +65,15 @@ def settings(tmp_path):
     return _make_settings(tmp_path)
 
 
+@pytest.fixture(autouse=True)
+def _mock_language_detect():
+    """Auto-detect returns all languages so all mocked adapters run."""
+    all_langs = {"python", "php", "laravel", "cpp", "javascript", "typescript",
+                 "go", "rust", "java", "docker", "terraform", "yaml", "ci"}
+    with patch("scanner.core.language_detect.detect_languages", return_value=all_langs):
+        yield
+
+
 async def test_run_scan_requires_target_or_repo(settings):
     """Calling run_scan with neither path nor repo raises ValueError."""
     with pytest.raises(ValueError, match="either target_path or repo_url"):
