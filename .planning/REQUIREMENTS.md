@@ -67,13 +67,13 @@
 ### Infrastructure
 
 - [x] **INFRA-01**: Entire stack runs via single docker-compose up
-- [ ] **INFRA-02**: Docker images support x86_64 and ARM64 architectures
+- [x] **INFRA-02**: Docker images support x86_64 and ARM64 architectures
 - [x] **INFRA-03**: All configuration via environment variables and config.yml
 - [x] **INFRA-04**: No hardcoded paths, hostnames, or credentials in codebase
 - [x] **INFRA-05**: SQLite database in mounted volume for persistence
-- [ ] **INFRA-06**: Makefile with targets: install, run, test, migrate, backup, restore, package
-- [ ] **INFRA-07**: Migration scripts for moving scan history between environments
-- [ ] **INFRA-08**: make package creates distributable archive
+- [x] **INFRA-06**: Makefile with targets: install, run, test, migrate, backup, restore, package
+- [x] **INFRA-07**: Migration scripts for moving scan history between environments
+- [x] **INFRA-08**: make package creates distributable archive
 
 ### Documentation
 
@@ -160,13 +160,13 @@
 | CI-02 | Phase 5 | Complete |
 | CI-03 | Phase 5 | Complete |
 | INFRA-01 | Phase 1 | Complete |
-| INFRA-02 | Phase 6 | Pending |
+| INFRA-02 | Phase 6 | Complete |
 | INFRA-03 | Phase 1 | Complete |
 | INFRA-04 | Phase 1 | Complete |
 | INFRA-05 | Phase 1 | Complete |
-| INFRA-06 | Phase 6 | Pending |
-| INFRA-07 | Phase 6 | Pending |
-| INFRA-08 | Phase 6 | Pending |
+| INFRA-06 | Phase 6 | Complete |
+| INFRA-07 | Phase 6 | Complete |
+| INFRA-08 | Phase 6 | Complete |
 | DOC-01 | Phase 6 | Pending |
 | DOC-02 | Phase 6 | Pending |
 | DOC-03 | Phase 6 | Pending |
