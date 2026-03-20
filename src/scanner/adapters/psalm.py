@@ -55,18 +55,21 @@ class PsalmAdapter(ScannerAdapter):
         if not self._has_php_files(target_path):
             return []
 
-        # Psalm requires a config file for taint analysis
-        if not self._has_psalm_config(target_path):
-            logger.info("Psalm skipped: no psalm.xml in %s", target_path)
-            return []
+        has_config = self._has_psalm_config(target_path)
 
         cmd = [
             "psalm",
             "--output-format=json",
-            "--taint-analysis",
             "--no-cache",
             f"--root={target_path}",
         ]
+
+        if has_config:
+            # Full taint analysis when psalm.xml exists
+            cmd.append("--taint-analysis")
+        else:
+            # Basic analysis without config — security-relevant checks only
+            cmd.extend(["--no-config", "--show-info=false"])
         if extra_args:
             cmd.extend(extra_args)
 

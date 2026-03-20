@@ -39,9 +39,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Composer + Psalm (global install)
+ENV COMPOSER_HOME=/opt/composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer && \
     composer global require --no-interaction vimeo/psalm && \
-    ln -s /root/.composer/vendor/bin/psalm /usr/local/bin/psalm
+    ln -s /opt/composer/vendor/bin/psalm /usr/local/bin/psalm && \
+    chmod +x /opt/composer/vendor/bin/psalm
 
 # local-php-security-checker
 RUN ARCH=$(dpkg --print-architecture | sed 's/amd64/amd64/;s/arm64/arm64/') && \
