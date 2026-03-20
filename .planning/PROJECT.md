@@ -23,19 +23,19 @@ Every release branch is automatically scanned for security vulnerabilities befor
 - [x] HTML interactive reports with code diffs and fix examples — *Validated in Phase 04: Reports and Quality Gate*
 - [x] PDF formal reports for management and telecom operators — *Validated in Phase 04: Reports and Quality Gate*
 - [x] Quality Gate — block Jenkins builds on Critical/High findings — *Validated in Phase 04: Reports and Quality Gate (configurable severity thresholds via GateConfig)*
-- [ ] FastAPI REST API for triggering scans and fetching reports
-- [ ] Live web dashboard with scan history and release comparison
-- [ ] Jenkins pipeline integration as a stage
-- [ ] Configurable Slack and email notifications on findings
+- [x] FastAPI REST API for triggering scans and fetching reports — *Validated in Phase 05: API and Dashboard*
+- [x] Live web dashboard with scan history and release comparison — *Validated in Phase 05: API and Dashboard*
+- [x] Jenkins pipeline integration as a stage — *Validated in Phase 05: CI/CD and Notifications*
+- [x] Configurable Slack and email notifications on findings — *Validated in Phase 05: CI/CD and Notifications*
 - [x] Full Docker containerization with single docker-compose up
 - [x] SQLite local scan history database
-- [ ] Custom Semgrep rules for aipix platform (RTSP auth, VMS API, webhooks)
+- [x] Custom Semgrep rules for aipix platform (RTSP auth, VMS API, webhooks) — *Validated in Phase 05: Custom Rules*
 - [x] Dual-mode scan input — local path (Jenkins) or repo URL (API-triggered) — *Validated in Phase 02: git clone module*
-- [ ] Multi-arch support (Linux x86_64, ARM64)
-- [ ] Bilingual documentation suite (Russian/English, separate files)
-- [ ] Portability — migration scripts, backup/restore, packaging
+- [x] Multi-arch support (Linux x86_64, ARM64) — *Validated in Phase 06: Makefile docker-multiarch target*
+- [x] Bilingual documentation suite (Russian/English, separate files) — *Validated in Phase 06: docs/en/ + docs/ru/*
+- [x] Portability — migration scripts, backup/restore, packaging — *Validated in Phase 06: Makefile backup/restore/package targets*
 - [x] Health check endpoint
-- [ ] API key authentication for API/dashboard access
+- [x] API key authentication for API/dashboard access — *Validated in Phase 05: API Key Auth*
 
 ### Out of Scope
 
@@ -104,10 +104,10 @@ Every release branch is automatically scanned for security vulnerabilities befor
 | cppcheck alongside Semgrep for C++ | Semgrep has limited C++ support; cppcheck provides proper static analysis for Mediaserver | Confirmed — Phase 02 |
 | SQLite over PostgreSQL | Simplifies portability — single file, no external DB, easy backup/transfer | Confirmed — Phase 01 |
 | Dual-mode scan input (path + URL) | Local path for Jenkins pipeline, repo URL for API-triggered standalone scans | Confirmed — Phase 02 |
-| Separate bilingual doc files | docs/en/ + docs/ru/ — clean separation, easier maintenance | — Pending |
-| Apache 2.0 license | Patent protection, explicit contributor terms — better for enterprise/partner sharing | — Pending |
-| API key auth | Simple shared secret in env var — appropriate for internal tool, Jenkins passes in headers | — Pending |
-| Configurable notifications | Slack and email both optional via config.yml toggles — teams choose what fits | — Pending |
+| Separate bilingual doc files | docs/en/ + docs/ru/ — clean separation, easier maintenance | Confirmed — Phase 06 |
+| Apache 2.0 license | Patent protection, explicit contributor terms — better for enterprise/partner sharing | Confirmed — Phase 06 |
+| API key auth | Simple shared secret in env var — appropriate for internal tool, Jenkins passes in headers | Confirmed — Phase 05 |
+| Configurable notifications | Slack and email both optional via config.yml toggles — teams choose what fits | Confirmed — Phase 05 |
 
 ---
-*Last updated: 2026-03-19 — Phase 04 complete: Configurable quality gate, delta comparison, interactive HTML report, formal PDF report, full CLI pipeline integration*
+*Last updated: 2026-03-20 — Phase 06 complete: All 6 phases delivered. Makefile automation, multi-arch Docker, bilingual docs (en/ru), Apache 2.0 license, complete packaging for team transfer.*
