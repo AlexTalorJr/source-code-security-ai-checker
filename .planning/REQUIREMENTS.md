@@ -86,7 +86,7 @@
 - [x] **DOC-07**: docs/en/api.md — REST API reference
 - [x] **DOC-08**: docs/en/transfer-guide.md — migration to new server, onboarding checklist
 - [x] **DOC-09**: docs/en/custom-rules.md — writing custom Semgrep rules
-- [ ] **DOC-10**: All docs available in Russian (docs/ru/) as separate files
+- [x] **DOC-10**: All docs available in Russian (docs/ru/) as separate files
 - [x] **DOC-11**: CHANGELOG.md, LICENSE (Apache 2.0), CONTRIBUTING.md, .env.example
 
 ## v2 Requirements
@@ -176,7 +176,7 @@
 | DOC-07 | Phase 6 | Complete |
 | DOC-08 | Phase 6 | Complete |
 | DOC-09 | Phase 6 | Complete |
-| DOC-10 | Phase 6 | Pending |
+| DOC-10 | Phase 6 | Complete |
 | DOC-11 | Phase 6 | Complete |
 
 **Coverage:**
