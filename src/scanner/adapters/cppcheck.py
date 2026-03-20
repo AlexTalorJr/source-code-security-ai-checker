@@ -36,10 +36,14 @@ class CppcheckAdapter(ScannerAdapter):
     def _version_command(self) -> list[str]:
         return ["cppcheck", "--version"]
 
-    @staticmethod
-    def _has_cpp_files(target_path: str) -> bool:
+    _SKIP_DIRS = frozenset({".venv", "venv", "node_modules", ".git", "__pycache__"})
+
+    @classmethod
+    def _has_cpp_files(cls, target_path: str) -> bool:
         """Check whether the target directory contains any C/C++ files."""
         for p in Path(target_path).rglob("*"):
+            if any(part in cls._SKIP_DIRS for part in p.parts):
+                continue
             if p.suffix in _CPP_EXTENSIONS:
                 return True
         return False
@@ -69,6 +73,8 @@ class CppcheckAdapter(ScannerAdapter):
         stdout, stderr, returncode = await self._execute(cmd, timeout)
 
         # cppcheck writes XML to stderr, not stdout.
+        if not stderr or not stderr.strip():
+            return []
         root = ET.fromstring(stderr)
 
         findings: list[FindingSchema] = []

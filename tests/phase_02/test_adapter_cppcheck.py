@@ -53,8 +53,8 @@ async def test_cppcheck_reads_stderr_not_stdout(adapter, cppcheck_output):
         findings = await adapter.run("/tmp/target", timeout=60)
     assert len(findings) == 2
 
-    # Pass XML in stdout, empty stderr -- should fail (no XML to parse).
+    # Pass XML in stdout, empty stderr -- should return empty (no XML to parse).
     adapter._execute = AsyncMock(return_value=(cppcheck_output, "", 0))
     with patch.object(CppcheckAdapter, "_has_cpp_files", return_value=True):
-        with pytest.raises(Exception):
-            await adapter.run("/tmp/target", timeout=60)
+        findings = await adapter.run("/tmp/target", timeout=60)
+    assert findings == []
