@@ -218,4 +218,4 @@ Apache 2.0
 
 ---
 
-Russian documentation: [README.ru.md](README.ru.md)
+Other languages: [Русский](README.ru.md) | [Français](README.fr.md) | [Español](README.es.md) | [Italiano](README.it.md)
