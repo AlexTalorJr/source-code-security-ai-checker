@@ -142,6 +142,9 @@ class ScanQueue:
 
                     await session.commit()
 
+                # Ensure scan_result has id and target info for notifications
+                scan_result.id = scan_id
+
                 logger.info("Scan %d completed successfully", scan_id)
 
                 # Notify (graceful -- module may not exist yet)

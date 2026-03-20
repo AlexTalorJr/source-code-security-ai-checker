@@ -14,11 +14,11 @@ scanners:
   semgrep:
     enabled: true
     timeout: 180
-    extra_args: []
+    extra_args: ["--exclude", ".venv", "--exclude", "node_modules"]
   cppcheck:
     enabled: true
     timeout: 120
-    extra_args: []
+    extra_args: ["-i.venv", "-inode_modules"]
   gitleaks:
     enabled: true
     timeout: 120
@@ -30,7 +30,7 @@ scanners:
   checkov:
     enabled: true
     timeout: 120
-    extra_args: []
+    extra_args: ["--skip-path", ".venv", "--skip-path", "node_modules"]
 
 ai:
   max_cost_per_scan: 5.0

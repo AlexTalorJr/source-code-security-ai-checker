@@ -59,6 +59,9 @@ class CheckovAdapter(ScannerAdapter):
             "json",
             "--quiet",
             "--compact",
+            "--skip-path", ".venv",
+            "--skip-path", "node_modules",
+            "--skip-path", ".git",
         ]
         if extra_args:
             cmd.extend(extra_args)

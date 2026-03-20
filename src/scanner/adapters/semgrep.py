@@ -38,6 +38,9 @@ class SemgrepAdapter(ScannerAdapter):
             "p/security-audit",
             "--config",
             "p/secrets",
+            "--exclude", ".venv",
+            "--exclude", "node_modules",
+            "--exclude", ".git",
             target_path,
         ]
         if extra_args:

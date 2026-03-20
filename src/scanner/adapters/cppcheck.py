@@ -58,6 +58,9 @@ class CppcheckAdapter(ScannerAdapter):
             "--xml",
             "--xml-version=2",
             "--enable=warning,style,performance,portability",
+            "-i.venv",
+            "-inode_modules",
+            "-i.git",
             target_path,
         ]
         if extra_args:
