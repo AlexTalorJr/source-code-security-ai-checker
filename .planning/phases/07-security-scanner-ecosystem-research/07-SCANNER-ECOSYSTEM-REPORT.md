@@ -736,3 +736,363 @@ scanners:
 | **Recommendation** | Keep for general Ruby patterns | **Add for Rails projects** |
 
 **Verdict:** Use both for Rails projects. Semgrep provides general Ruby pattern matching. Brakeman adds deep Rails-specific analysis (33 vulnerability types) with zero configuration. For non-Rails Ruby projects, Semgrep remains the only option. The 5MB footprint and clean JSON/SARIF output make Brakeman a high-value, low-effort addition.
+
+---
+
+## SCA (Software Composition Analysis) Tools
+
+Software Composition Analysis tools scan project dependencies for known vulnerabilities (CVEs). The scanner currently uses Trivy for SCA alongside IaC scanning. This section evaluates whether additional SCA tools add value.
+
+### Trivy (Re-evaluation -- Current SCA Tool)
+
+- **Purpose:** Comprehensive security scanner covering dependencies, containers, IaC, and filesystems
+- **Language(s):** Universal (supports package managers for Python/pip, Node/npm, Go/mod, Rust/cargo, Java/Maven/Gradle, Ruby/gems, PHP/composer, C#/NuGet, and more)
+- **License:** Apache-2.0
+- **Output formats:** JSON, SARIF, table, CycloneDX, SPDX
+- **CLI usage:** `trivy fs --format json /path/to/project`
+- **Docker install:** Single binary, ~50MB
+- **SARIF support:** Yes (`--format sarif`)
+- **Integration effort:** Already integrated (adapter exists)
+- **Current version:** 0.69.3 (installed in Dockerfile)
+- **Status:** Active development by Aqua Security. Broadest scope of any SCA tool evaluated.
+
+**Current config:**
+```yaml
+scanners:
+  trivy:
+    enabled: true
+    timeout: 120
+    extra_args: []
+```
+
+**Key strengths:**
+- Single tool covers dependencies + containers + IaC + filesystem secrets
+- Supports the widest range of package managers and lockfile formats
+- Active CVE database updates
+- CycloneDX and SPDX SBOM generation
+- Already integrated and working well
+
+**Limitations:**
+- Risk scoring is binary (vulnerability exists or not) -- lacks EPSS/KEV risk prioritization
+- Broad scope means it is a generalist, not a specialist in any single ecosystem
+- Can produce high finding counts without risk-based prioritization
+
+- **Pros:** Broadest scope, single binary, already integrated, active development
+- **Cons:** Less precise risk scoring than specialized SCA tools, no EPSS/KEV support
+
+### Grype (Evaluated -- Consider as Complement)
+
+- **Purpose:** Vulnerability scanner for container images and filesystems with advanced risk scoring
+- **Language(s):** Universal (supports same package managers as Trivy)
+- **License:** Apache-2.0
+- **Output formats:** JSON, SARIF, table, CycloneDX
+- **CLI usage:** `grype dir:/path/to/project -o json`
+- **Docker install:** Single binary, ~30MB
+- **SARIF support:** Yes (`-o sarif`)
+- **Integration effort:** S -- clean CLI, familiar pattern to existing Trivy adapter
+- **Config snippet:**
+```yaml
+scanners:
+  grype:
+    enabled: "auto"
+    timeout: 120
+    extra_args: []
+```
+- **FindingSchema mapping:**
+  - fingerprint: computed from `vulnerability.id + artifact.name + artifact.version`
+  - rule_id: from vulnerability `id` field (e.g., CVE-2023-12345)
+  - severity: from `severity` field (Critical/High/Medium/Low/Negligible mapped to CRITICAL/HIGH/MEDIUM/LOW/LOW)
+  - line_start: N/A (dependency-level finding)
+  - file_path: from artifact `name` (package name) or lockfile path
+  - snippet: from `matchDetails` (affected version range, fix version if available)
+  - title: from vulnerability `id` + artifact `name`
+  - description: from vulnerability `description`
+- **False positive reduction:**
+  - Use `--only-fixed` to report only vulnerabilities with available fixes (actionable findings only)
+  - Use `--fail-on critical` for gate decisions
+  - Configure `.grype.yaml` for project-specific ignores
+- **Detection:** CVE matching with advanced risk scoring:
+  - CVSS scoring (standard vulnerability severity)
+  - EPSS scoring (Exploit Prediction Scoring System -- probability of exploitation)
+  - KEV integration (CISA Known Exploited Vulnerabilities catalog)
+  - Combined risk scoring helps prioritize which vulnerabilities to fix first
+- **Pros:**
+  - Superior risk prioritization (CVSS + EPSS + KEV)
+  - Single binary, small footprint (30MB)
+  - Clean JSON/SARIF output
+  - `--only-fixed` flag reduces noise to actionable findings
+  - Maintained by Anchore (SBOM/security company)
+- **Cons:**
+  - Narrower scope than Trivy (dependencies only, no IaC/container scanning)
+  - Overlaps with Trivy's dependency scanning
+  - Adding a second SCA tool increases finding deduplication complexity
+
+**SCANNER_LANGUAGES entry:**
+```python
+"grype": set(),  # Universal -- scans lockfiles regardless of language
+```
+
+### OWASP Dependency-Check (Evaluated -- Not Recommended)
+
+- **Purpose:** SCA tool using CPE (Common Platform Enumeration) matching for dependency vulnerabilities
+- **Language(s):** Primarily Java/Maven, also supports .NET, Node.js, Python, Ruby
+- **License:** Apache-2.0
+- **Output formats:** XML, HTML, CSV, JSON, SARIF (experimental)
+- **CLI usage:** `dependency-check --scan /path --format XML --out report.xml`
+- **Docker install:** Requires JVM (~200MB+), large NVD database download (~1GB)
+- **SARIF support:** Experimental (not production-ready)
+- **Integration effort:** L -- JVM dependency, XML output, slow NVD database updates, high false positives
+- **Detection:** CPE-based matching against NVD (National Vulnerability Database)
+
+**Why Not Recommended:**
+- Higher false positive rate than Trivy/Grype due to CPE matching ambiguity
+- Slower execution (NVD database download and update required)
+- XML-only reliable output (SARIF is experimental)
+- JVM dependency adds 200MB+ to Docker image
+- NVD database requires ~1GB disk space
+- Trivy already covers Java/Maven dependencies adequately
+- Deepest Java/Maven coverage, but the marginal benefit over Trivy does not justify the cost
+
+### SCA Comparison Matrix
+
+| Feature | Trivy (current) | Grype | OWASP Dep-Check |
+|---------|----------------|-------|-----------------|
+| **Scope** | Deps + IaC + containers | Dependencies only | Dependencies only |
+| **Risk Scoring** | CVSS only | CVSS + EPSS + KEV | CVSS only |
+| **Output Formats** | JSON, SARIF, CycloneDX | JSON, SARIF, CycloneDX | XML, HTML (SARIF experimental) |
+| **SARIF** | Yes | Yes | Experimental |
+| **Docker Size** | ~50MB (already installed) | +30MB | +200MB (JVM) + 1GB (NVD) |
+| **Integration Effort** | Already integrated | S | L |
+| **False Positive Rate** | Low-medium | Low (with --only-fixed) | **High** (CPE matching) |
+| **Recommendation** | **Keep as primary SCA** | Consider as complement for risk prioritization | **Not Recommended** |
+
+**Verdict:** Keep Trivy as the primary SCA tool (broadest scope, already integrated). Consider adding Grype as a complement specifically for its EPSS + KEV risk scoring, which helps teams prioritize which vulnerabilities to fix first. Skip OWASP Dependency-Check (high false positives, JVM dependency, XML output, Trivy covers its use case).
+
+---
+
+## DAST (Dynamic Application Security Testing) Feasibility
+
+**Important note:** DAST tools require a running application to scan. This is fundamentally different from SAST/SCA tools, which analyze source code and dependency files statically. The current `ScannerAdapter` pattern (receives a directory path, runs CLI tool, parses output) does not directly support DAST workflows. DAST integration would likely require:
+
+- A separate `DastAdapter` base class that accepts a target URL instead of a directory path
+- Application startup/teardown management
+- Authentication configuration for scanning protected endpoints
+- Network access from the scanner container to the target application
+
+This section assesses feasibility, not integration design.
+
+### Nuclei (Recommended DAST Candidate)
+
+- **Purpose:** Template-based vulnerability scanner for known CVEs, misconfigurations, and exposed services
+- **Language(s):** N/A (scans running applications via HTTP)
+- **License:** MIT
+- **Output formats:** JSON (JSONL), SARIF, markdown
+- **CLI usage:** `nuclei -u https://target -jsonl -o results.json`
+- **Docker install:** Single binary, ~30MB
+- **SARIF support:** Yes
+- **Integration effort:** M -- CLI-friendly and lightweight, but requires a running target application (different paradigm from SAST)
+- **Config snippet:**
+```yaml
+scanners:
+  nuclei:
+    enabled: false
+    timeout: 300
+    extra_args: ["-severity", "medium,high,critical"]
+```
+
+**Note:** `enabled: false` by default because DAST requires a target URL, which the current scanner does not provide. Enabling Nuclei would require additional configuration (target URL, authentication) beyond the standard `ScannerAdapter` pattern.
+
+- **FindingSchema mapping:**
+  - fingerprint: computed from `template-id + matched-at`
+  - rule_id: from `template-id` (e.g., CVE-2021-44228, exposed-panels/phpmyadmin)
+  - severity: from `info.severity` (critical/high/medium/low/info mapped directly)
+  - line_start: N/A (HTTP-based findings)
+  - file_path: from `matched-at` (target URL)
+  - snippet: from `curl-command` or `extracted-results`
+  - title: from `info.name`
+  - description: from `info.description`
+- **False positive reduction:**
+  - Use `-severity medium,high,critical` to skip info/low findings
+  - Use `-tags cve,owasp` to run only CVE and OWASP templates
+  - Exclude noisy templates via `-exclude-templates`
+  - Use `-rate-limit` to avoid overwhelming targets
+- **Detection:** 11,000+ community templates covering:
+  - Known CVEs (Log4Shell, Spring4Shell, etc.)
+  - Exposed admin panels (phpMyAdmin, Grafana, Jenkins)
+  - Default credentials
+  - Misconfigurations (CORS, security headers, SSL)
+  - Information disclosure (server version, debug pages)
+  - API vulnerabilities
+- **Pros:**
+  - Template-based -- targeted scanning, not brute-force
+  - Fast execution (minutes, not hours)
+  - Single binary, small footprint (30MB)
+  - Huge community template library (11,000+)
+  - SARIF support for standardized output
+  - CLI-friendly (similar pattern to SAST tools)
+- **Cons:**
+  - Requires a running application target
+  - Template-based means it finds known issues, not unknown ones
+  - Does not crawl application (requires URL list or target specification)
+  - Different paradigm from current ScannerAdapter pattern
+
+### ZAP (Evaluated -- Defer)
+
+- **Purpose:** Comprehensive web application security scanner with proxy, spider, and active/passive scanning
+- **Language(s):** N/A (scans running web applications)
+- **License:** Apache-2.0
+- **Output formats:** JSON, XML, HTML, SARIF (via community plugins)
+- **CLI usage:** `zap-cli quick-scan --self-contained https://target`
+- **Docker install:** Requires JVM + full ZAP install (~500MB+)
+- **SARIF support:** Via community plugins (not native)
+- **Integration effort:** L -- requires running app, massive Docker footprint, complex configuration for authentication, proxy setup, scan policies
+- **Detection:** Comprehensive web application security:
+  - XSS (reflected, stored, DOM-based)
+  - SQL injection (all variants)
+  - CSRF, SSRF
+  - Directory traversal
+  - Session management flaws
+  - Authentication bypass
+  - Application crawling and discovery
+- **Pros:**
+  - Most comprehensive open-source DAST tool
+  - Active scanning discovers unknown vulnerabilities (not just templates)
+  - Application crawling (spider) discovers endpoints automatically
+  - OWASP flagship project, widely adopted
+  - Proxy mode for development-time testing
+- **Cons:**
+  - Massive Docker footprint (~500MB+)
+  - JVM dependency
+  - Slow execution (hours for full scan)
+  - Complex configuration for production use
+  - Requires authentication setup for protected applications
+  - SARIF support via plugins only (not native)
+  - Hardest to integrate of all evaluated tools
+
+### Nikto (Evaluated -- Not Recommended)
+
+- **Purpose:** Web server scanner for server-level misconfigurations
+- **Language(s):** N/A (scans web servers)
+- **License:** GPL-2.0
+- **Output formats:** CSV, HTML, text, XML
+- **CLI usage:** `nikto -h https://target -Format csv -output report.csv`
+- **Docker install:** Perl runtime + Nikto scripts, ~50MB
+- **SARIF support:** No
+- **Integration effort:** S (simple CLI) but limited value
+
+**Why Not Recommended:**
+- Server-level only (HTTP headers, server version, default files) -- does not test application logic
+- Limited detection compared to Nuclei (which covers server issues plus CVEs, panels, and more)
+- No JSON or SARIF output (CSV/XML only)
+- Nuclei's template library covers Nikto's server-level checks and far more
+
+### DAST Comparison Matrix
+
+| Feature | Nuclei | ZAP | Nikto |
+|---------|--------|-----|-------|
+| **Type** | Template-based scanner | Full proxy + active scanner | Server scanner |
+| **Best For** | Known CVEs, misconfigs, exposed panels | Comprehensive web app testing | Web server misconfiguration |
+| **Docker Size** | ~30MB | ~500MB+ | ~50MB |
+| **SARIF** | Yes | Via plugins | No |
+| **Integration Effort** | M | L | S (but limited value) |
+| **Scan Speed** | Minutes | Hours | Minutes |
+| **Detection Depth** | Known issues (template-based) | Unknown + known (active scanning) | Server-level only |
+| **Requires Running App** | Yes | Yes | Yes |
+| **Recommendation** | **Recommended if DAST pursued** | Defer (high effort) | **Not Recommended** |
+
+**Integration Feasibility Summary:**
+
+If DAST is pursued in a future phase, **Nuclei is the recommended starting point**:
+- CLI-friendly interface similar to SAST tools
+- Lightweight single binary (30MB vs ZAP's 500MB)
+- SARIF output for standardized parsing
+- Template-based approach allows targeted scanning
+- Fast execution (minutes vs ZAP's hours)
+
+ZAP is the most thorough DAST tool but should be deferred due to its massive footprint, complex configuration, and JVM dependency. It may be worth pursuing later for projects requiring comprehensive active scanning.
+
+Both DAST tools require a running application target URL, which the current scanner architecture does not support. Integration would require extending the configuration to accept target URLs and potentially creating a `DastAdapter` base class separate from `ScannerAdapter`.
+
+---
+
+## Secrets Scanning Comparison
+
+**Current coverage:** Gitleaks (universal secrets scanner)
+**Recommendation:** Keep Gitleaks as primary. TruffleHog is a valid complement for deep audits but not a replacement.
+
+### Gitleaks (Re-evaluation -- Current Tool)
+
+- **Purpose:** Detect hardcoded secrets, passwords, and API keys in source code and git history
+- **Language(s):** Universal (scans all file types)
+- **License:** MIT
+- **Output formats:** JSON, CSV, SARIF
+- **CLI usage:** `gitleaks detect --source /path --report-format json --report-path results.json`
+- **Docker install:** Single binary, ~15MB
+- **SARIF support:** No (JSON and CSV only; custom JSON format, not SARIF)
+- **Integration effort:** Already integrated (adapter exists)
+- **Current version:** 8.30.0 (installed in Dockerfile)
+- **Status:** Active development. Fast, reliable, well-integrated.
+
+**Current config:**
+```yaml
+scanners:
+  gitleaks:
+    enabled: true
+    timeout: 120
+    extra_args: []
+```
+
+**Detection method:** Regex-based pattern matching against 150+ built-in rules covering:
+- AWS keys, Google Cloud credentials, Azure tokens
+- GitHub/GitLab/Bitbucket tokens
+- Stripe, Twilio, SendGrid API keys
+- Database connection strings
+- Private keys (RSA, SSH, PGP)
+- Generic passwords and secrets patterns
+
+**Key characteristics:**
+- Fast: regex-only scanning, no network calls
+- Deterministic: same input always produces same output
+- Offline: does not verify if detected secrets are active
+- Higher false positive rate due to pattern matching without verification
+
+### TruffleHog (Comparison)
+
+- **Purpose:** Detect and verify secrets in source code, git history, and external sources
+- **Language(s):** Universal
+- **License:** AGPL-3.0
+- **Output formats:** JSON, text
+- **CLI usage:** `trufflehog filesystem /path --json`
+- **Docker install:** Single binary, ~50MB
+- **SARIF support:** No (custom JSON format)
+- **Integration effort:** S -- clean CLI, JSON output, but adds network dependency for verification
+- **Detection method:** Pattern matching + **active credential verification**
+  - Detects a potential secret via regex/entropy
+  - Attempts to verify if the credential is live (e.g., makes API call with detected key)
+  - Marks findings as verified or unverified
+- **Scope:** Beyond git repos, supports scanning:
+  - S3 buckets
+  - Docker images
+  - Slack history
+  - Jira
+  - And more external sources
+
+### Secrets Scanner Comparison Matrix
+
+| Feature | Gitleaks (current) | TruffleHog |
+|---------|-------------------|------------|
+| **Speed** | Fast (regex-only, no network) | Slower (verifies credentials) |
+| **Detection Method** | Pattern matching | Pattern matching + active verification |
+| **Verification** | No (offline) | Yes (attempts to use detected credentials) |
+| **Scope** | Git repos, directories | Git + S3 + Docker + Slack + more |
+| **False Positives** | Higher (no verification) | Lower (verified findings are confirmed) |
+| **Network Required** | No | Yes (for verification) |
+| **Docker Size** | ~15MB | ~50MB |
+| **SARIF** | No | No |
+| **License** | MIT | AGPL-3.0 |
+| **Integration Effort** | Already integrated | S |
+| **Recommendation** | **Keep as primary** | Consider for deep audits |
+
+**Verdict:** Keep Gitleaks as the primary secrets scanner. Its speed, simplicity, and offline operation make it ideal for CI/CD integration where fast feedback is critical. TruffleHog's credential verification is valuable -- it can confirm whether a detected secret is actually live and exploitable -- but it adds network dependency and slower execution. TruffleHog is best used as an optional complement for periodic deep security audits rather than on every scan.
+
+**Note on AGPL-3.0:** TruffleHog's AGPL license may have implications for some deployment models. Gitleaks' MIT license is more permissive.
