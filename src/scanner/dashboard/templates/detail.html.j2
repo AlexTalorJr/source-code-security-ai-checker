@@ -201,6 +201,23 @@
   font-family: monospace;
 }
 
+/* Copy AI Prompt button */
+.btn--copy-prompt {
+  background: #6f42c1;
+  color: #fff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn--copy-prompt:hover { background: #5a32a3; }
+.btn--copy-prompt.copied {
+  background: #28a745;
+}
+
 /* Delta badges */
 .delta-badge {
   display: inline-block;
@@ -369,6 +386,9 @@
 <div class="download-links">
   <a href="/dashboard/scans/{{ scan.id }}/report" class="btn btn--accent btn--small">Download HTML Report</a>
   <a href="/dashboard/scans/{{ scan.id }}/report/pdf" class="btn btn--accent btn--small">Download PDF Report</a>
+  {% if findings %}
+  <button class="btn--copy-prompt" id="copy-ai-prompt" onclick="copyAiPrompt()">Copy AI Prompt</button>
+  {% endif %}
 </div>
 {% endif %}
 
@@ -503,5 +523,54 @@
     {% endif %}
   </div>
 </div>
+
+{% if findings %}
+<script>
+function copyAiPrompt() {
+  var target = {{ scan.repo_url | tojson }} || {{ scan.target_path | tojson }} || 'unknown project';
+  var branch = {{ scan.branch | tojson }} || 'unknown';
+
+  var prompt = 'I ran a security scan on my project and found the following vulnerabilities.\n';
+  prompt += 'Please analyze each finding, explain the risk, and suggest specific code fixes.\n\n';
+  prompt += '## Scan Info\n';
+  prompt += '- **Target:** ' + target + '\n';
+  prompt += '- **Branch:** ' + branch + '\n';
+  prompt += '- **Total findings:** {{ findings | length }}\n';
+  prompt += '- **Quality gate:** {{ gate_label or "N/A" }}\n\n';
+  prompt += '## Findings\n\n';
+
+  {% for f in findings %}
+  prompt += '### {{ loop.index }}. [{{ f.severity }}] {{ f.title | replace("'", "\\'") | replace("\n", " ") }}\n';
+  prompt += '- **File:** `{{ f.file_path }}{% if f.line_start %}:{{ f.line_start }}{% endif %}`\n';
+  prompt += '- **Tool:** {{ f.tool }}\n';
+  prompt += '- **Rule:** {{ f.rule_id }}\n';
+  {% if f.description %}
+  prompt += '- **Description:** {{ f.description | replace("'", "\\'") | replace("\n", " ") | truncate(300) }}\n';
+  {% endif %}
+  {% if f.snippet %}
+  prompt += '- **Code snippet:**\n```\n{{ f.snippet | replace("'", "\\'") | replace("\n", "\\n") }}\n```\n';
+  {% endif %}
+  prompt += '\n';
+  {% endfor %}
+
+  prompt += '## What I need\n\n';
+  prompt += '1. For each finding, explain whether it is a real vulnerability or a false positive\n';
+  prompt += '2. For real vulnerabilities, provide a specific code fix (show the exact code change)\n';
+  prompt += '3. Prioritize fixes by severity (Critical > High > Medium > Low)\n';
+  prompt += '4. Group related findings that can be fixed together\n';
+
+  navigator.clipboard.writeText(prompt).then(function() {
+    var btn = document.getElementById('copy-ai-prompt');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(function() {
+      btn.textContent = 'Copy AI Prompt';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+</script>
+{% endif %}
+
 {% endif %}
 {% endblock %}
