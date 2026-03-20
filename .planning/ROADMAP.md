@@ -117,11 +117,13 @@ Plans:
   3. Scan history can be exported from one environment, transferred, and imported into another using migration scripts
   4. A new user can go from zero to first scan in under 5 minutes following only the README
   5. Complete documentation exists in both English (docs/en/) and Russian (docs/ru/) covering architecture, user guide, admin guide, DevOps guide, API reference, transfer guide, and custom rules
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 06-01: TBD
-- [ ] 06-02: TBD
+- [ ] 06-01-PLAN.md -- Makefile automation (install, run, test, backup, restore, package, multi-arch) and Wave 0 tests
+- [ ] 06-02-PLAN.md -- Doc restructuring: move to docs/en/, rewrite README.md, update 5 English docs
+- [ ] 06-03-PLAN.md -- Update remaining 3 English docs, create LICENSE, CONTRIBUTING.md, update CHANGELOG.md
+- [ ] 06-04-PLAN.md -- Russian translations: README.ru.md and 8 docs in docs/ru/
 
 ## Progress
 
@@ -135,4 +137,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 3. AI Analysis | 0/3 | Not started | - |
 | 4. Reports and Quality Gate | 3/4 | In Progress|  |
 | 5. API, Dashboard, CI, and Notifications | 3/4 | Gap closure | 2026-03-19 |
-| 6. Packaging, Portability, and Documentation | 0/0 | Not started | - |
+| 6. Packaging, Portability, and Documentation | 0/4 | Planned | - |
