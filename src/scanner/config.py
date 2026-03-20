@@ -31,6 +31,9 @@ class ScannersConfig(BaseModel):
     gitleaks: ScannerToolConfig = ScannerToolConfig(timeout=120)
     trivy: ScannerToolConfig = ScannerToolConfig(timeout=120)
     checkov: ScannerToolConfig = ScannerToolConfig(timeout=120)
+    psalm: ScannerToolConfig = ScannerToolConfig(enabled=False, timeout=300)
+    enlightn: ScannerToolConfig = ScannerToolConfig(enabled=False, timeout=120)
+    php_security_checker: ScannerToolConfig = ScannerToolConfig(enabled=False, timeout=30)
 
 
 class AIConfig(BaseModel):

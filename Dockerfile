@@ -28,6 +28,25 @@ RUN ARCH=$(uname -m | sed 's/x86_64/64bit/;s/aarch64/ARM64/') && \
 # Install checkov via pip
 RUN pip install --no-cache-dir checkov
 
+# Install PHP tools (psalm, local-php-security-checker)
+# PHP runtime for psalm and enlightn
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    php-cli \
+    php-xml \
+    php-mbstring \
+    php-curl \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Composer (for psalm)
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+# local-php-security-checker
+RUN ARCH=$(dpkg --print-architecture | sed 's/amd64/amd64/;s/arm64/arm64/') && \
+    curl -sSL "https://github.com/fabpot/local-php-security-checker/releases/download/v2.1.3/local-php-security-checker_linux_${ARCH}" \
+    -o /usr/local/bin/local-php-security-checker && \
+    chmod +x /usr/local/bin/local-php-security-checker
+
 # Non-root user for security
 RUN groupadd -r scanner && useradd -r -g scanner -d /app scanner
 RUN mkdir -p /data && chown scanner:scanner /data

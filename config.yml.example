@@ -31,6 +31,19 @@ scanners:
     enabled: true
     timeout: 120
     extra_args: ["--skip-path", ".venv", "--skip-path", "node_modules"]
+  # PHP/Laravel scanners (enable for PHP projects)
+  psalm:
+    enabled: false  # Psalm taint analysis (SQL injection, XSS via data flow)
+    timeout: 300
+    extra_args: []
+  enlightn:
+    enabled: false  # Laravel-specific checks (CSRF, mass assignment, debug mode)
+    timeout: 120
+    extra_args: []
+  php_security_checker:
+    enabled: false  # CVE detection in composer.lock dependencies
+    timeout: 30
+    extra_args: []
 
 ai:
   max_cost_per_scan: 5.0
