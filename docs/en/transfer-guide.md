@@ -2,133 +2,198 @@
 
 ## Overview
 
-This guide covers migrating aipix-security-scanner to a new server or datacenter. The scanner is fully self-contained in Docker, making transfers straightforward.
+This guide covers migrating aipix-security-scanner to a new server, handing the project to a new team, or setting up a fresh installation.
 
-## Prerequisites on Target Server
+**What gets transferred:**
+- SQLite database (scan history, findings, suppressions)
+- Configuration files (`config.yml`, `.env`)
+- Generated reports (HTML/PDF)
+
+**What does NOT get transferred:**
+- Docker images -- rebuilt on the target host from source
+- Python virtual environments -- recreated during `make install`
+
+## Prerequisites
+
+The target host needs:
 
 - Docker Engine 20.10+
 - Docker Compose v2+
+- GNU Make
+- Git (for cloning the repository)
 - 2 GB RAM minimum
 - 10 GB disk space
 
-## Step-by-Step Migration
+## Export from Source
 
-### Step 1: Backup on Source Server
+Create a backup archive on the source server:
 
 ```bash
-# On source server
 cd /path/to/naveksoft-security
 
-# Stop scanner (ensures clean DB state)
-docker compose down
-
-# Create transfer archive
-mkdir -p /tmp/scanner-transfer
-cp -r . /tmp/scanner-transfer/source/
-docker cp naveksoft-security-scanner-1:/data/scanner.db /tmp/scanner-transfer/ 2>/dev/null || true
-
-# If scanner was already stopped, extract from volume
-docker run --rm -v naveksoft-security_scanner_data:/data -v /tmp/scanner-transfer:/backup \
-  alpine cp /data/scanner.db /backup/
-
-tar czf /tmp/scanner-transfer.tar.gz -C /tmp scanner-transfer/
+# Create timestamped backup (DB + reports + config)
+make backup
+# Output: backups/backup-YYYYMMDD_HHMMSS.tar.gz
 ```
 
-### Step 2: Transfer to Target
+Copy the archive to the target host:
 
 ```bash
-# Copy archive to target server
-scp /tmp/scanner-transfer.tar.gz user@target-server:/tmp/
+scp backups/backup-*.tar.gz user@target-server:/tmp/
 ```
 
-### Step 3: Deploy on Target
+## Import to Target
+
+### Fresh Installation (Git Clone)
 
 ```bash
 # On target server
-cd /opt  # or preferred location
-tar xzf /tmp/scanner-transfer.tar.gz
-mv scanner-transfer/source naveksoft-security
+git clone https://github.com/AlexTalorJr/naveksoft-security.git
 cd naveksoft-security
 
-# Restore database
-mkdir -p /tmp/scanner-data
-cp /tmp/scanner-transfer/scanner.db /tmp/scanner-data/ 2>/dev/null || true
-
 # Configure
-cp config.yml.example config.yml
-# Edit config.yml as needed
+cp .env.example .env
+# Edit .env with real values (see Environment Variables Reference below)
 
-# Set environment
-cat > .env << 'EOF'
-SCANNER_API_KEY=your-api-key
-SCANNER_CLAUDE_API_KEY=sk-ant-...
-EOF
+cp config.yml.example config.yml
+# Edit config.yml if needed
 
 # Build and start
-docker compose up -d --build
+make install
+make run
+
+# Run migrations
+make migrate
 
 # Verify
 curl http://localhost:8000/api/health
 ```
 
-### Step 4: Restore Database
+### Restoring Data from Backup
+
+If you have a backup archive from the source server:
 
 ```bash
-# Copy database into container volume
-docker cp /tmp/scanner-data/scanner.db naveksoft-security-scanner-1:/data/scanner.db
+# After make install and make run:
+make restore BACKUP=/tmp/backup-20260320_143000.tar.gz
 
 # Restart to pick up restored data
 docker compose restart
 
-# Verify data
+# Verify
 curl http://localhost:8000/api/health
 ```
 
-### Step 5: Cleanup Source
+## Onboarding Checklist
 
-After verifying the target works:
+Follow these steps to get a new installation running:
 
-```bash
-# On source server
-docker compose down -v  # Removes volumes too
-rm -rf /tmp/scanner-transfer*
-```
+1. Install Docker and Docker Compose on the target host
+2. Clone the repository:
+   ```bash
+   git clone https://github.com/AlexTalorJr/naveksoft-security.git
+   cd naveksoft-security
+   ```
+3. Copy configuration templates:
+   ```bash
+   cp config.yml.example config.yml
+   cp .env.example .env
+   ```
+4. Set `SCANNER_API_KEY` -- generate a secure key:
+   ```bash
+   python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+   ```
+5. Set `SCANNER_CLAUDE_API_KEY` -- obtain from the [Anthropic Console](https://console.anthropic.com/)
+6. Configure notification settings if needed:
+   - Slack: set `SCANNER_SLACK_WEBHOOK_URL` in `.env`
+   - Email: set `SCANNER_EMAIL_SMTP_HOST`, `SCANNER_NOTIFICATIONS__EMAIL__SMTP_USER`, `SCANNER_NOTIFICATIONS__EMAIL__SMTP_PASSWORD`, and `SCANNER_NOTIFICATIONS__EMAIL__RECIPIENTS` in `.env`
+7. Build Docker images:
+   ```bash
+   make install
+   ```
+8. Start the scanner:
+   ```bash
+   make run
+   ```
+9. Run database migrations:
+   ```bash
+   make migrate
+   ```
+10. Verify the health endpoint:
+    ```bash
+    curl http://localhost:8000/api/health
+    # Expected: {"status": "healthy", ...}
+    ```
+11. Run your first scan:
+    ```bash
+    curl -X POST http://localhost:8000/api/scans \
+      -H "X-API-Key: your-key" \
+      -H "Content-Type: application/json" \
+      -d '{"path": "/path/to/code"}'
+    ```
 
-## Files to Transfer
+## Environment Variables Reference
 
-| File/Dir | Required | Description |
-|----------|----------|-------------|
-| `docker-compose.yml` | Yes | Service definition |
-| `Dockerfile` | Yes | Build instructions |
-| `src/` | Yes | Application source |
-| `pyproject.toml` | Yes | Python dependencies |
-| `config.yml` | Yes | Configuration |
-| `.env` | Yes | Secrets (create new!) |
-| `alembic/` | Yes | Database migrations |
-| `alembic.ini` | Yes | Alembic config |
-| `scanner.db` | Optional | Existing scan data |
-| `tests/` | Optional | Test suite |
-| `docs/` | Optional | Documentation |
+All variables use the `SCANNER_` prefix. Set them in the `.env` file.
 
-## Quick Transfer (Git-based)
-
-If the target has internet access:
-
-```bash
-git clone https://github.com/AlexTalorJr/naveksoft-security.git
-cd naveksoft-security
-cp config.yml.example config.yml
-# Configure .env with secrets
-docker compose up -d
-```
-
-Database must still be transferred separately.
+| Variable | Required | Default | Description | Example |
+|----------|----------|---------|-------------|---------|
+| `SCANNER_API_KEY` | Yes | -- | API key for REST API authentication | `dGhpcyBpcyBhIHRlc3Q` |
+| `SCANNER_CLAUDE_API_KEY` | Yes | -- | Anthropic API key for AI analysis | `sk-ant-api03-...` |
+| `SCANNER_PORT` | No | `8000` | External port for the scanner | `9000` |
+| `SCANNER_DB_PATH` | No | `/data/scanner.db` | SQLite database file path | `/data/scanner.db` |
+| `SCANNER_CONFIG_PATH` | No | `config.yml` | Path to YAML config file | `config.yml` |
+| `SCANNER_GIT_TOKEN` | No | -- | Token for cloning private repos | `ghp_xxxxxxxxxxxx` |
+| `SCANNER_SLACK_WEBHOOK_URL` | No | -- | Slack webhook for notifications | `https://hooks.slack.com/...` |
+| `SCANNER_EMAIL_SMTP_HOST` | No | -- | SMTP server for email notifications | `smtp.gmail.com` |
+| `SCANNER_NOTIFICATIONS__EMAIL__SMTP_PORT` | No | `587` | SMTP port | `587` |
+| `SCANNER_NOTIFICATIONS__EMAIL__SMTP_USER` | No | -- | SMTP username | `alerts@example.com` |
+| `SCANNER_NOTIFICATIONS__EMAIL__SMTP_PASSWORD` | No | -- | SMTP password | -- |
+| `SCANNER_NOTIFICATIONS__EMAIL__RECIPIENTS` | No | `[]` | JSON array of recipient emails | `["dev@example.com"]` |
 
 ## Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| Port 8000 in use | Change `SCANNER_PORT` in `.env` |
-| Permission denied on `/data` | Check Docker volume permissions |
-| Health returns "degraded" | Check DB path and file permissions |
-| Container keeps restarting | Check `docker compose logs scanner` |
+### Container Won't Start
+
+```bash
+docker compose logs scanner
+```
+
+Common causes:
+- Port already in use -- change `SCANNER_PORT` in `.env`
+- Missing `.env` file -- copy from `.env.example`
+- Docker not running -- start Docker daemon
+
+### Health Endpoint Returns Error
+
+```bash
+curl http://localhost:8000/api/health
+# {"status": "degraded", "database": "error"}
+```
+
+Check that `SCANNER_DB_PATH` points to a writable location inside the container. The default `/data/scanner.db` requires the `scanner_data` volume to be mounted.
+
+### Scans Fail or Timeout
+
+- Check that scanner tools (semgrep, trivy, etc.) are available inside the Docker image
+- Increase `scan_timeout` in `config.yml` for large repositories
+- For private repos, ensure `SCANNER_GIT_TOKEN` is set
+
+### Database Locked Errors
+
+The database uses WAL mode for concurrent read access. If you see "database is locked" errors:
+- Ensure only one scanner container is running
+- Do not access the SQLite file directly while the container is running
+- Use `make backup` for safe database copies
+
+### Permission Denied on /data
+
+The container runs as a non-root `scanner` user. Ensure the Docker volume has correct ownership:
+
+```bash
+docker compose down
+docker volume rm naveksoft-security_scanner_data
+docker compose up -d  # Recreates volume with correct permissions
+```
+
+Note: This removes existing scan data. Back up first with `make backup`.

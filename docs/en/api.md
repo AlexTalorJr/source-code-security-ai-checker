@@ -3,26 +3,24 @@
 ## Base URL
 
 ```
-http://localhost:8000/api
+http://localhost:8000
 ```
 
 ## Authentication
 
-All endpoints except health check require an API key in the `X-API-Key` header. The key is validated using timing-safe comparison (`secrets.compare_digest`).
+All API endpoints except `/api/health` require an API key passed in the `X-API-Key` header. The key is set via the `SCANNER_API_KEY` environment variable and validated using timing-safe comparison (`secrets.compare_digest`).
 
 ```bash
 curl -H "X-API-Key: your-key" http://localhost:8000/api/scans
 ```
 
+Requests without a valid key receive a `401 Unauthorized` response.
+
 ## Endpoints
 
-### Health Check
+### GET /api/health
 
-```
-GET /api/health
-```
-
-Checks application and database health. No authentication required.
+Health check endpoint. No authentication required.
 
 **Response 200:**
 
@@ -30,123 +28,277 @@ Checks application and database health. No authentication required.
 {
   "status": "healthy",
   "version": "0.1.0",
-  "uptime_seconds": 123.45,
+  "uptime_seconds": 3600.5,
   "database": "ok"
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| status | string | `"healthy"` or `"degraded"` |
-| version | string | Scanner version |
-| uptime_seconds | float | Seconds since startup |
-| database | string | `"ok"` or `"error"` |
+| `status` | string | `"healthy"` or `"degraded"` |
+| `version` | string | Scanner version from pyproject.toml |
+| `uptime_seconds` | float | Seconds since application startup |
+| `database` | string | `"ok"` or `"error"` |
 
-### Trigger Scan
+**Example:**
 
+```bash
+curl http://localhost:8000/api/health
 ```
-POST /api/scans
-```
 
-Start a new security scan. Returns immediately with scan ID; scan runs asynchronously.
+---
+
+### POST /api/scans
+
+Trigger a new security scan. The scan is queued and runs asynchronously in the background.
 
 **Request body:**
 
 ```json
 {
+  "path": "/path/to/local/code",
   "repo_url": "https://github.com/org/repo.git",
   "branch": "main"
 }
 ```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `path` | string | No | Local filesystem path to scan |
+| `repo_url` | string | No | Git repository URL to clone and scan |
+| `branch` | string | No | Branch to checkout (default: repository default branch) |
+
+Provide either `path` or `repo_url`. If `repo_url` is given, the scanner clones the repository before scanning.
 
 **Response 202:**
 
 ```json
 {
   "id": 1,
-  "status": "pending",
-  "repo_url": "https://github.com/org/repo.git",
-  "branch": "main"
+  "status": "queued"
 }
 ```
 
-### List Scans
+**Status codes:** `202` Created, `401` Unauthorized, `422` Validation error
 
-```
-GET /api/scans
-```
+**Example:**
 
-Returns all scans ordered by creation date (newest first).
-
-### Get Scan Details
-
-```
-GET /api/scans/{id}
+```bash
+curl -X POST http://localhost:8000/api/scans \
+  -H "X-API-Key: your-key" \
+  -H "Content-Type: application/json" \
+  -d '{"repo_url": "https://github.com/org/repo.git", "branch": "main"}'
 ```
 
-Returns scan metadata, severity counts, and quality gate result.
+---
 
-### Get Scan Findings
+### GET /api/scans
 
-```
-GET /api/scans/{id}/findings
-```
+List all scans, ordered by creation date (newest first).
 
-Returns all findings for a scan, including AI analysis and fix suggestions.
+**Response 200:**
 
-### Download HTML Report
-
-```
-GET /api/scans/{id}/report/html
-```
-
-Returns the interactive HTML report for a completed scan.
-
-### Download PDF Report
-
-```
-GET /api/scans/{id}/report/pdf
+```json
+[
+  {
+    "id": 1,
+    "repo_url": "https://github.com/org/repo.git",
+    "branch": "main",
+    "status": "completed",
+    "started_at": "2026-03-20T10:00:00Z",
+    "completed_at": "2026-03-20T10:05:00Z",
+    "gate_passed": true
+  }
+]
 ```
 
-Returns the PDF report for a completed scan.
+**Example:**
 
-### Quality Gate Result
-
-```
-GET /api/scans/{id}/gate
+```bash
+curl -H "X-API-Key: your-key" http://localhost:8000/api/scans
 ```
 
-Returns the quality gate evaluation result for a scan.
+---
 
-### Create Suppression
+### GET /api/scans/{id}
 
+Get detailed scan results including findings.
+
+**Path parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | integer | Scan ID |
+
+**Response 200:**
+
+```json
+{
+  "id": 1,
+  "repo_url": "https://github.com/org/repo.git",
+  "branch": "main",
+  "status": "completed",
+  "started_at": "2026-03-20T10:00:00Z",
+  "completed_at": "2026-03-20T10:05:00Z",
+  "gate_passed": true,
+  "findings": [
+    {
+      "id": 1,
+      "tool": "semgrep",
+      "rule_id": "python.lang.security.audit.exec-detected",
+      "severity": "high",
+      "file_path": "src/app.py",
+      "line": 42,
+      "message": "Use of exec() detected",
+      "fingerprint": "abc123..."
+    }
+  ]
+}
 ```
-POST /api/suppressions
+
+**Status codes:** `200` OK, `401` Unauthorized, `404` Scan not found
+
+**Example:**
+
+```bash
+curl -H "X-API-Key: your-key" http://localhost:8000/api/scans/1
 ```
 
-Mark a finding fingerprint as a false positive.
+---
+
+### POST /api/scans/{scan_id}/findings/{finding_id}/suppress
+
+Suppress a finding (mark as false positive).
+
+**Path parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `scan_id` | integer | Scan ID |
+| `finding_id` | integer | Finding ID |
 
 **Request body:**
 
 ```json
 {
-  "fingerprint": "abc123...",
-  "reason": "False positive: test fixture"
+  "reason": "False positive: test fixture data"
 }
 ```
 
-### Delete Suppression
+**Response 200:**
 
-```
-DELETE /api/suppressions/{fingerprint}
+```json
+{
+  "status": "suppressed",
+  "finding_id": 1,
+  "reason": "False positive: test fixture data"
+}
 ```
 
-Remove a suppression to re-enable the finding.
+**Example:**
+
+```bash
+curl -X POST http://localhost:8000/api/scans/1/findings/5/suppress \
+  -H "X-API-Key: your-key" \
+  -H "Content-Type: application/json" \
+  -d '{"reason": "False positive: test fixture"}'
+```
+
+---
+
+### DELETE /api/scans/{scan_id}/findings/{finding_id}/suppress
+
+Remove suppression from a finding.
+
+**Path parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `scan_id` | integer | Scan ID |
+| `finding_id` | integer | Finding ID |
+
+**Response 200:**
+
+```json
+{
+  "status": "unsuppressed",
+  "finding_id": 1
+}
+```
+
+**Example:**
+
+```bash
+curl -X DELETE http://localhost:8000/api/scans/1/findings/5/suppress \
+  -H "X-API-Key: your-key"
+```
+
+---
+
+### GET /api/trends
+
+Get finding trends over time for trend charts.
+
+**Response 200:**
+
+```json
+{
+  "scans": [
+    {
+      "id": 1,
+      "completed_at": "2026-03-20T10:05:00Z",
+      "total_findings": 15,
+      "critical": 1,
+      "high": 3,
+      "medium": 7,
+      "low": 4
+    }
+  ]
+}
+```
+
+**Example:**
+
+```bash
+curl -H "X-API-Key: your-key" http://localhost:8000/api/trends
+```
+
+## Dashboard
+
+A web dashboard is available at `/dashboard` providing a graphical interface for the scanner:
+
+| Route | Description |
+|-------|-------------|
+| `GET /dashboard/login` | Login page |
+| `POST /dashboard/login` | Authenticate with API key |
+| `GET /dashboard/` | Scan history overview |
+| `GET /dashboard/scans/{id}` | Scan detail with findings |
+| `GET /dashboard/trends` | Trend charts over time |
+
+The dashboard uses the same API key for authentication, stored in a session cookie after login. Finding suppression and unsuppression are available directly from the scan detail page.
+
+## Error Responses
+
+All error responses follow a standard format:
+
+```json
+{
+  "detail": "Description of the error"
+}
+```
+
+**Common status codes:**
+
+| Code | Meaning |
+|------|---------|
+| `401` | Missing or invalid API key |
+| `404` | Resource not found (scan ID, finding ID) |
+| `422` | Validation error (invalid request body) |
 
 ## OpenAPI Documentation
 
 FastAPI auto-generates interactive API documentation:
 
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
-- OpenAPI JSON: http://localhost:8000/openapi.json
+- **Swagger UI:** http://localhost:8000/docs
+- **ReDoc:** http://localhost:8000/redoc
+- **OpenAPI JSON:** http://localhost:8000/openapi.json

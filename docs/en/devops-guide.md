@@ -8,17 +8,19 @@
 cp config.yml.example config.yml
 cp .env.example .env
 # Edit .env with real secrets
-docker compose up -d
+make install   # builds Docker images
+make run       # starts scanner in background
 ```
 
-### Dockerfile
+Or directly with Docker Compose:
 
-Multi-stage build based on `python:3.12-slim`:
-- Non-root user `scanner` for security
-- `curl` installed for health checks
-- Package installed via `pip install .` with hatchling build backend
+```bash
+docker compose up -d --build
+```
 
-### docker-compose.yml
+### Container Configuration
+
+The `docker-compose.yml` defines a single `scanner` service:
 
 ```yaml
 services:
@@ -27,13 +29,8 @@ services:
     ports:
       - "${SCANNER_PORT:-8000}:8000"
     volumes:
-      - scanner_data:/data           # Persistent DB storage
-      - ./config.yml:/app/config.yml:ro  # Read-only config
-    environment:
-      - SCANNER_DB_PATH=/data/scanner.db
-      - SCANNER_API_KEY=${SCANNER_API_KEY:-}
-      - SCANNER_CLAUDE_API_KEY=${SCANNER_CLAUDE_API_KEY:-}
-      - SCANNER_CONFIG_PATH=/app/config.yml
+      - scanner_data:/data           # Persistent DB and reports
+      - ./config.yml:/app/config.yml:ro  # Read-only config mount
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
@@ -46,72 +43,53 @@ volumes:
   scanner_data:  # Named volume for SQLite persistence
 ```
 
-### Environment Variables
+- **Volume `scanner_data`** mounts at `/data` inside the container -- stores the SQLite database and generated reports. Data survives container restarts and rebuilds.
+- **Config mount** binds `config.yml` read-only into the container at `/app/config.yml`.
+- **Port mapping** defaults to `8000` but can be changed via `SCANNER_PORT` environment variable.
+- **Restart policy** `unless-stopped` ensures the scanner restarts after host reboots.
 
-Pass secrets via `.env` file (not committed to git):
+## Dockerfile
 
-```bash
-# .env
-SCANNER_API_KEY=your-api-key
-SCANNER_CLAUDE_API_KEY=sk-ant-...
-SCANNER_PORT=8000
-```
+The image is based on `python:3.12-slim`:
 
-### Health Checks
+1. **System dependencies** -- `curl` (healthcheck), `libpango` and `libharfbuzz` (WeasyPrint PDF generation)
+2. **Non-root user** -- `scanner` user and group created for security; `/data` directory owned by this user
+3. **Install workflow** -- `pyproject.toml` and `src/` copied, then `pip install --no-cache-dir .` using the hatchling build backend
+4. **App files** -- `alembic.ini`, `alembic/` migrations, and `config.yml.example` (as default `config.yml`) copied in
+5. **Entrypoint** -- `uvicorn scanner.main:app --host 0.0.0.0 --port 8000`
 
-Docker health check runs every 30 seconds:
+## Environment Variables
 
-```bash
-# Check container health
-docker compose ps
+All configuration can be set via environment variables with the `SCANNER_` prefix. Pass secrets via the `.env` file (not committed to git).
 
-# Manual check
-curl http://localhost:8000/api/health
-```
-
-### Logs
-
-```bash
-# Tail logs
-docker compose logs -f scanner
-
-# Last 100 lines
-docker compose logs scanner --tail 100
-```
-
-### Rebuild
-
-```bash
-docker compose down
-docker compose up -d --build
-```
-
-### Data Persistence
-
-SQLite database is stored in a named Docker volume `scanner_data` mounted at `/data`. Data survives container restarts and rebuilds.
-
-```bash
-# Inspect volume
-docker volume inspect naveksoft-security_scanner_data
-
-# Backup
-docker cp naveksoft-security-scanner-1:/data/scanner.db ./backup/scanner.db
-
-# Restore
-docker cp ./backup/scanner.db naveksoft-security-scanner-1:/data/scanner.db
-docker compose restart
-```
-
-### Port Configuration
-
-```bash
-# Change external port
-SCANNER_PORT=9000 docker compose up -d
-```
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `SCANNER_API_KEY` | Yes | -- | API key for authenticating REST API requests |
+| `SCANNER_CLAUDE_API_KEY` | Yes | -- | Anthropic API key for AI analysis |
+| `SCANNER_PORT` | No | `8000` | External port for the scanner service |
+| `SCANNER_DB_PATH` | No | `/data/scanner.db` | Path to SQLite database file |
+| `SCANNER_CONFIG_PATH` | No | `config.yml` | Path to YAML configuration file |
+| `SCANNER_GIT_TOKEN` | No | -- | Token for cloning private Git repositories |
+| `SCANNER_SLACK_WEBHOOK_URL` | No | -- | Slack incoming webhook URL for notifications |
+| `SCANNER_EMAIL_SMTP_HOST` | No | -- | SMTP server hostname for email notifications |
+| `SCANNER_NOTIFICATIONS__EMAIL__SMTP_PORT` | No | `587` | SMTP server port |
+| `SCANNER_NOTIFICATIONS__EMAIL__SMTP_USER` | No | -- | SMTP authentication username |
+| `SCANNER_NOTIFICATIONS__EMAIL__SMTP_PASSWORD` | No | -- | SMTP authentication password |
+| `SCANNER_NOTIFICATIONS__EMAIL__RECIPIENTS` | No | `[]` | JSON array of email recipients |
 
 ## Jenkins Integration
 
-The scanner integrates with Jenkins pipelines via a Jenkinsfile stage that triggers a scan and checks the quality gate. Uses the Jenkins `httpRequest` plugin for API calls.
+The project includes `Jenkinsfile.security` for integrating security scans into a Jenkins pipeline. It uses the Jenkins `httpRequest` plugin for API calls.
+
+### Setup
+
+1. Install the **HTTP Request** plugin in Jenkins
+2. Add `SCANNER_URL` (e.g., `http://scanner:8000`) as a Jenkins credential or environment variable
+3. Add `SCANNER_API_KEY` as a Jenkins secret text credential
+
+### Usage
+
+Add the security scan stage to your existing `Jenkinsfile`:
 
 ```groovy
 stage('Security Scan') {
@@ -124,52 +102,141 @@ stage('Security Scan') {
                 contentType: 'APPLICATION_JSON',
                 requestBody: """{"repo_url": "${GIT_URL}", "branch": "${GIT_BRANCH}"}"""
             )
-            def scanId = readJSON(text: response.content).id
+            def scanResult = readJSON(text: response.content)
+            def scanId = scanResult.id
             // Poll for completion, then check quality gate
         }
     }
 }
 ```
 
-## Backup Strategy
+### Quality Gate
 
-### Automated Backup Script
+The scanner evaluates a quality gate after each scan. Configure pass/fail criteria in `config.yml`:
 
-```bash
-#!/bin/bash
-# backup-scanner.sh
-BACKUP_DIR="/backups/scanner/$(date +%Y%m%d)"
-mkdir -p "$BACKUP_DIR"
-
-# Copy database (WAL mode allows hot backup)
-docker cp naveksoft-security-scanner-1:/data/scanner.db "$BACKUP_DIR/"
-docker cp naveksoft-security-scanner-1:/data/scanner.db-wal "$BACKUP_DIR/" 2>/dev/null
-docker cp naveksoft-security-scanner-1:/data/scanner.db-shm "$BACKUP_DIR/" 2>/dev/null
-
-# Copy config
-cp config.yml "$BACKUP_DIR/"
-
-echo "Backup saved to $BACKUP_DIR"
+```yaml
+gate:
+  fail_on:
+    - critical
+    - high
+  include_compound_risks: true
 ```
 
-Add to cron:
+If the gate fails, the Jenkins stage should fail the build. Query the scan result to check `gate_passed`.
+
+## Backups
+
+### Using Make Targets
+
 ```bash
-0 2 * * * /path/to/backup-scanner.sh
+# Create a timestamped backup (DB + reports + config)
+make backup
+# Output: backups/backup-20260320_143000.tar.gz
+
+# Restore from a backup file
+make restore BACKUP=backups/backup-20260320_143000.tar.gz
 ```
 
-## Local Development
+### What Gets Backed Up
+
+- **SQLite database** -- backed up using `sqlite3 .backup` command (WAL-safe, no downtime required)
+- **Reports** -- generated HTML/PDF reports from `/data/reports`
+- **Configuration** -- `config.yml`
+
+### WAL Mode Safety
+
+The database runs in WAL (Write-Ahead Logging) mode. The `make backup` target uses SQLite's `.backup` command inside the container, which safely handles WAL checkpointing. Do not simply copy the `.db` file -- use the make target or `sqlite3 .backup` command.
+
+### Recommended Schedule
+
+Set up a daily cron job for automated backups:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-
-# Run all tests
-python -m pytest tests/ -v
-
-# Run specific phase tests
-python -m pytest tests/phase_01/ -v
-
-# Start dev server
-SCANNER_DB_PATH=./dev.db uvicorn scanner.main:app --reload
+# Daily at 2 AM
+0 2 * * * cd /path/to/naveksoft-security && make backup
 ```
+
+## Multi-Architecture Builds
+
+Build Docker images for both `amd64` and `arm64` architectures using Docker Buildx.
+
+### Prerequisites
+
+- Docker Desktop 4.x+ (includes buildx) or manually installed `docker-buildx` plugin
+- QEMU user-static for cross-platform emulation (Docker Desktop handles this automatically)
+
+### Build Multi-Arch Images
+
+```bash
+# Build for amd64 + arm64, save as OCI archive
+make docker-multiarch
+# Output: aipix-security-scanner-{version}-multiarch.tar
+
+# Build and push to a container registry
+make docker-push REGISTRY=your-registry.example.com
+```
+
+The `docker-multiarch` target creates a buildx builder named `multiarch` if it does not already exist.
+
+## Monitoring
+
+### Health Endpoint
+
+Poll the health endpoint to monitor scanner status:
+
+```bash
+curl http://localhost:8000/api/health
+# {"status": "healthy", "version": "0.1.0", "uptime_seconds": 3600.5, "database": "ok"}
+```
+
+A `"degraded"` status or `"database": "error"` response indicates an issue with the database connection.
+
+### Docker Healthcheck
+
+The container includes a built-in healthcheck that runs every 30 seconds. Check container health status:
+
+```bash
+docker compose ps
+# Shows "healthy" or "unhealthy" in the STATUS column
+```
+
+### Logs
+
+```bash
+# Follow logs in real time
+docker compose logs -f scanner
+
+# Last 100 lines
+docker compose logs scanner --tail 100
+```
+
+Log level is configured in `config.yml` via the `log_level` field (default: `info`).
+
+### Restart Policy
+
+The container uses `restart: unless-stopped`, so it automatically restarts after crashes or host reboots. Only a manual `docker compose stop` or `docker compose down` will keep it stopped.
+
+## Upgrading
+
+1. Pull the latest code:
+   ```bash
+   git pull origin main
+   ```
+
+2. Rebuild and restart:
+   ```bash
+   make install   # rebuilds Docker image
+   make run       # starts updated container
+   ```
+
+3. Run database migrations:
+   ```bash
+   make migrate
+   ```
+
+4. Verify the upgrade:
+   ```bash
+   curl http://localhost:8000/api/health
+   ```
+
+If the health endpoint returns the new version number and `"status": "healthy"`, the upgrade is complete.
