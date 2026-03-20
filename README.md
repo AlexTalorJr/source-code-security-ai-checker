@@ -15,8 +15,8 @@ Get your first scan running in under 5 minutes.
 
 ```bash
 # 1. Clone
-git clone https://github.com/AlexTalorJr/naveksoft-security.git
-cd naveksoft-security
+git clone https://github.com/AlexTalorJr/source-code-security-ai-checker.git
+cd source-code-security-ai-checker
 
 # 2. Configure
 cp config.yml.example config.yml
@@ -44,7 +44,31 @@ Expected response:
 }
 ```
 
-### Run a Scan
+## Web Dashboard
+
+The scanner includes a built-in web interface at `http://localhost:8000/dashboard/`.
+
+**Login:** use the API key set in `SCANNER_API_KEY`.
+
+### Starting a scan from the dashboard
+
+1. Open **Scan History** (`/dashboard/history`)
+2. Click **"Start New Scan"** — the form expands
+3. Fill in either **Local Path** or **Repository URL** + **Branch**
+4. Optionally check **"Skip AI Analysis"** to run without Claude API (faster, no cost)
+5. Click **"Start Scan"**
+
+The scan runs in the background. The detail page shows real-time progress with live polling, and results appear automatically when complete.
+
+### Dashboard pages
+
+| Page | URL | Description |
+|------|-----|-------------|
+| Scan History | `/dashboard/history` | List of all scans + start new scan form |
+| Scan Detail | `/dashboard/scans/{id}` | Findings, severity breakdown, suppression controls |
+| Trends | `/dashboard/trends` | Charts: severity over time, tool distribution |
+
+### Run a Scan via API
 
 ```bash
 curl -X POST http://localhost:8000/api/scans \
@@ -53,16 +77,100 @@ curl -X POST http://localhost:8000/api/scans \
   -d '{"repo_url": "https://github.com/your-org/your-repo.git", "branch": "main"}'
 ```
 
+To skip AI analysis for a specific scan:
+
+```bash
+curl -X POST http://localhost:8000/api/scans \
+  -H "X-API-Key: $SCANNER_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"repo_url": "https://github.com/your-org/repo.git", "branch": "main", "skip_ai": true}'
+```
+
+## Jenkins Pipeline Integration
+
+Add the scanner as a stage in your `Jenkinsfile` to block deployments with Critical/High findings.
+
+### Basic Jenkinsfile stage
+
+```groovy
+pipeline {
+    agent any
+
+    environment {
+        SCANNER_URL = 'http://scanner-host:8000'
+        SCANNER_API_KEY = credentials('scanner-api-key')
+    }
+
+    stages {
+        stage('Security Scan') {
+            steps {
+                script {
+                    // Trigger scan
+                    def response = httpRequest(
+                        url: "${SCANNER_URL}/api/scans",
+                        httpMode: 'POST',
+                        contentType: 'APPLICATION_JSON',
+                        customHeaders: [[name: 'X-API-Key', value: "${SCANNER_API_KEY}"]],
+                        requestBody: """{"repo_url": "${env.GIT_URL}", "branch": "${env.GIT_BRANCH}"}"""
+                    )
+
+                    def scan = readJSON text: response.content
+                    def scanId = scan.id
+                    echo "Scan started: #${scanId}"
+
+                    // Poll until complete
+                    def status = 'queued'
+                    while (status == 'queued' || status == 'running') {
+                        sleep 10
+                        def progress = httpRequest(
+                            url: "${SCANNER_URL}/api/scans/${scanId}/progress",
+                            httpMode: 'GET'
+                        )
+                        status = readJSON(text: progress.content).stage
+                    }
+
+                    // Check quality gate
+                    def result = httpRequest(
+                        url: "${SCANNER_URL}/api/scans/${scanId}",
+                        httpMode: 'GET',
+                        customHeaders: [[name: 'X-API-Key', value: "${SCANNER_API_KEY}"]]
+                    )
+                    def scanResult = readJSON text: result.content
+
+                    if (!scanResult.gate_passed) {
+                        error "Security scan FAILED: ${scanResult.critical_count} Critical, ${scanResult.high_count} High findings"
+                    }
+
+                    echo "Security scan PASSED (${scanResult.total_findings} findings, gate passed)"
+                }
+            }
+        }
+    }
+}
+```
+
+### Key points
+
+- **Quality gate** blocks the build if Critical or High findings are detected (configurable in `config.yml` under `gate.fail_on`)
+- **Scan via local path** — if Jenkins and the scanner share a filesystem, use `"path": "${WORKSPACE}"` instead of `repo_url`
+- **Skip AI analysis** — add `"skip_ai": true` to the request body for faster scans without Claude API costs
+- **Notifications** — configure Slack/email in `config.yml` to get alerts on scan completion
+- **Reports** — HTML and PDF reports are generated automatically, accessible via `/api/scans/{id}/report` or the dashboard
+
+See [DevOps Guide](docs/en/devops-guide.md) for full Jenkins integration details including pipeline examples with parallel stages.
+
 ## Features
 
 - **5 parallel security scanners** -- Semgrep, cppcheck, Gitleaks, Trivy, Checkov
 - **AI-powered analysis** -- Claude reviews findings for context, compound risks, and fix suggestions
 - **Interactive HTML and PDF reports** -- filterable findings with code context and charts
 - **Configurable quality gate** -- block deployments on Critical/High severity findings
-- **REST API with web dashboard** -- scan management, history, suppression controls
-- **Slack and email notifications** -- real-time alerts on scan completion
+- **Web dashboard** -- scan management, real-time progress, history, suppression controls
+- **REST API** -- trigger scans, fetch results, manage findings programmatically
+- **Slack and email notifications** -- real-time alerts with scan target identification
 - **Jenkins CI integration** -- pipeline stage with quality gate checks
 - **Scan history with delta comparison** -- track new, fixed, and persisting findings
+- **Skip AI per scan** -- run without Claude API when speed or cost matters
 
 ## Documentation
 
@@ -75,9 +183,11 @@ curl -X POST http://localhost:8000/api/scans \
 | [Admin Guide](docs/en/admin-guide.md) | Configuration, environment variables, tuning |
 | [DevOps Guide](docs/en/devops-guide.md) | Docker deployment, Jenkins, backups |
 | [Transfer Guide](docs/en/transfer-guide.md) | Server migration procedures |
-| [Custom Rules](docs/en/custom-rules.md) | Writing Semgrep rules for aipix |
+| [Custom Rules](docs/en/custom-rules.md) | Writing custom Semgrep rules |
 
 ## Project Status
+
+All v1.0 phases complete.
 
 | Phase | Description | Status |
 |-------|-------------|--------|
@@ -86,7 +196,7 @@ curl -X POST http://localhost:8000/api/scans \
 | 3 | AI Analysis (Claude API) | Done |
 | 4 | Report Generation (HTML/PDF) | Done |
 | 5 | Dashboard, Notifications & Quality Gate | Done |
-| 6 | Packaging, Portability & Documentation | In Progress |
+| 6 | Packaging, Portability & Documentation | Done |
 
 ## Tech Stack
 
