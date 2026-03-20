@@ -30,7 +30,7 @@ Every code change is automatically scanned for security vulnerabilities before d
 
 ### Active (v2.0)
 
-- [ ] Research security scanner ecosystem — tools, configurations, best practices per language
+- [x] Research security scanner ecosystem — tools, configurations, best practices per language — Validated in Phase 7
 - [ ] Scanner plugin architecture — add/configure scanners without code changes
 - [ ] Advanced scanner configuration UI — manage scanner settings from dashboard
 - [ ] DAST (dynamic application security testing) capabilities
@@ -40,7 +40,7 @@ Every code change is automatically scanned for security vulnerabilities before d
 
 **Goal:** Research and improve the security scanning capabilities — discover which tools work best for each language, how to configure them optimally, and how to make scanner management extensible.
 
-**Phase 7 (research):** Deep investigation of available open-source security scanners per language, their configuration best practices, false positive rates, and integration patterns. Output: actionable recommendations for scanner improvements.
+**Phase 7 (research) — COMPLETE:** Produced 1416-line scanner ecosystem report covering 9 languages, 13 tools evaluated, 9 recommended across 3 priority tiers. Key outcomes: config-driven plugin registry, optional SARIF helper, incremental scanning pattern. Implementation roadmap: Phase 8 (Tier 1 tools), Phase 9 (SARIF + Tier 2), Phase 10 (incremental + DAST).
 
 ### Out of Scope
 
@@ -90,4 +90,4 @@ Every code change is automatically scanned for security vulnerabilities before d
 | Skip AI per scan | Cost control, faster scans when AI not needed | ✓ Confirmed |
 
 ---
-*Last updated: 2026-03-20 — v2.0 milestone started. Research phase on scanner ecosystem.*
+*Last updated: 2026-03-20 — Phase 7 complete. Scanner ecosystem research delivered.*
