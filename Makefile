@@ -16,10 +16,22 @@ install: ## Build Docker images
 	docker compose build
 
 run: ## Start scanner (detached)
+	@PID=$$(lsof -ti :8000 2>/dev/null); \
+	if [ -n "$$PID" ]; then \
+		echo "Port 8000 in use by PID $$PID — killing..."; \
+		kill $$PID 2>/dev/null; sleep 1; \
+		kill -9 $$PID 2>/dev/null || true; \
+	fi
 	docker compose up -d
 
 stop: ## Stop scanner
 	docker compose down
+	@PID=$$(lsof -ti :8000 2>/dev/null); \
+	if [ -n "$$PID" ]; then \
+		echo "Port 8000 still in use by PID $$PID — killing..."; \
+		kill $$PID 2>/dev/null; sleep 1; \
+		kill -9 $$PID 2>/dev/null || true; \
+	fi
 
 test: ## Run test suite
 	@if [ -f .venv/bin/pytest ]; then .venv/bin/pytest tests/ -v; elif python3 -c "import pytest" 2>/dev/null; then python3 -m pytest tests/ -v; else docker compose exec scanner python -m pytest tests/ -v; fi
