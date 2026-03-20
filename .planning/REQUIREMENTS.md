@@ -55,22 +55,22 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PLUG-01 | — | Pending |
-| PLUG-02 | — | Pending |
-| PLUG-03 | — | Pending |
-| PLUG-04 | — | Pending |
-| SCAN-01 | — | Pending |
-| SCAN-02 | — | Pending |
-| SCAN-03 | — | Pending |
-| SCAN-04 | — | Pending |
-| INFRA-01 | — | Pending |
-| INFRA-02 | — | Pending |
-| DOCS-01 | — | Pending |
+| PLUG-01 | Phase 8 | Pending |
+| PLUG-02 | Phase 8 | Pending |
+| PLUG-03 | Phase 8 | Pending |
+| PLUG-04 | Phase 8 | Pending |
+| SCAN-01 | Phase 9 | Pending |
+| SCAN-02 | Phase 9 | Pending |
+| SCAN-03 | Phase 9 | Pending |
+| SCAN-04 | Phase 9 | Pending |
+| INFRA-01 | Phase 10 | Pending |
+| INFRA-02 | Phase 10 | Pending |
+| DOCS-01 | Phase 10 | Pending |
 
 **Coverage:**
 - v1.0.1 requirements: 11 total
-- Mapped to phases: 0
-- Unmapped: 11 ⚠️
+- Mapped to phases: 11
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-20*
