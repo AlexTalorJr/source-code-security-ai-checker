@@ -16,13 +16,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip install --no-cache-dir semgrep
 
 # Install gitleaks
-RUN ARCH=$(dpkg --print-architecture) && \
-    curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_${ARCH}.tar.gz" \
+RUN ARCH=$(dpkg --print-architecture | sed 's/amd64/x64/;s/arm64/arm64/') && \
+    curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v8.30.0/gitleaks_8.30.0_linux_${ARCH}.tar.gz" \
     | tar xz -C /usr/local/bin gitleaks
 
 # Install trivy
-RUN ARCH=$(dpkg --print-architecture) && \
-    curl -sSL "https://github.com/aquasecurity/trivy/releases/download/v0.58.1/trivy_0.58.1_Linux-$(uname -m | sed 's/x86_64/64bit/;s/aarch64/ARM64/').tar.gz" \
+RUN ARCH=$(uname -m | sed 's/x86_64/64bit/;s/aarch64/ARM64/') && \
+    curl -sSL "https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_Linux-${ARCH}.tar.gz" \
     | tar xz -C /usr/local/bin trivy
 
 # Install checkov via pip
