@@ -30,11 +30,17 @@ Every code change is automatically scanned for security vulnerabilities before d
 
 ### Active (v2.0)
 
+- [ ] Research security scanner ecosystem — tools, configurations, best practices per language
 - [ ] Scanner plugin architecture — add/configure scanners without code changes
 - [ ] Advanced scanner configuration UI — manage scanner settings from dashboard
-- [ ] Research and integrate additional security tools per language
 - [ ] DAST (dynamic application security testing) capabilities
 - [ ] Role-based access control (admin, viewer, scanner roles)
+
+## Current Milestone: v2.0 Scanner Ecosystem
+
+**Goal:** Research and improve the security scanning capabilities — discover which tools work best for each language, how to configure them optimally, and how to make scanner management extensible.
+
+**Phase 7 (research):** Deep investigation of available open-source security scanners per language, their configuration best practices, false positive rates, and integration patterns. Output: actionable recommendations for scanner improvements.
 
 ### Out of Scope
 
@@ -84,4 +90,4 @@ Every code change is automatically scanned for security vulnerabilities before d
 | Skip AI per scan | Cost control, faster scans when AI not needed | ✓ Confirmed |
 
 ---
-*Last updated: 2026-03-20 — v1.0 milestone complete. 6 phases, 21 plans, 8 scanners, 5 languages documentation.*
+*Last updated: 2026-03-20 — v2.0 milestone started. Research phase on scanner ecosystem.*
