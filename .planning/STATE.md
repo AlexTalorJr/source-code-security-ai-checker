@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: null
-milestone_name: null
-status: milestone_complete
+milestone: v1.0.1
+milestone_name: Scanner Plugin Registry
+status: defining_requirements
 last_updated: "2026-03-20"
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 23
-  completed_plans: 23
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -18,12 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-20)
 
 **Core value:** Every code change is automatically scanned for security vulnerabilities before deployment
-**Current focus:** Planning next milestone
+**Current focus:** Defining requirements for v1.0.1
 
 ## Current Position
 
-Milestone v2.0 Scanner Ecosystem — COMPLETE (shipped 2026-03-20)
-All milestones complete. Ready for `/gsd:new-milestone`.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-20 — Milestone v1.0.1 started
 
 ## Accumulated Context
 

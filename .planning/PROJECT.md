@@ -35,9 +35,24 @@ Every code change is automatically scanned for security vulnerabilities before d
 ### Active
 
 - [ ] Scanner plugin architecture — add/configure scanners without code changes
+- [ ] Tier 1 scanner integration — gosec, Brakeman, Bandit, cargo-audit
 - [ ] Advanced scanner configuration UI — manage scanner settings from dashboard
 - [ ] DAST (dynamic application security testing) capabilities
 - [ ] Role-based access control (admin, viewer, scanner roles)
+
+## Current Milestone: v1.0.1 Scanner Plugin Registry
+
+**Goal:** Implement the config-driven plugin registry architecture and integrate 4 Tier-1 scanners (gosec, Brakeman, Bandit, cargo-audit) as recommended by v2.0 research.
+
+**Target features:**
+- Config-driven scanner registration (adapter_class in config.yml)
+- gosec adapter for Go SAST
+- Brakeman adapter for Ruby/Rails SAST
+- Bandit adapter for Python SAST
+- cargo-audit adapter for Rust SCA
+- Updated language detection for new scanners
+- Docker image with new scanner binaries
+- Updated documentation (bilingual)
 
 ### Out of Scope
 
@@ -99,4 +114,4 @@ Every code change is automatically scanned for security vulnerabilities before d
 | Nuclei over ZAP for DAST | CLI-friendly, template-based, 30MB vs 500MB+ | ✓ Confirmed v2.0 |
 
 ---
-*Last updated: 2026-03-20 after v2.0 milestone*
+*Last updated: 2026-03-20 — v1.0.1 milestone started*
