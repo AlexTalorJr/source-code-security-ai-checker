@@ -52,22 +52,6 @@ _MARKER_FILES: dict[str, set[str]] = {
     "Makefile": {"make"},
 }
 
-# Which scanners apply to which languages
-SCANNER_LANGUAGES: dict[str, set[str]] = {
-    "semgrep": {"python", "php", "javascript", "typescript", "go", "java",
-                "kotlin", "ruby", "csharp", "rust"},
-    "cppcheck": {"cpp"},
-    "gitleaks": set(),      # Always applicable (secrets in any language)
-    "trivy": {"docker", "terraform", "yaml"},  # IaC + container scanning
-    "checkov": {"docker", "terraform", "yaml", "ci"},
-    "psalm": {"php"},
-    "enlightn": {"laravel"},
-    "php_security_checker": {"php"},
-}
-
-# Scanners that run regardless of language (universal)
-UNIVERSAL_SCANNERS = {"gitleaks"}
-
 
 def detect_languages(target_path: str, max_files: int = 5000) -> set[str]:
     """Scan target directory and return a set of detected language tags.
@@ -108,17 +92,15 @@ def detect_languages(target_path: str, max_files: int = 5000) -> set[str]:
     return languages
 
 
-def should_enable_scanner(tool_name: str, detected_languages: set[str]) -> bool:
+def should_enable_scanner(
+    tool_name: str,
+    scanner_languages: list[str],
+    detected_languages: set[str],
+) -> bool:
     """Determine if a scanner should run based on detected languages.
 
-    Universal scanners (gitleaks) always run.
-    Other scanners run only if their target languages are detected.
+    Universal scanners (empty languages list) always run.
     """
-    if tool_name in UNIVERSAL_SCANNERS:
+    if not scanner_languages:
         return True
-
-    required_langs = SCANNER_LANGUAGES.get(tool_name, set())
-    if not required_langs:
-        return True  # Unknown scanner — enable by default
-
-    return bool(required_langs & detected_languages)
+    return bool(set(scanner_languages) & detected_languages)

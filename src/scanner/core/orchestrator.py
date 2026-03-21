@@ -5,8 +5,8 @@ import json
 import logging
 from datetime import datetime
 
-from scanner.adapters import ALL_ADAPTERS
 from scanner.adapters.base import ScannerAdapter
+from scanner.adapters.registry import ScannerRegistry
 from scanner.ai.schemas import AIAnalysisResult
 from scanner.config import ScannerSettings
 from scanner.core.git import cleanup_clone, clone_repo
@@ -145,7 +145,8 @@ async def run_scan(
         # Clone repo if needed
         if repo_url:
             # Gitleaks needs full history, so shallow=False when it is enabled
-            gitleaks_enabled = settings.scanners.gitleaks.enabled
+            gitleaks_config = settings.scanners.get("gitleaks")
+            gitleaks_enabled = gitleaks_config.enabled if gitleaks_config else False
             shallow = not gitleaks_enabled
             clone_path = await clone_repo(
                 repo_url,
@@ -156,21 +157,14 @@ async def run_scan(
             target_path = clone_path
 
         # Auto-detect languages for smart scanner selection
-        from scanner.core.language_detect import detect_languages, should_enable_scanner
+        from scanner.core.language_detect import detect_languages
 
         detected_langs = detect_languages(target_path)
         logger.info("Detected languages: %s", detected_langs or "none")
 
-        # Build enabled adapters
-        enabled_adapters: list[ScannerAdapter] = []
-        for adapter_cls in ALL_ADAPTERS:
-            instance = adapter_cls()
-            tool_config = getattr(settings.scanners, instance.tool_name)
-            if tool_config.enabled == "auto":
-                if should_enable_scanner(instance.tool_name, detected_langs):
-                    enabled_adapters.append(instance)
-            elif tool_config.enabled:
-                enabled_adapters.append(instance)
+        # Build enabled adapters via registry
+        registry = ScannerRegistry(settings.scanners)
+        enabled_adapters = registry.get_enabled_adapters(detected_langs)
 
         # Notify: scanning stage with tool list
         if progress_callback:
@@ -199,9 +193,8 @@ async def run_scan(
             _run_adapter(
                 adapter,
                 target_path,
-                getattr(settings.scanners, adapter.tool_name).timeout,
-                getattr(settings.scanners, adapter.tool_name).extra_args
-                or None,
+                settings.scanners[adapter.tool_name].timeout,
+                settings.scanners[adapter.tool_name].extra_args or None,
                 on_complete=_on_tool_complete,
             )
             for adapter in enabled_adapters

@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from scanner.config import ScannerSettings
+from scanner.config import ScannerSettings, ScannerToolConfig
 from scanner.core.exceptions import ScannerTimeoutError
 from scanner.core.orchestrator import run_scan
 from scanner.schemas.finding import FindingSchema
@@ -27,37 +27,52 @@ def _make_finding(
     )
 
 
-def _make_settings(tmp_path) -> ScannerSettings:
+def _make_settings(tmp_path, scanners: dict[str, ScannerToolConfig] | None = None) -> ScannerSettings:
     """Create ScannerSettings with a temporary DB path."""
     db_path = str(tmp_path / "test.db")
     # Avoid loading config.yml from disk
     os.environ["SCANNER_CONFIG_PATH"] = "/dev/null"
-    return ScannerSettings(db_path=db_path)
+    if scanners is None:
+        scanners = {
+            name: ScannerToolConfig(
+                adapter_class=f"scanner.adapters.{name}.{name.capitalize()}Adapter",
+                enabled=True,
+                timeout=180,
+            )
+            for name in ["semgrep", "cppcheck", "gitleaks", "trivy", "checkov"]
+        }
+    return ScannerSettings(db_path=db_path, scanners=scanners)
 
 
-def _patch_all_adapters(findings_map: dict | None = None):
-    """Create a mock for ALL_ADAPTERS that returns configurable findings.
+def _mock_registry_adapters(findings_map: dict | None = None):
+    """Create a mock ScannerRegistry that returns configurable adapter mocks.
 
     Args:
         findings_map: dict of tool_name -> list[FindingSchema].
             If None, all adapters return empty lists.
+
+    Returns:
+        Tuple of (mock_registry_class, mock_adapters_list) where
+        mock_registry_class can be used with patch for ScannerRegistry.
     """
     if findings_map is None:
         findings_map = {}
 
     mock_adapters = []
     for tool_name in ["semgrep", "cppcheck", "gitleaks", "trivy", "checkov"]:
-        cls = MagicMock()
         instance = MagicMock()
         instance.tool_name = tool_name
         instance.run = AsyncMock(
             return_value=findings_map.get(tool_name, [])
         )
         instance.get_version = AsyncMock(return_value=f"{tool_name}-1.0")
-        cls.return_value = instance
-        mock_adapters.append(cls)
+        mock_adapters.append(instance)
 
-    return mock_adapters
+    mock_registry = MagicMock()
+    mock_registry.get_enabled_adapters.return_value = mock_adapters
+
+    MockRegistryClass = MagicMock(return_value=mock_registry)
+    return MockRegistryClass, mock_adapters
 
 
 @pytest.fixture
@@ -94,8 +109,8 @@ async def test_run_scan_rejects_both_target_and_repo(settings):
 async def test_run_scan_local_path(settings):
     """Scan with local path runs adapters and returns completed result."""
     test_findings = [_make_finding(fingerprint="f1", tool="semgrep")]
-    adapters = _patch_all_adapters({"semgrep": test_findings})
-    with patch("scanner.core.orchestrator.ALL_ADAPTERS", adapters):
+    MockRegistry, _ = _mock_registry_adapters({"semgrep": test_findings})
+    with patch("scanner.core.orchestrator.ScannerRegistry", MockRegistry):
         result, findings, compound_risks = await run_scan(settings, target_path="/tmp/test")
 
     assert result.status == "completed"
@@ -106,10 +121,10 @@ async def test_run_scan_local_path(settings):
 async def test_run_scan_with_repo_url(settings, tmp_path):
     """Scan with repo_url clones, scans, and cleans up."""
     clone_dir = str(tmp_path / "clone")
-    adapters = _patch_all_adapters()
+    MockRegistry, _ = _mock_registry_adapters()
 
     with (
-        patch("scanner.core.orchestrator.ALL_ADAPTERS", adapters),
+        patch("scanner.core.orchestrator.ScannerRegistry", MockRegistry),
         patch(
             "scanner.core.orchestrator.clone_repo",
             new_callable=AsyncMock,
@@ -128,15 +143,15 @@ async def test_run_scan_with_repo_url(settings, tmp_path):
 
 async def test_timeout_graceful_degradation(settings):
     """Adapter timeout produces partial results with warning, not failure."""
-    adapters = _patch_all_adapters(
+    MockRegistry, adapters = _mock_registry_adapters(
         {"cppcheck": [_make_finding(fingerprint="f1", tool="cppcheck")]}
     )
     # Make semgrep raise a timeout
-    adapters[0].return_value.run = AsyncMock(
+    adapters[0].run = AsyncMock(
         side_effect=ScannerTimeoutError("semgrep", 180)
     )
 
-    with patch("scanner.core.orchestrator.ALL_ADAPTERS", adapters):
+    with patch("scanner.core.orchestrator.ScannerRegistry", MockRegistry):
         result, _, _ = await run_scan(settings, target_path="/tmp/test")
 
     assert result.status == "completed"
@@ -147,14 +162,14 @@ async def test_timeout_graceful_degradation(settings):
 
 async def test_adapter_crash_graceful_degradation(settings):
     """Adapter RuntimeError produces partial results with warning."""
-    adapters = _patch_all_adapters(
+    MockRegistry, adapters = _mock_registry_adapters(
         {"cppcheck": [_make_finding(fingerprint="f1", tool="cppcheck")]}
     )
-    adapters[0].return_value.run = AsyncMock(
+    adapters[0].run = AsyncMock(
         side_effect=RuntimeError("segfault")
     )
 
-    with patch("scanner.core.orchestrator.ALL_ADAPTERS", adapters):
+    with patch("scanner.core.orchestrator.ScannerRegistry", MockRegistry):
         result, _, _ = await run_scan(settings, target_path="/tmp/test")
 
     assert result.status == "completed"
@@ -164,11 +179,11 @@ async def test_adapter_crash_graceful_degradation(settings):
 
 async def test_gate_fails_on_critical(settings):
     """Gate fails when CRITICAL findings present."""
-    adapters = _patch_all_adapters(
+    MockRegistry, _ = _mock_registry_adapters(
         {"semgrep": [_make_finding(severity=Severity.CRITICAL)]}
     )
 
-    with patch("scanner.core.orchestrator.ALL_ADAPTERS", adapters):
+    with patch("scanner.core.orchestrator.ScannerRegistry", MockRegistry):
         result, _, _ = await run_scan(settings, target_path="/tmp/test")
 
     assert result.gate_passed is False
@@ -176,27 +191,43 @@ async def test_gate_fails_on_critical(settings):
 
 async def test_gate_passes_on_medium_only(settings):
     """Gate passes when only MEDIUM findings present."""
-    adapters = _patch_all_adapters(
+    MockRegistry, _ = _mock_registry_adapters(
         {"semgrep": [_make_finding(severity=Severity.MEDIUM)]}
     )
 
-    with patch("scanner.core.orchestrator.ALL_ADAPTERS", adapters):
+    with patch("scanner.core.orchestrator.ScannerRegistry", MockRegistry):
         result, _, _ = await run_scan(settings, target_path="/tmp/test")
 
     assert result.gate_passed is True
 
 
-async def test_disabled_adapter_not_run(settings):
-    """Disabled adapter should not have its run() called."""
-    adapters = _patch_all_adapters()
+async def test_disabled_adapter_not_run(tmp_path):
+    """Disabled adapter should be excluded by registry."""
+    settings = _make_settings(tmp_path, scanners={
+        "semgrep": ScannerToolConfig(
+            adapter_class="scanner.adapters.semgrep.SemgrepAdapter",
+            enabled=False,
+        ),
+        "cppcheck": ScannerToolConfig(
+            adapter_class="scanner.adapters.cppcheck.CppcheckAdapter",
+            enabled=True,
+        ),
+    })
 
-    # Disable semgrep
-    settings.scanners.semgrep.enabled = False
+    mock_cppcheck = MagicMock()
+    mock_cppcheck.tool_name = "cppcheck"
+    mock_cppcheck.run = AsyncMock(return_value=[])
+    mock_cppcheck.get_version = AsyncMock(return_value="cppcheck-1.0")
 
-    with patch("scanner.core.orchestrator.ALL_ADAPTERS", adapters):
+    mock_registry = MagicMock()
+    # Registry excludes disabled semgrep, only returns cppcheck
+    mock_registry.get_enabled_adapters.return_value = [mock_cppcheck]
+
+    MockRegistryClass = MagicMock(return_value=mock_registry)
+
+    with patch("scanner.core.orchestrator.ScannerRegistry", MockRegistryClass):
         result, _, _ = await run_scan(settings, target_path="/tmp/test")
 
-    # semgrep adapter's run should never be called
-    semgrep_instance = adapters[0].return_value
-    semgrep_instance.run.assert_not_awaited()
     assert result.status == "completed"
+    # Only cppcheck ran (semgrep was disabled via registry)
+    mock_cppcheck.run.assert_awaited_once()

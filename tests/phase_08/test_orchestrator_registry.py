@@ -56,7 +56,7 @@ def _mock_language_detect():
     """Auto-detect returns all languages so registry can filter."""
     all_langs = {"python", "php", "javascript", "typescript",
                  "go", "rust", "java", "docker", "terraform", "yaml", "ci"}
-    with patch("scanner.core.orchestrator.detect_languages", return_value=all_langs):
+    with patch("scanner.core.language_detect.detect_languages", return_value=all_langs):
         yield
 
 
