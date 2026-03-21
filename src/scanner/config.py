@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -27,19 +27,8 @@ class ScannerToolConfig(BaseModel):
     enabled: bool | str = "auto"
     timeout: int = 180
     extra_args: list[str] = []
-
-
-class ScannersConfig(BaseModel):
-    """Configuration for all scanner tools."""
-
-    semgrep: ScannerToolConfig = ScannerToolConfig(timeout=180)
-    cppcheck: ScannerToolConfig = ScannerToolConfig(timeout=120)
-    gitleaks: ScannerToolConfig = ScannerToolConfig(timeout=120)
-    trivy: ScannerToolConfig = ScannerToolConfig(timeout=120)
-    checkov: ScannerToolConfig = ScannerToolConfig(timeout=120)
-    psalm: ScannerToolConfig = ScannerToolConfig(timeout=300)
-    enlightn: ScannerToolConfig = ScannerToolConfig(timeout=120)
-    php_security_checker: ScannerToolConfig = ScannerToolConfig(timeout=30)
+    adapter_class: str = ""
+    languages: list[str] = []
 
 
 class AIConfig(BaseModel):
@@ -144,7 +133,18 @@ class ScannerSettings(BaseSettings):
     scan_timeout: int = 600
 
     # Scanner tool configuration
-    scanners: ScannersConfig = ScannersConfig()
+    scanners: dict[str, ScannerToolConfig] = {}
+
+    @field_validator("scanners", mode="before")
+    @classmethod
+    def _coerce_scanner_dicts(cls, value: dict) -> dict:
+        """Coerce raw YAML dicts into ScannerToolConfig instances."""
+        if not isinstance(value, dict):
+            return value
+        return {
+            k: ScannerToolConfig(**v) if isinstance(v, dict) else v
+            for k, v in value.items()
+        }
 
     # AI analysis
     ai: AIConfig = AIConfig()

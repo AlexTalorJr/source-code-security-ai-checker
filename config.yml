@@ -3,40 +3,67 @@
 host: "0.0.0.0"
 port: 8000
 db_path: "/data/scanner.db"
-api_key: ""  # Set via SCANNER_API_KEY env var
+api_key: "test123"  # Set via SCANNER_API_KEY env var
 claude_api_key: ""  # Set via SCANNER_CLAUDE_API_KEY env var
 slack_webhook_url: ""  # Set via SCANNER_SLACK_WEBHOOK_URL env var
 email_smtp_host: ""
 log_level: "info"
 scan_timeout: 600
-notifications:                                                                                                                                                                                       
-  slack:                                                                                                                                                                                             
+notifications:
+  slack:
     enabled: true
 gate:
-      fail_on:
-              - high
+  fail_on:
+    - high
 ai:
-    max_cost_per_scan: 1.0
-ai:                                                                                                                                                                                                  
-      min_severity: "high"
+  max_cost_per_scan: 1.0
+  min_severity: "high"
 scanners:
   semgrep:
+    adapter_class: "scanner.adapters.semgrep.SemgrepAdapter"
     enabled: true
     timeout: 180
     extra_args: ["--exclude", ".venv", "--exclude", "node_modules"]
+    languages: ["python", "php", "javascript", "typescript", "go", "java", "kotlin", "ruby", "csharp", "rust"]
   cppcheck:
+    adapter_class: "scanner.adapters.cppcheck.CppcheckAdapter"
     enabled: true
     timeout: 120
     extra_args: ["-i.venv", "-inode_modules"]
+    languages: ["cpp"]
   gitleaks:
+    adapter_class: "scanner.adapters.gitleaks.GitleaksAdapter"
     enabled: true
     timeout: 120
     extra_args: []
+    languages: []
   trivy:
+    adapter_class: "scanner.adapters.trivy.TrivyAdapter"
     enabled: true
     timeout: 120
     extra_args: []
+    languages: ["docker", "terraform", "yaml"]
   checkov:
+    adapter_class: "scanner.adapters.checkov.CheckovAdapter"
     enabled: true
     timeout: 120
     extra_args: ["--skip-path", ".venv", "--skip-path", "node_modules"]
+    languages: ["docker", "terraform", "yaml", "ci"]
+  psalm:
+    adapter_class: "scanner.adapters.psalm.PsalmAdapter"
+    enabled: "auto"
+    timeout: 300
+    extra_args: []
+    languages: ["php"]
+  enlightn:
+    adapter_class: "scanner.adapters.enlightn.EnlightnAdapter"
+    enabled: "auto"
+    timeout: 120
+    extra_args: []
+    languages: ["laravel"]
+  php_security_checker:
+    adapter_class: "scanner.adapters.php_security_checker.PhpSecurityCheckerAdapter"
+    enabled: "auto"
+    timeout: 30
+    extra_args: []
+    languages: ["php"]
