@@ -16,8 +16,8 @@
 
 - [x] **SCAN-01**: gosec adapter scans Go source code and produces FindingSchema-compatible results
 - [x] **SCAN-02**: Bandit adapter scans Python source code and produces FindingSchema-compatible results
-- [ ] **SCAN-03**: Brakeman adapter scans Ruby/Rails applications and produces FindingSchema-compatible results
-- [ ] **SCAN-04**: cargo-audit adapter scans Rust dependencies via Cargo.lock and produces FindingSchema-compatible results
+- [x] **SCAN-03**: Brakeman adapter scans Ruby/Rails applications and produces FindingSchema-compatible results
+- [x] **SCAN-04**: cargo-audit adapter scans Rust dependencies via Cargo.lock and produces FindingSchema-compatible results
 
 ### Infrastructure
 
@@ -61,8 +61,8 @@
 | PLUG-04 | Phase 8 | Complete |
 | SCAN-01 | Phase 9 | Complete |
 | SCAN-02 | Phase 9 | Complete |
-| SCAN-03 | Phase 9 | Pending |
-| SCAN-04 | Phase 9 | Pending |
+| SCAN-03 | Phase 9 | Complete |
+| SCAN-04 | Phase 9 | Complete |
 | INFRA-01 | Phase 10 | Pending |
 | INFRA-02 | Phase 10 | Pending |
 | DOCS-01 | Phase 10 | Pending |

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 09-01-PLAN.md
-last_updated: "2026-03-21T21:47:58.688Z"
+stopped_at: Completed 09-02-PLAN.md
+last_updated: "2026-03-21T21:53:49.222Z"
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -50,6 +50,7 @@ Plan: 2 of 2
 | Phase 08 P01 | 3min | 2 tasks | 6 files |
 | Phase 08 P02 | 4min | 2 tasks | 8 files |
 | Phase 09 P01 | 2min | 2 tasks | 7 files |
+| Phase 09 P02 | 3min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,9 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 08]: should_enable_scanner takes scanner_languages list from config instead of SCANNER_LANGUAGES dict
 - [Phase 09]: Gosec uses direct severity mapping (HIGH/MEDIUM/LOW) with single-line findings
 - [Phase 09]: Bandit uses confidence x severity matrix for 9-cell severity resolution
+- [Phase 09]: Brakeman uses confidence-weighted severity: High->HIGH, Medium->MEDIUM, Weak->LOW
+- [Phase 09]: cargo-audit uses cvss library for CVSS-to-severity conversion, null CVSS defaults to MEDIUM
+- [Phase 09]: cargo-audit generates Cargo.lock via cargo generate-lockfile if missing
 
 ### Pending Todos
 
@@ -77,6 +81,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-21T21:47:58.681Z
-Stopped at: Completed 09-01-PLAN.md
+Last session: 2026-03-21T21:53:49.213Z
+Stopped at: Completed 09-02-PLAN.md
 Resume file: None
