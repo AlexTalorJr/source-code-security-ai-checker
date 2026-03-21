@@ -35,7 +35,7 @@ Every code change is automatically scanned for security vulnerabilities before d
 ### Active
 
 - ✓ Scanner plugin architecture — add/configure scanners without code changes — v1.0.1 Phase 8
-- [ ] Tier 1 scanner integration — gosec, Brakeman, Bandit, cargo-audit
+- ✓ Tier 1 scanner integration — gosec, Brakeman, Bandit, cargo-audit — v1.0.1 Phase 9
 - [ ] Advanced scanner configuration UI — manage scanner settings from dashboard
 - [ ] DAST (dynamic application security testing) capabilities
 - [ ] Role-based access control (admin, viewer, scanner roles)
@@ -69,7 +69,7 @@ Every code change is automatically scanned for security vulnerabilities before d
 
 **Scanner tech stack:**
 - Python 3.12 (orchestrator, FastAPI, reports)
-- 8 scanners: Semgrep, cppcheck, Gitleaks, Trivy, Checkov, Psalm, Enlightn, PHP Security Checker
+- 12 scanners: Semgrep, cppcheck, Gitleaks, Trivy, Checkov, Psalm, Enlightn, PHP Security Checker, gosec, Bandit, Brakeman, cargo-audit
 - Claude API (AI semantic analysis)
 - Jinja2 + WeasyPrint (HTML/PDF reports)
 - SQLite/WAL (scan history)
@@ -114,4 +114,4 @@ Every code change is automatically scanned for security vulnerabilities before d
 | Nuclei over ZAP for DAST | CLI-friendly, template-based, 30MB vs 500MB+ | ✓ Confirmed v2.0 |
 
 ---
-*Last updated: 2026-03-21 — Phase 8 complete: plugin registry architecture*
+*Last updated: 2026-03-21 — Phase 9 complete: tier-1 scanner adapters (gosec, Bandit, Brakeman, cargo-audit)*
