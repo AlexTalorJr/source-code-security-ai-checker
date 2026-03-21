@@ -1,0 +1,71 @@
+{
+  "database": {
+    "advisory-count": 650,
+    "last-commit": "abc123",
+    "last-updated": "2026-03-01"
+  },
+  "lockfile": {
+    "dependency-count": 125
+  },
+  "vulnerabilities": {
+    "found": true,
+    "count": 2,
+    "list": [
+      {
+        "advisory": {
+          "id": "RUSTSEC-2023-0001",
+          "package": "openssl",
+          "title": "Buffer overflow in openssl crate",
+          "description": "A buffer overflow vulnerability in the openssl crate allows remote code execution.",
+          "date": "2023-01-15",
+          "aliases": ["CVE-2023-12345"],
+          "cvss": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+          "url": "https://rustsec.org/advisories/RUSTSEC-2023-0001"
+        },
+        "versions": {
+          "patched": [">=0.10.40"],
+          "unaffected": ["<0.9.0"]
+        },
+        "package": {
+          "name": "openssl",
+          "version": "0.10.35",
+          "source": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      },
+      {
+        "advisory": {
+          "id": "RUSTSEC-2023-0050",
+          "package": "tokio",
+          "title": "Data race in tokio JoinHandle",
+          "description": "A data race condition in tokio's JoinHandle.",
+          "date": "2023-06-01",
+          "aliases": [],
+          "cvss": null,
+          "url": "https://rustsec.org/advisories/RUSTSEC-2023-0050"
+        },
+        "versions": {
+          "patched": [">=1.25.1"],
+          "unaffected": []
+        },
+        "package": {
+          "name": "tokio",
+          "version": "1.24.0",
+          "source": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      }
+    ]
+  },
+  "warnings": {
+    "unsound": [],
+    "yanked": [
+      {
+        "advisory": null,
+        "package": {
+          "name": "old-crate",
+          "version": "0.1.0",
+          "source": "registry+https://github.com/rust-lang/crates.io-index"
+        }
+      }
+    ]
+  }
+}

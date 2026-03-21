@@ -67,3 +67,27 @@ scanners:
     timeout: 30
     extra_args: []
     languages: ["php"]
+  gosec:
+    adapter_class: "scanner.adapters.gosec.GosecAdapter"
+    enabled: "auto"
+    timeout: 120
+    extra_args: []
+    languages: ["go"]
+  bandit:
+    adapter_class: "scanner.adapters.bandit.BanditAdapter"
+    enabled: "auto"
+    timeout: 120
+    extra_args: []
+    languages: ["python"]
+  brakeman:
+    adapter_class: "scanner.adapters.brakeman.BrakemanAdapter"
+    enabled: "auto"
+    timeout: 120
+    extra_args: []
+    languages: ["ruby"]
+  cargo_audit:
+    adapter_class: "scanner.adapters.cargo_audit.CargoAuditAdapter"
+    enabled: "auto"
+    timeout: 60
+    extra_args: []
+    languages: ["rust"]

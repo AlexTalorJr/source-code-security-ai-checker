@@ -56,7 +56,7 @@ def settings():
 
 
 class TestConfigYmlMigration:
-    """config.yml produces 8 scanner entries with adapter_class and languages."""
+    """config.yml produces scanner entries with adapter_class and languages."""
 
     EXPECTED_SCANNERS = {
         "semgrep",
@@ -67,12 +67,16 @@ class TestConfigYmlMigration:
         "psalm",
         "enlightn",
         "php_security_checker",
+        "gosec",
+        "bandit",
+        "brakeman",
+        "cargo_audit",
     }
 
     def test_scanners_is_dict(self, settings):
         assert isinstance(settings.scanners, dict)
 
-    def test_has_all_eight_scanners(self, settings):
+    def test_has_all_scanners(self, settings):
         assert set(settings.scanners.keys()) == self.EXPECTED_SCANNERS
 
     def test_each_scanner_has_adapter_class(self, settings):

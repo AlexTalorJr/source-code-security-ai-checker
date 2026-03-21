@@ -20,6 +20,7 @@ dependencies = [
     "weasyprint>=68.0",
     "matplotlib>=3.10.0",
     "defusedxml>=0.7.1",
+    "cvss>=3.2",
 ]
 
 [project.optional-dependencies]
