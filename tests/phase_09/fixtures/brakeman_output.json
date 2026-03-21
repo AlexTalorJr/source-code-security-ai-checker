@@ -1,0 +1,47 @@
+{
+  "warnings": [
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "abc123def456789012345678901234567890123456789012345678901234",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/controllers/users_controller.rb",
+      "line": 15,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "User.where(\"name = '#{params[:name]}'\")",
+      "confidence": "High"
+    },
+    {
+      "warning_type": "Cross-Site Scripting",
+      "warning_code": 2,
+      "fingerprint": "def789abc012345678901234567890123456789012345678901234567890",
+      "check_name": "CrossSiteScripting",
+      "message": "Unescaped model attribute",
+      "file": "app/views/users/show.html.erb",
+      "line": 8,
+      "link": "https://brakemanscanner.org/docs/warning_types/cross_site_scripting/",
+      "code": "params[:name]",
+      "confidence": "Medium"
+    },
+    {
+      "warning_type": "Mass Assignment",
+      "warning_code": 17,
+      "fingerprint": "ghi012jkl345678901234567890123456789012345678901234567890123",
+      "check_name": "MassAssignment",
+      "message": "Unprotected mass assignment",
+      "file": "app/controllers/posts_controller.rb",
+      "line": 22,
+      "link": "https://brakemanscanner.org/docs/warning_types/mass_assignment/",
+      "code": "Post.new(params[:post])",
+      "confidence": "Weak"
+    }
+  ],
+  "errors": [],
+  "ignored_warnings": [],
+  "scan_info": {
+    "app_path": "/tmp/target",
+    "rails_version": "7.0.4",
+    "brakeman_version": "6.0.1"
+  }
+}
