@@ -44,7 +44,10 @@
   2. All existing 8 scanners load from config.yml registry instead of the hard-coded ALL_ADAPTERS list
   3. Starting the application with a misspelled or missing adapter_class produces a clear warning (not a crash)
   4. Adding a new language-to-scanner mapping in config.yml causes auto-detection to enable that scanner for matching projects
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 08-01-PLAN.md — Config model extension, ScannerRegistry core, config.yml migration
+- [ ] 08-02-PLAN.md — Orchestrator refactor, language_detect migration, /api/scanners endpoint
 
 ### Phase 9: Tier-1 Scanner Adapters
 **Goal**: Users can scan Go, Python, Ruby/Rails, and Rust projects with dedicated security tools
@@ -79,6 +82,6 @@
 | 5. API, Dashboard, CI, and Notifications | v1.0 | 4/4 | Complete | 2026-03-19 |
 | 6. Packaging, Portability, and Documentation | v1.0 | 4/4 | Complete | 2026-03-20 |
 | 7. Security Scanner Ecosystem Research | v2.0 | 2/2 | Complete | 2026-03-20 |
-| 8. Plugin Registry Architecture | v1.0.1 | 0/0 | Not started | - |
+| 8. Plugin Registry Architecture | v1.0.1 | 0/2 | In progress | - |
 | 9. Tier-1 Scanner Adapters | v1.0.1 | 0/0 | Not started | - |
 | 10. Infrastructure and Documentation | v1.0.1 | 0/0 | Not started | - |
