@@ -34,7 +34,7 @@ Every code change is automatically scanned for security vulnerabilities before d
 
 ### Active
 
-- [ ] Scanner plugin architecture — add/configure scanners without code changes
+- ✓ Scanner plugin architecture — add/configure scanners without code changes — v1.0.1 Phase 8
 - [ ] Tier 1 scanner integration — gosec, Brakeman, Bandit, cargo-audit
 - [ ] Advanced scanner configuration UI — manage scanner settings from dashboard
 - [ ] DAST (dynamic application security testing) capabilities
@@ -114,4 +114,4 @@ Every code change is automatically scanned for security vulnerabilities before d
 | Nuclei over ZAP for DAST | CLI-friendly, template-based, 30MB vs 500MB+ | ✓ Confirmed v2.0 |
 
 ---
-*Last updated: 2026-03-20 — v1.0.1 milestone started*
+*Last updated: 2026-03-21 — Phase 8 complete: plugin registry architecture*
