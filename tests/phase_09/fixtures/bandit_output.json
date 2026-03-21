@@ -1,0 +1,67 @@
+{
+  "results": [
+    {
+      "code": "exec(user_input)\n",
+      "col_offset": 0,
+      "end_col_offset": 20,
+      "filename": "/tmp/target/app.py",
+      "issue_confidence": "HIGH",
+      "issue_severity": "HIGH",
+      "issue_cwe": {"id": 78, "link": "https://cwe.mitre.org/data/definitions/78.html"},
+      "issue_text": "Use of exec detected.",
+      "line_number": 10,
+      "line_range": [10],
+      "more_info": "https://bandit.readthedocs.io/en/latest/plugins/b102_exec_used.html",
+      "test_id": "B102",
+      "test_name": "exec_used"
+    },
+    {
+      "code": "password = 'hardcoded'\n",
+      "col_offset": 0,
+      "end_col_offset": 25,
+      "filename": "/tmp/target/config.py",
+      "issue_confidence": "MEDIUM",
+      "issue_severity": "HIGH",
+      "issue_cwe": {"id": 259, "link": "https://cwe.mitre.org/data/definitions/259.html"},
+      "issue_text": "Possible hardcoded password.",
+      "line_number": 5,
+      "line_range": [5],
+      "more_info": "https://bandit.readthedocs.io/en/latest/plugins/b105_hardcoded_password_string.html",
+      "test_id": "B105",
+      "test_name": "hardcoded_password_string"
+    },
+    {
+      "code": "hashlib.md5(data)\n",
+      "col_offset": 0,
+      "end_col_offset": 18,
+      "filename": "/tmp/target/utils.py",
+      "issue_confidence": "HIGH",
+      "issue_severity": "MEDIUM",
+      "issue_cwe": {"id": 327, "link": "https://cwe.mitre.org/data/definitions/327.html"},
+      "issue_text": "Use of insecure MD5 hash function.",
+      "line_number": 22,
+      "line_range": [22],
+      "more_info": "https://bandit.readthedocs.io/en/latest/plugins/b303_md5.html",
+      "test_id": "B303",
+      "test_name": "md5"
+    },
+    {
+      "code": "os.chmod(path, 0o777)\n",
+      "col_offset": 0,
+      "end_col_offset": 22,
+      "filename": "/tmp/target/setup.py",
+      "issue_confidence": "LOW",
+      "issue_severity": "LOW",
+      "issue_cwe": {"id": 732, "link": "https://cwe.mitre.org/data/definitions/732.html"},
+      "issue_text": "Insecure file permissions.",
+      "line_number": 8,
+      "line_range": [8],
+      "more_info": "https://bandit.readthedocs.io/en/latest/plugins/b103_set_bad_file_permissions.html",
+      "test_id": "B103",
+      "test_name": "set_bad_file_permissions"
+    }
+  ],
+  "errors": [],
+  "generated_at": "2026-03-21T12:00:00Z",
+  "metrics": {}
+}
