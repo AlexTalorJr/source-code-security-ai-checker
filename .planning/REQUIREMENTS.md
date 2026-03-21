@@ -7,9 +7,9 @@
 
 ### Plugin Architecture
 
-- [ ] **PLUG-01**: Scanner adapters can be registered via config.yml `adapter_class` field without code changes
+- [x] **PLUG-01**: Scanner adapters can be registered via config.yml `adapter_class` field without code changes
 - [ ] **PLUG-02**: Existing hard-coded ALL_ADAPTERS list migrated to config-driven registration
-- [ ] **PLUG-03**: Config validation warns on missing or invalid adapter_class references
+- [x] **PLUG-03**: Config validation warns on missing or invalid adapter_class references
 - [ ] **PLUG-04**: SCANNER_LANGUAGES mapping extended for new scanner→language associations
 
 ### Scanner Integration
@@ -55,9 +55,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PLUG-01 | Phase 8 | Pending |
+| PLUG-01 | Phase 8 | Complete |
 | PLUG-02 | Phase 8 | Pending |
-| PLUG-03 | Phase 8 | Pending |
+| PLUG-03 | Phase 8 | Complete |
 | PLUG-04 | Phase 8 | Pending |
 | SCAN-01 | Phase 9 | Pending |
 | SCAN-02 | Phase 9 | Pending |
