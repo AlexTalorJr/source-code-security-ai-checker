@@ -1,0 +1,38 @@
+{
+  "Issues": [
+    {
+      "severity": "HIGH",
+      "confidence": "LOW",
+      "cwe": {"id": "798", "url": "https://cwe.mitre.org/data/definitions/798.html"},
+      "rule_id": "G101",
+      "details": "Potential hardcoded credentials",
+      "file": "/tmp/target/cmd/main.go",
+      "code": "var password = \"secret\"",
+      "line": "32",
+      "column": "6"
+    },
+    {
+      "severity": "MEDIUM",
+      "confidence": "HIGH",
+      "cwe": {"id": "22", "url": "https://cwe.mitre.org/data/definitions/22.html"},
+      "rule_id": "G304",
+      "details": "File path provided as taint input",
+      "file": "/tmp/target/pkg/handler.go",
+      "code": "f, err := os.Open(userInput)",
+      "line": "15",
+      "column": "12"
+    },
+    {
+      "severity": "LOW",
+      "confidence": "HIGH",
+      "cwe": {"id": "703", "url": "https://cwe.mitre.org/data/definitions/703.html"},
+      "rule_id": "G104",
+      "details": "Errors unhandled",
+      "file": "/tmp/target/pkg/utils.go",
+      "code": "_ = f.Close()",
+      "line": "42",
+      "column": "2"
+    }
+  ],
+  "Stats": {"files": 10, "lines": 500, "nosec": 0, "found": 3}
+}
