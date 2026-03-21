@@ -59,7 +59,10 @@ Plans:
   3. Scanning a Ruby/Rails project produces Brakeman findings in the standard report
   4. Scanning a Rust project with a Cargo.lock produces cargo-audit dependency vulnerability findings
   5. All four new scanners produce FindingSchema-compatible output that flows through AI analysis and quality gate
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 09-01-PLAN.md — Test infrastructure, gosec adapter, Bandit adapter
+- [ ] 09-02-PLAN.md — Brakeman adapter, cargo-audit adapter, config.yml registration
 
 ### Phase 10: Infrastructure and Documentation
 **Goal**: The complete platform ships as a single Docker image with all 12 scanners and up-to-date documentation
@@ -83,5 +86,5 @@ Plans:
 | 6. Packaging, Portability, and Documentation | v1.0 | 4/4 | Complete | 2026-03-20 |
 | 7. Security Scanner Ecosystem Research | v2.0 | 2/2 | Complete | 2026-03-20 |
 | 8. Plugin Registry Architecture | v1.0.1 | 0/2 | In progress | - |
-| 9. Tier-1 Scanner Adapters | v1.0.1 | 0/0 | Not started | - |
+| 9. Tier-1 Scanner Adapters | v1.0.1 | 0/2 | Not started | - |
 | 10. Infrastructure and Documentation | v1.0.1 | 0/0 | Not started | - |
