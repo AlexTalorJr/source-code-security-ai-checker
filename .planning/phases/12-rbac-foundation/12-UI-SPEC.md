@@ -125,7 +125,7 @@ Role badge colors:
 | Class | Purpose | Spec |
 |-------|---------|------|
 | `.navbar__user` | Username + role badge group in navbar | `display: flex; align-items: center; gap: 8px; margin-right: 16px;` |
-| `.navbar__role-badge` | Role indicator pill in navbar | `.badge` base + role-specific background color, font-size 10px, padding 2px 6px |
+| `.navbar__role-badge` | Role indicator pill in navbar | `.badge` base + role-specific background color, font-size 10px, padding 4px 8px |
 | `.form-group` | Label + input wrapper for login/user forms | `margin-bottom: 16px;` |
 | `.form-input` | Text/password input fields | `width: 100%; padding: 8px; border: 1px solid var(--color-border); border-radius: 4px; font-size: 14px;` |
 | `.form-input:focus` | Focus state | `outline: 2px solid var(--color-accent); border-color: var(--color-accent);` |
@@ -133,7 +133,7 @@ Role badge colors:
 | `.token-value` | One-time token display | `font-family: var(--font-mono); background: var(--color-surface); padding: 8px 16px; border: 1px solid var(--color-border); border-radius: 4px; word-break: break-all;` |
 | `.token-masked` | Masked token in table | `font-family: var(--font-mono); color: var(--color-text-secondary);` |
 | `.card-centered` | Centered card for login and 403 pages | `max-width: 400px; width: 100%; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 8px; padding: 32px;` |
-| `.success-alert` | Token creation success message | `background: #d4edda; color: #155724; border: 1px solid #c3e6cb; border-left: 4px solid var(--color-success); border-radius: 4px; padding: 8px 12px; font-size: 14px; margin-bottom: 16px;` |
+| `.success-alert` | Token creation success message | `background: #d4edda; color: #155724; border: 1px solid #c3e6cb; border-left: 4px solid var(--color-success); border-radius: 4px; padding: 8px 16px; font-size: 14px; margin-bottom: 16px;` |
 
 ---
 
@@ -183,13 +183,13 @@ Role badge colors:
 - Password: password input, required, minimum 8 characters
 - Role: select dropdown with options: admin, scanner, viewer (default: viewer)
 - Submit: "Create User" button (accent)
-- Cancel: "Cancel" link (plain text)
+- Discard: "Discard" link (plain text)
 
 **Edit User form:** Same inline pattern:
 - Username: text input, pre-filled, required
 - Password: password input, optional (blank = no change), placeholder "Leave blank to keep current"
 - Role: select dropdown, pre-selected
-- Submit: "Save Changes" button (accent)
+- Submit: "Update User" button (accent)
 
 ### Token Management Page (`tokens.html.j2` -- NEW, any authenticated user)
 
@@ -227,7 +227,7 @@ Role badge colors:
 
 **Right section:**
 - Username text (14px, regular)
-- Role badge (10px, semibold, uppercase, role-colored, 2px 6px padding)
+- Role badge (10px, semibold, uppercase, role-colored, 4px 8px padding)
 - "Log Out" link (existing styling)
 
 **Layout:** `display: flex; align-items: center; gap: 8px;` for the user info group.
@@ -276,6 +276,7 @@ Direct URL access to role-restricted pages redirects to 403 page.
 | Login CTA | "Log In" |
 | Login error | "Invalid username or password. Please try again." |
 | Create User CTA | "Create User" |
+| Edit User CTA | "Update User" |
 | Generate Token CTA | "Generate Token" |
 | Token created success | "Token created successfully. Copy it now -- you will not see it again." |
 | Token soft limit | "Maximum of 10 active tokens reached. Revoke an existing token first." |
@@ -290,6 +291,7 @@ Direct URL access to role-restricted pages redirects to 403 page.
 | Deactivate user confirm | "Deactivate user {username}? They will no longer be able to log in." |
 | Revoke token confirm | "Revoke token {name}? This cannot be undone. Any CI/CD pipelines using this token will stop working." |
 | Navbar logout | "Log Out" |
+| Create User discard | "Discard" |
 | Password placeholder | "Enter your password" |
 | Username placeholder | "Enter your username" |
 | Edit password placeholder | "Leave blank to keep current" |
