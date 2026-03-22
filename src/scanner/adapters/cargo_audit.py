@@ -92,7 +92,7 @@ class CargoAuditAdapter(ScannerAdapter):
 
     @property
     def tool_name(self) -> str:
-        return "cargo-audit"
+        return "cargo_audit"
 
     def _version_command(self) -> list[str]:
         return ["cargo-audit", "--version"]

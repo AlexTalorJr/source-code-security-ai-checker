@@ -30,7 +30,7 @@ async def test_parse_cargo_audit_findings(adapter, cargo_audit_output):
         )
         findings = await adapter.run("/tmp/target", timeout=60)
     assert len(findings) == 2
-    assert all(f.tool == "cargo-audit" for f in findings)
+    assert all(f.tool == "cargo_audit" for f in findings)
 
 
 @pytest.mark.asyncio

@@ -24,7 +24,7 @@ NEW_SCANNERS = {
     "cargo_audit": {
         "adapter_class": "scanner.adapters.cargo_audit.CargoAuditAdapter",
         "languages": ["rust"],
-        "tool_name": "cargo-audit",
+        "tool_name": "cargo_audit",
     },
 }
 
@@ -80,4 +80,4 @@ def test_registry_language_filtering():
     assert any(a.tool_name == "brakeman" for a in ruby_adapters)
 
     rust_adapters = registry.get_enabled_adapters({"rust"})
-    assert any(a.tool_name == "cargo-audit" for a in rust_adapters)
+    assert any(a.tool_name == "cargo_audit" for a in rust_adapters)
