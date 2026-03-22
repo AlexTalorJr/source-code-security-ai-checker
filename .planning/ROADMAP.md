@@ -31,7 +31,7 @@
 
 - [ ] **Phase 8: Plugin Registry Architecture** - Config-driven scanner registration replacing hard-coded adapter list
 - [ ] **Phase 9: Tier-1 Scanner Adapters** - gosec, Bandit, Brakeman, and cargo-audit adapters
-- [ ] **Phase 10: Infrastructure and Documentation** - Docker image with new binaries and bilingual docs update
+- [x] **Phase 10: Infrastructure and Documentation** - Docker image with new binaries and bilingual docs update (completed 2026-03-22)
 
 ## Phase Details
 
@@ -72,7 +72,7 @@ Plans:
   1. `docker-compose up` starts a container with all 12 scanner binaries (8 existing + 4 new) available and functional
   2. Multi-arch build produces working images for both x86_64 and ARM64
   3. Documentation in all 5 languages (EN, RU, FR, ES, IT) covers plugin registry usage and new scanner capabilities
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [ ] 10-01-PLAN.md — Dockerfile scanner installs, Makefile verify-scanners, smoke test samples
 - [ ] 10-02-PLAN.md — English documentation update (8 docs + README)
@@ -91,4 +91,4 @@ Plans:
 | 7. Security Scanner Ecosystem Research | v2.0 | 2/2 | Complete | 2026-03-20 |
 | 8. Plugin Registry Architecture | v1.0.1 | 0/2 | In progress | - |
 | 9. Tier-1 Scanner Adapters | v1.0.1 | 0/2 | Not started | - |
-| 10. Infrastructure and Documentation | 2/3 | In Progress|  | - |
+| 10. Infrastructure and Documentation | 3/3 | Complete   | 2026-03-22 | - |
