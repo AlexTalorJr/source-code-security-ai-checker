@@ -67,7 +67,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ruby && \
 # Install cargo-audit
 RUN ARCH=$(uname -m | sed 's/x86_64/x86_64-unknown-linux-gnu/;s/aarch64/aarch64-unknown-linux-gnu/') && \
     curl -sSL "https://github.com/rustsec/rustsec/releases/download/cargo-audit%2Fv0.22.1/cargo-audit-${ARCH}-v0.22.1.tgz" \
-    | tar xz -C /usr/local/bin
+    | tar xz --strip-components=1 -C /usr/local/bin "cargo-audit-${ARCH}-v0.22.1/cargo-audit"
 
 # Non-root user for security
 RUN groupadd -r scanner && useradd -r -g scanner -d /app scanner
