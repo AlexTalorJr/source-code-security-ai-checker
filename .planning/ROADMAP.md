@@ -32,7 +32,7 @@
 - [ ] **Phase 8: Plugin Registry Architecture** - Config-driven scanner registration replacing hard-coded adapter list
 - [ ] **Phase 9: Tier-1 Scanner Adapters** - gosec, Bandit, Brakeman, and cargo-audit adapters
 - [x] **Phase 10: Infrastructure and Documentation** - Docker image with new binaries and bilingual docs update (completed 2026-03-22)
-- [ ] **Phase 11: Cargo-Audit Fix and Documentation Corrections** - Fix cargo-audit key mismatch, Makefile wording, admin-guide signatures
+- [x] **Phase 11: Cargo-Audit Fix and Documentation Corrections** - Fix cargo-audit key mismatch, Makefile wording, admin-guide signatures (completed 2026-03-22)
 
 ## Phase Details
 
@@ -89,7 +89,7 @@ Plans:
   2. Integration test verifies orchestrator can look up cargo-audit settings from config
   3. admin-guide.md "Adding a New Scanner" example has correct `run()` signature in all 5 languages
   4. Makefile verify-scanners describes "12 scanners (11 binaries)"
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
 - [ ] 11-01-PLAN.md — Fix cargo_audit tool_name, update tests, correct admin-guide signatures, Makefile wording
 
@@ -107,4 +107,4 @@ Plans:
 | 8. Plugin Registry Architecture | v1.0.1 | 0/2 | In progress | - |
 | 9. Tier-1 Scanner Adapters | v1.0.1 | 0/2 | Not started | - |
 | 10. Infrastructure and Documentation | v1.0.1 | 3/3 | Complete | 2026-03-22 |
-| 11. Cargo-Audit Fix and Doc Corrections | v1.0.1 | 0/1 | Not started | - |
+| 11. Cargo-Audit Fix and Doc Corrections | 1/1 | Complete   | 2026-03-22 | - |
