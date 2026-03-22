@@ -38,6 +38,49 @@
 
 ---
 
+## Milestone: v1.0.1 — Scanner Plugin Registry
+
+**Shipped:** 2026-03-22
+**Phases:** 4 | **Plans:** 8 | **Tasks:** 24
+**Timeline:** 2 days (2026-03-21 → 2026-03-22)
+
+### What Was Built
+- Config-driven plugin registry replacing hard-coded ALL_ADAPTERS list
+- 4 Tier-1 scanner adapters: gosec (Go), Bandit (Python), Brakeman (Ruby), cargo-audit (Rust)
+- Docker image with all 12 scanners, multi-arch (x86_64, ARM64)
+- Bilingual documentation updated across 5 languages (40+ doc files)
+- cargo-audit tool_name fix resolving runtime KeyError on Rust projects
+
+### What Worked
+- Milestone audit caught the cargo-audit tool_name/config key mismatch that unit tests missed — justified the audit step
+- Gap closure phase (Phase 11) was fast and focused — well-scoped bug fix completed in one plan
+- Research → plan → execute → verify pipeline caught real integration issues
+- Config-driven registry pattern worked exactly as v2.0 research recommended
+
+### What Was Inefficient
+- cargo-audit KeyError was a 1-line fix but required a full phase cycle (context → plan → execute → verify) — overhead for trivial fixes
+- Phase 8-9 roadmap checkboxes weren't updated to `[x]` during execution, leaving stale state until milestone completion
+- 5 flaky async tests in phase_03/test_orchestrator_ai.py — test isolation debt from v1.0 still accumulating
+
+### Patterns Established
+- Adapter pattern: tool_name must use underscores matching config.yml keys
+- ScannerRegistry dynamic loading via importlib with graceful error handling
+- Per-phase test directories (tests/phase_XX/) for isolation
+- Confidence-weighted severity mapping (Bandit's 9-cell matrix, Brakeman's confidence downgrade)
+
+### Key Lessons
+1. Milestone audits are worth the cost — the cargo-audit mismatch would have shipped broken without it
+2. tool_name convention (underscore matching config keys) should be documented and enforced in base class
+3. Research recommendations (v2.0) translated directly into implementation — research-first approach validated
+4. Doc translation across 5 languages is mechanical but high-volume — plan accordingly
+
+### Cost Observations
+- Model mix: ~70% opus (executors, planners), ~30% sonnet (checkers, verifiers)
+- Sessions: 2
+- Notable: Phase 11 (gap closure) used minimal tokens — skip-research + single plan + skip-Nyquist
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -46,8 +89,11 @@
 |-----------|----------|--------|------------|
 | v1.0 | multiple | 6 | Foundation → full platform build |
 | v2.0 | 1 | 1 | Research-only milestone, single session |
+| v1.0.1 | 2 | 4 | Research → implementation pipeline validated; milestone audit caught real bug |
 
 ### Top Lessons (Verified Across Milestones)
 
 1. Structured planning (research → plan → execute → verify) catches gaps early
 2. Config-driven patterns scale better than hard-coded registries
+3. Milestone audits pay for themselves — they catch integration gaps that unit tests miss
+4. Research-first approach (v2.0 research → v1.0.1 implementation) produces well-scoped work
