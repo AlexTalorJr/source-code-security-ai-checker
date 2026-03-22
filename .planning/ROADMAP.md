@@ -107,4 +107,4 @@ Plans:
 | 8. Plugin Registry Architecture | v1.0.1 | 0/2 | In progress | - |
 | 9. Tier-1 Scanner Adapters | v1.0.1 | 0/2 | Not started | - |
 | 10. Infrastructure and Documentation | v1.0.1 | 3/3 | Complete | 2026-03-22 |
-| 11. Cargo-Audit Fix and Doc Corrections | 1/1 | Complete   | 2026-03-22 | - |
+| 11. Cargo-Audit Fix and Doc Corrections | 1/1 | Complete    | 2026-03-22 | - |
