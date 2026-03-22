@@ -133,9 +133,10 @@ Per aggiungere un nuovo scanner alla piattaforma:
 ```python
 # src/scanner/adapters/my_scanner.py
 from scanner.adapters.base import ScannerAdapter
+from scanner.schemas.finding import FindingSchema
 
 class MyScannerAdapter(ScannerAdapter):
-    async def run(self, target_path: str, config: dict) -> list[dict]:
+    async def run(self, target_path: str, timeout: int, extra_args: list[str] | None = None) -> list[FindingSchema]:
         # Execute scanner binary and parse output
         ...
         return findings

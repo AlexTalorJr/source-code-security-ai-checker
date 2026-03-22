@@ -36,8 +36,8 @@ stop: ## Stop scanner
 test: ## Run test suite
 	@if [ -f .venv/bin/pytest ]; then .venv/bin/pytest tests/ -v; elif python3 -c "import pytest" 2>/dev/null; then python3 -m pytest tests/ -v; else docker compose exec scanner python -m pytest tests/ -v; fi
 
-verify-scanners: ## Smoke-test all 11 scanner binaries inside Docker
-	@echo "Verifying 11 scanner binaries (Enlightn uses artisan, not a standalone binary)..."
+verify-scanners: ## Smoke-test 12 scanners (11 binaries) inside Docker
+	@echo "Verifying 12 scanners (11 binaries; Enlightn uses artisan, not a standalone binary)..."
 	@docker compose exec -T scanner semgrep --version > /dev/null && echo "  semgrep: OK" || echo "  semgrep: FAIL"
 	@docker compose exec -T scanner cppcheck --version > /dev/null && echo "  cppcheck: OK" || echo "  cppcheck: FAIL"
 	@docker compose exec -T scanner gitleaks version > /dev/null && echo "  gitleaks: OK" || echo "  gitleaks: FAIL"
