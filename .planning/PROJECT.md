@@ -41,9 +41,20 @@ Every code change is automatically scanned for security vulnerabilities before d
 
 ### Active
 
-- [ ] Advanced scanner configuration UI — manage scanner settings from dashboard
-- [ ] DAST (dynamic application security testing) capabilities
-- [ ] Role-based access control (admin, viewer, scanner roles)
+- [ ] Scanner configuration UI — enable/disable scanners, per-scanner settings, config editor, scan profiles
+- [ ] DAST — Nuclei adapter for template-based dynamic scanning
+- [ ] RBAC — token-based API auth + role-based dashboard access (admin, viewer, scanner)
+
+## Current Milestone: v1.0.2 Scanner UI, DAST & RBAC
+
+**Goal:** Add web-based scanner configuration, Nuclei DAST adapter, and token-based authentication with role-based access control.
+
+**Target features:**
+- Scanner configuration UI (enable/disable, settings, config editor, scan profiles)
+- Nuclei DAST adapter (template-based dynamic application security testing)
+- Token-based API authentication for CI/CD pipelines
+- Role-based access control (admin, viewer, scanner roles)
+- Dashboard access control per role
 
 ### Out of Scope
 
@@ -52,6 +63,9 @@ Every code change is automatically scanned for security vulnerabilities before d
 - Real-time code monitoring — scan-on-demand and CI-triggered only
 - Windows host support — Linux containers only
 - Commercial/paid scanner integration — open-source tools only
+- OAuth/SSO/LDAP integration — simple local auth only for v1.0.2
+- User self-registration — admin creates accounts
+- Full DAST pipeline (target management, DAST-specific reports) — Nuclei adapter only for v1.0.2
 
 ## Context
 
@@ -102,4 +116,4 @@ Every code change is automatically scanned for security vulnerabilities before d
 | Underscore convention for config keys | tool_name uses underscores to match config.yml keys | ✓ Confirmed v1.0.1 |
 
 ---
-*Last updated: 2026-03-22 after v1.0.1 milestone*
+*Last updated: 2026-03-22 — milestone v1.0.2 started*
