@@ -59,11 +59,14 @@
   3. Viewer-role user can view scan results but receives 403 when attempting to trigger a scan or change settings
   4. Scanner-role user can trigger scans and view results via API token but cannot access dashboard configuration pages
   5. Unauthenticated API requests return 401; SQLite handles concurrent writes without busy errors
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] 12-01: TBD
-- [ ] 12-02: TBD
+- [ ] 12-01-PLAN.md — Models, schemas, config, SQLite hardening, admin bootstrap
+- [ ] 12-02-PLAN.md — Unified auth core (get_current_user, require_role, JWT sessions)
+- [ ] 12-03-PLAN.md — Test infrastructure and Phase 05 fixture migration
+- [ ] 12-04-PLAN.md — User CRUD API, Token API, role enforcement on endpoints
+- [ ] 12-05-PLAN.md — Dashboard UI (login, 403, navbar, users, tokens pages)
 
 ### Phase 13: Nuclei DAST Adapter
 **Goal**: Users can run dynamic application security scans against target URLs alongside existing SAST scans
@@ -125,7 +128,7 @@ Phases 13 and 14 can execute in parallel after Phase 12 completes.
 | 9. Tier-1 Scanner Adapters | v1.0.1 | 2/2 | Complete | 2026-03-21 |
 | 10. Infrastructure and Documentation | v1.0.1 | 3/3 | Complete | 2026-03-22 |
 | 11. Cargo-Audit Fix and Doc Corrections | v1.0.1 | 1/1 | Complete | 2026-03-22 |
-| 12. RBAC Foundation | v1.0.2 | 0/? | Not started | - |
+| 12. RBAC Foundation | v1.0.2 | 0/5 | Not started | - |
 | 13. Nuclei DAST Adapter | v1.0.2 | 0/? | Not started | - |
 | 14. Scanner Configuration UI | v1.0.2 | 0/? | Not started | - |
 | 15. Scan Profiles and Documentation | v1.0.2 | 0/? | Not started | - |
