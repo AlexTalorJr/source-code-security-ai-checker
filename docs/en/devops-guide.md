@@ -50,13 +50,45 @@ volumes:
 
 ## Dockerfile
 
-The image is based on `python:3.12-slim`:
+The image is based on `python:3.12-slim` and includes all 12 scanner tools:
 
-1. **System dependencies** -- `curl` (healthcheck), `libpango` and `libharfbuzz` (WeasyPrint PDF generation)
+1. **System dependencies** -- `curl` (healthcheck), `libpango` and `libharfbuzz` (WeasyPrint PDF generation), `ruby` (Brakeman)
 2. **Non-root user** -- `scanner` user and group created for security; `/data` directory owned by this user
-3. **Install workflow** -- `pyproject.toml` and `src/` copied, then `pip install --no-cache-dir .` using the hatchling build backend
-4. **App files** -- `alembic.ini`, `alembic/` migrations, and `config.yml.example` (as default `config.yml`) copied in
-5. **Entrypoint** -- `uvicorn scanner.main:app --host 0.0.0.0 --port 8000`
+3. **Scanner binaries** -- see Scanner Binaries section below for the full list
+4. **Install workflow** -- `pyproject.toml` and `src/` copied, then `pip install --no-cache-dir .` using the hatchling build backend
+5. **App files** -- `alembic.ini`, `alembic/` migrations, and `config.yml.example` (as default `config.yml`) copied in
+6. **Entrypoint** -- `uvicorn scanner.main:app --host 0.0.0.0 --port 8000`
+
+## Scanner Binaries
+
+All 12 scanner tools are installed inside the Docker image:
+
+| Scanner | Install Method | Notes |
+|---------|---------------|-------|
+| **Semgrep** | `pip install semgrep` | Python package, installed alongside application |
+| **cppcheck** | `apt-get install cppcheck` | System package |
+| **Gitleaks** | Pre-built binary from GitHub releases | Downloaded to `/usr/local/bin`, supports amd64/arm64 |
+| **Trivy** | Pre-built binary from GitHub releases | Downloaded to `/usr/local/bin`, supports amd64/arm64 |
+| **Checkov** | `pip install checkov` | Python package, installed with `--no-cache-dir` |
+| **Psalm** | `composer global require vimeo/psalm` | PHP Composer package, requires `php-cli` |
+| **Enlightn** | `composer global require enlightn/enlightn` | PHP Composer package |
+| **PHP Security Checker** | Pre-built binary from GitHub releases | Downloaded to `/usr/local/bin` |
+| **gosec** | Pre-built binary from GitHub releases | Downloaded to `/usr/local/bin`, supports amd64/arm64 |
+| **Bandit** | `pip install bandit` | Python package, installed alongside Semgrep and Checkov |
+| **Brakeman** | `gem install brakeman` | Ruby gem, requires `ruby` apt package (~80MB) |
+| **cargo-audit** | Pre-built binary from GitHub releases | Downloaded to `/usr/local/bin`, supports amd64/arm64 |
+
+All binary downloads (Gitleaks, Trivy, gosec, cargo-audit, PHP Security Checker) use architecture detection (`dpkg --print-architecture` / `uname -m`) to download the correct binary for amd64 or arm64 platforms.
+
+### Verifying Scanner Availability
+
+After building the Docker image, verify all scanners are correctly installed:
+
+```bash
+make verify-scanners
+```
+
+This target runs a smoke test inside the container, checking that each of the 12 scanner binaries is available and responds to version/help commands. Use this after any Dockerfile changes to ensure no scanner was broken.
 
 ## Environment Variables
 
@@ -177,6 +209,8 @@ make docker-push REGISTRY=your-registry.example.com
 ```
 
 The `docker-multiarch` target creates a buildx builder named `multiarch` if it does not already exist.
+
+All 12 scanner binary downloads (Gitleaks, Trivy, gosec, cargo-audit, PHP Security Checker) support both amd64 and arm64 architectures. Python packages (Semgrep, Checkov, Bandit) and Ruby gems (Brakeman) are platform-independent and work on both architectures without modification.
 
 ## Monitoring
 

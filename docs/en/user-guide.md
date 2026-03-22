@@ -2,7 +2,129 @@
 
 ## What is Security AI Scanner?
 
-A security scanning tool that analyzes source code for vulnerabilities using five parallel static analysis tools, enriches findings with AI analysis via Claude, and produces actionable reports with fix suggestions.
+A security scanning tool that analyzes source code for vulnerabilities using twelve parallel security scanning tools, enriches findings with AI analysis via Claude, and produces actionable reports with fix suggestions. Scanners are automatically enabled based on detected project languages.
+
+## Supported Scanners
+
+### Semgrep (Multi-language SAST)
+
+**Language:** Python, PHP, JavaScript, TypeScript, Go, Java, Kotlin, Ruby, C#, Rust
+**Type:** SAST
+**What it detects:** Injection flaws, authentication issues, insecure patterns, and language-specific vulnerabilities across multiple languages using semantic pattern matching.
+**Example finding:**
+> `python.lang.security.audit.exec-detected`: Use of exec() detected at `app.py:42`
+
+**Enabled:** Automatically when Python, PHP, JS/TS, Go, Java, Kotlin, Ruby, C#, or Rust files are detected
+
+### cppcheck (C/C++)
+
+**Language:** C/C++
+**Type:** SAST
+**What it detects:** Memory safety issues, buffer overflows, null pointer dereferences, undefined behavior, and resource leaks.
+**Example finding:**
+> `arrayIndexOutOfBounds`: Array index out of bounds at `buffer.cpp:15`
+
+**Enabled:** Automatically when C/C++ files are detected
+
+### Gitleaks (Secrets)
+
+**Language:** All languages
+**Type:** Secrets detection
+**What it detects:** Hardcoded secrets, API keys, tokens, passwords, and credentials in source code and git history.
+**Example finding:**
+> `generic-api-key`: Generic API Key detected at `config.py:8`
+
+**Enabled:** Always enabled for all projects
+
+### Trivy (Infrastructure)
+
+**Language:** Docker, Terraform, YAML/Kubernetes
+**Type:** SCA / Infrastructure
+**What it detects:** CVEs in container images, IaC misconfigurations, and Kubernetes security issues.
+**Example finding:**
+> `CVE-2023-44487`: HTTP/2 rapid reset attack in `Dockerfile:1`
+
+**Enabled:** Automatically when Dockerfiles, Terraform, or Kubernetes YAML files are detected
+
+### Checkov (Infrastructure)
+
+**Language:** Docker, Terraform, YAML, CI configs
+**Type:** Infrastructure
+**What it detects:** Infrastructure-as-code security best practices, cloud misconfigurations, and CI pipeline security.
+**Example finding:**
+> `CKV_DOCKER_2`: Ensure that HEALTHCHECK instructions have been added to container images at `Dockerfile:1`
+
+**Enabled:** Automatically when Docker, Terraform, YAML, or CI configuration files are detected
+
+### Psalm (PHP)
+
+**Language:** PHP
+**Type:** SAST (taint analysis)
+**What it detects:** SQL injection, XSS, and other taint-related vulnerabilities via data flow tracking in PHP code.
+**Example finding:**
+> `TaintedSql`: Detected tainted SQL in `UserController.php:34`
+
+**Enabled:** Automatically when PHP files are detected
+
+### Enlightn (Laravel)
+
+**Language:** Laravel (PHP)
+**Type:** SAST
+**What it detects:** CSRF vulnerabilities, mass assignment, debug mode exposure, exposed .env files, and 120+ Laravel-specific security checks.
+**Example finding:**
+> `MassAssignmentAnalyzer`: Potential mass assignment vulnerability in `User.php:12`
+
+**Enabled:** Automatically when a Laravel project is detected
+
+### PHP Security Checker (PHP SCA)
+
+**Language:** PHP (Composer)
+**Type:** SCA
+**What it detects:** Known CVEs in Composer dependencies by checking against the SensioLabs security advisories database.
+**Example finding:**
+> `CVE-2023-46734`: Twig code injection via sandbox bypass in `composer.lock`
+
+**Enabled:** Automatically when PHP Composer files are detected
+
+### gosec (Go SAST)
+
+**Language:** Go
+**Type:** SAST
+**What it detects:** Hardcoded credentials, SQL injection, insecure cryptography, unsafe file permissions, and Go-specific security issues.
+**Example finding:**
+> `G101`: Potential hardcoded credentials at `config.go:22`
+
+**Enabled:** Automatically when Go files are detected
+
+### Bandit (Python SAST)
+
+**Language:** Python
+**Type:** SAST
+**What it detects:** Hardcoded passwords, SQL injection, eval usage, weak cryptography, and Python-specific security patterns.
+**Example finding:**
+> `B105`: Possible hardcoded password at `settings.py:15`
+
+**Enabled:** Automatically when Python files are detected
+
+### Brakeman (Ruby/Rails SAST)
+
+**Language:** Ruby / Rails
+**Type:** SAST
+**What it detects:** SQL injection, XSS, mass assignment, command injection, and Rails-specific vulnerabilities.
+**Example finding:**
+> `SQL Injection`: Possible SQL injection near line 15 in `app/models/user.rb`
+
+**Enabled:** Automatically when Ruby files are detected
+
+### cargo-audit (Rust SCA)
+
+**Language:** Rust
+**Type:** SCA
+**What it detects:** Known vulnerable dependencies via the RustSec advisory database by auditing Cargo.lock files.
+**Example finding:**
+> `RUSTSEC-2019-0009`: Heap overflow in smallvec in `Cargo.lock`
+
+**Enabled:** Automatically when Rust files are detected
 
 ## Running a Scan
 

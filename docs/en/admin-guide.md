@@ -20,35 +20,152 @@ cp config.yml.example config.yml
 
 ## Scanner Configuration
 
-Each of the five scanner tools can be independently enabled, given a timeout, and passed extra arguments:
+Each of the twelve scanner tools can be independently configured with enable/disable, timeout, extra arguments, and language detection. Scanners with `enabled: "auto"` are activated automatically when matching project files are detected.
 
 ```yaml
 scanners:
   semgrep:
+    adapter_class: "scanner.adapters.semgrep.SemgrepAdapter"
     enabled: true
     timeout: 180
-    extra_args: []
+    extra_args: ["--exclude", ".venv", "--exclude", "node_modules"]
+    languages: ["python", "php", "javascript", "typescript", "go", "java", "kotlin", "ruby", "csharp", "rust"]
   cppcheck:
+    adapter_class: "scanner.adapters.cppcheck.CppcheckAdapter"
     enabled: true
     timeout: 120
-    extra_args: []
+    extra_args: ["-i.venv", "-inode_modules"]
+    languages: ["cpp"]
   gitleaks:
+    adapter_class: "scanner.adapters.gitleaks.GitleaksAdapter"
     enabled: true
     timeout: 120
     extra_args: []
+    languages: []
   trivy:
+    adapter_class: "scanner.adapters.trivy.TrivyAdapter"
     enabled: true
     timeout: 120
     extra_args: []
+    languages: ["docker", "terraform", "yaml"]
   checkov:
+    adapter_class: "scanner.adapters.checkov.CheckovAdapter"
     enabled: true
     timeout: 120
+    extra_args: ["--skip-path", ".venv", "--skip-path", "node_modules"]
+    languages: ["docker", "terraform", "yaml", "ci"]
+  psalm:
+    adapter_class: "scanner.adapters.psalm.PsalmAdapter"
+    enabled: "auto"
+    timeout: 300
     extra_args: []
+    languages: ["php"]
+  enlightn:
+    adapter_class: "scanner.adapters.enlightn.EnlightnAdapter"
+    enabled: "auto"
+    timeout: 120
+    extra_args: []
+    languages: ["laravel"]
+  php_security_checker:
+    adapter_class: "scanner.adapters.php_security_checker.PhpSecurityCheckerAdapter"
+    enabled: "auto"
+    timeout: 30
+    extra_args: []
+    languages: ["php"]
+  gosec:
+    adapter_class: "scanner.adapters.gosec.GosecAdapter"
+    enabled: "auto"
+    timeout: 120
+    extra_args: []
+    languages: ["go"]
+  bandit:
+    adapter_class: "scanner.adapters.bandit.BanditAdapter"
+    enabled: "auto"
+    timeout: 120
+    extra_args: []
+    languages: ["python"]
+  brakeman:
+    adapter_class: "scanner.adapters.brakeman.BrakemanAdapter"
+    enabled: "auto"
+    timeout: 120
+    extra_args: []
+    languages: ["ruby"]
+  cargo_audit:
+    adapter_class: "scanner.adapters.cargo_audit.CargoAuditAdapter"
+    enabled: "auto"
+    timeout: 60
+    extra_args: []
+    languages: ["rust"]
 ```
 
-- **enabled** -- set to `false` to skip a tool entirely
+- **adapter_class** -- fully qualified Python class implementing the scanner adapter (see Plugin Registry below)
+- **enabled** -- set to `true` (always on), `false` (always off), or `"auto"` (enabled when matching files detected)
 - **timeout** -- maximum seconds before the tool is killed
 - **extra_args** -- additional CLI arguments passed to the tool
+- **languages** -- file types that trigger auto-detection; scanners with an empty list (e.g., Gitleaks) run on all projects
+
+## Plugin Registry
+
+The scanner uses a config-driven plugin registry to load scanner adapters dynamically from `config.yml`. This architecture allows adding new scanners without modifying application code.
+
+### How Scanners Are Registered
+
+Each scanner entry in `config.yml` includes an `adapter_class` field that specifies the fully qualified Python class path implementing the `ScannerAdapter` interface. On startup, the `ScannerRegistry` reads all entries from the `scanners` section and dynamically imports each adapter class.
+
+The `adapter_class` field follows the format:
+
+```
+scanner.adapters.<module_name>.<ClassName>
+```
+
+For example: `scanner.adapters.gosec.GosecAdapter`
+
+### Language Auto-Detection
+
+Scanners with a `languages` field are automatically enabled when the scanned repository contains matching files. The orchestrator detects file extensions in the target repository and activates scanners whose `languages` list overlaps with the detected languages. Scanners with an empty `languages` list (like Gitleaks) always run regardless of project type.
+
+### Adding a New Scanner
+
+To add a new scanner to the platform:
+
+1. **Create an adapter class** implementing the `ScannerAdapter` interface:
+
+```python
+# src/scanner/adapters/my_scanner.py
+from scanner.adapters.base import ScannerAdapter
+
+class MyScannerAdapter(ScannerAdapter):
+    async def run(self, target_path: str, config: dict) -> list[dict]:
+        # Execute scanner binary and parse output
+        ...
+        return findings
+```
+
+2. **Add an entry to `config.yml`** in the `scanners` section:
+
+```yaml
+scanners:
+  my_scanner:
+    adapter_class: "scanner.adapters.my_scanner.MyScannerAdapter"
+    enabled: "auto"
+    timeout: 120
+    extra_args: []
+    languages: ["python"]
+```
+
+3. **Install the scanner binary** in the Dockerfile if it is an external tool.
+
+No other code changes are required. The registry discovers and loads the new adapter automatically from the configuration.
+
+### Listing Registered Scanners
+
+The `/api/scanners` endpoint returns all registered scanners with their configuration:
+
+```bash
+curl -H "X-API-Key: $SCANNER_API_KEY" http://localhost:8000/api/scanners
+```
+
+Response includes each scanner's name, enabled status, configured languages, and adapter class.
 
 ## AI Configuration
 
