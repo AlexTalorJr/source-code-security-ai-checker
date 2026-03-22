@@ -161,8 +161,8 @@ See [DevOps Guide](docs/en/devops-guide.md) for full Jenkins integration details
 
 ## Features
 
-- **8 security scanners with auto-detection** -- scanners are enabled automatically based on project languages
-- **Multi-language support** -- Python, PHP/Laravel, C/C++, JavaScript/TypeScript, Go, Rust, Java, C#, Ruby
+- **12 security scanners with auto-detection** -- scanners are enabled automatically based on project languages via a config-driven plugin registry
+- **Multi-language support** -- Python, PHP/Laravel, C/C++, JavaScript/TypeScript, Go, Rust, Java, C#, Ruby, Kotlin
 - **AI-powered analysis** -- Claude reviews findings for context, compound risks, and fix suggestions
 - **Interactive HTML and PDF reports** -- filterable findings with code context and charts
 - **Configurable quality gate** -- block deployments on Critical/High severity findings
@@ -187,6 +187,10 @@ Scanners are enabled automatically based on detected languages (`enabled: auto`)
 | **Psalm** | PHP | Taint analysis — SQL injection, XSS via data flow tracking |
 | **Enlightn** | Laravel | CSRF, mass assignment, debug mode, exposed .env (120+ checks) |
 | **PHP Security Checker** | PHP (composer) | Known CVEs in composer dependencies |
+| **gosec** | Go | Hardcoded credentials, SQL injection, insecure crypto, unsafe file permissions |
+| **Bandit** | Python | Hardcoded passwords, SQL injection, eval usage, weak crypto |
+| **Brakeman** | Ruby/Rails | SQL injection, XSS, mass assignment, command injection |
+| **cargo-audit** | Rust | Known vulnerable dependencies via RustSec advisory database |
 
 ## Documentation
 

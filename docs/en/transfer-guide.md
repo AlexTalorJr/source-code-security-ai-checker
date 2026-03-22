@@ -175,7 +175,7 @@ Check that `SCANNER_DB_PATH` points to a writable location inside the container.
 
 ### Scans Fail or Timeout
 
-- Check that scanner tools (semgrep, trivy, etc.) are available inside the Docker image
+- Check that all 12 scanner tools (semgrep, cppcheck, gitleaks, trivy, checkov, psalm, enlightn, php-security-checker, gosec, bandit, brakeman, cargo-audit) are available inside the Docker image. Run `make verify-scanners` to confirm
 - Increase `scan_timeout` in `config.yml` for large repositories
 - For private repos, ensure `SCANNER_GIT_TOKEN` is set
 

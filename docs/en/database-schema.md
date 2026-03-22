@@ -40,7 +40,7 @@ erDiagram
         int id PK "autoincrement"
         int scan_id FK "references scans.id, indexed"
         varchar fingerprint "SHA-256 hex, 64 chars, indexed"
-        varchar tool "semgrep/gitleaks/trivy/cppcheck/checkov"
+        varchar tool "semgrep/cppcheck/gitleaks/trivy/checkov/psalm/enlightn/php_security_checker/gosec/bandit/brakeman/cargo_audit"
         varchar rule_id "tool-specific rule identifier"
         varchar file_path "path in scanned repo"
         int line_start "nullable"
@@ -88,7 +88,7 @@ Tracks a single scan execution from trigger to completion. Stores aggregate seve
 
 ### Finding
 
-A normalized security vulnerability found by one of the five scanner tools. Each finding has a deterministic `fingerprint` (SHA-256 of normalized path + rule_id + snippet) for cross-scan deduplication. AI enrichment fields (`ai_analysis`, `ai_fix_suggestion`) are populated after Claude analysis.
+A normalized security vulnerability found by one of the twelve scanner tools. Each finding has a deterministic `fingerprint` (SHA-256 of normalized path + rule_id + snippet) for cross-scan deduplication. AI enrichment fields (`ai_analysis`, `ai_fix_suggestion`) are populated after Claude analysis.
 
 ### CompoundRisk
 

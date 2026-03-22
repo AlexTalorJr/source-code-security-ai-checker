@@ -124,6 +124,46 @@ semgrep --config rules/ /path/to/code
 semgrep --config rules/ --json /path/to/code | python3 -m json.tool
 ```
 
+## Custom Rules for Other Scanners
+
+In addition to Semgrep, several other scanners support custom rule configuration:
+
+### gosec (Go)
+
+gosec supports including or excluding specific rule IDs:
+
+```yaml
+scanners:
+  gosec:
+    extra_args: ["-include=G101,G201,G301"]
+```
+
+Use `-include` to run only specific rules, or `-exclude` to skip rules. Rule IDs follow the pattern `G1xx` (injection), `G2xx` (crypto), `G3xx` (file I/O), `G4xx` (network), `G5xx` (blocklist).
+
+### Bandit (Python)
+
+Bandit supports custom profiles via configuration files:
+
+```yaml
+scanners:
+  bandit:
+    extra_args: ["-c", "bandit.yml"]
+```
+
+Create a `bandit.yml` profile to include/exclude specific test IDs (e.g., `B105`, `B201`) or configure severity thresholds.
+
+### Brakeman (Ruby/Rails)
+
+Brakeman supports type filtering to focus on specific vulnerability categories:
+
+```yaml
+scanners:
+  brakeman:
+    extra_args: ["-t", "SQL,XSS,CommandInjection"]
+```
+
+Use `-t` to run only specific check types, or `--except` to exclude types.
+
 ## Rule Development Tips
 
 1. **Start specific, broaden later** -- begin with exact patterns and relax constraints as needed
