@@ -37,9 +37,17 @@ class TestDocConsistency:
 
     def test_admin_guide_has_plugin_registry_section(self):
         """admin-guide.md in every language has Plugin Registry section."""
+        registry_terms = {
+            "en": ("plugin", "registry"),
+            "ru": ("плагин", "реестр"),
+            "fr": ("plugin", "registre"),
+            "es": ("plugin", "registro"),
+            "it": ("plugin", "registro"),
+        }
         for lang in LANGUAGES:
             content = (PROJECT_ROOT / "docs" / lang / "admin-guide.md").read_text().lower()
-            assert "plugin" in content and "registry" in content, (
+            term1, term2 = registry_terms.get(lang, ("plugin", "registry"))
+            assert term1 in content and term2 in content, (
                 f"docs/{lang}/admin-guide.md missing Plugin Registry section"
             )
 
