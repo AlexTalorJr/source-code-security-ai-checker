@@ -40,7 +40,7 @@ erDiagram
         int id PK "autoincrement"
         int scan_id FK "references scans.id, indexed"
         varchar fingerprint "SHA-256 hex, 64 chars, indexed"
-        varchar tool "semgrep/gitleaks/trivy/cppcheck/checkov"
+        varchar tool "semgrep/cppcheck/gitleaks/trivy/checkov/psalm/enlightn/php_security_checker/gosec/bandit/brakeman/cargo_audit"
         varchar rule_id "tool-specific rule identifier"
         varchar file_path "path in scanned repo"
         int line_start "nullable"
@@ -88,7 +88,7 @@ erDiagram
 
 ### Finding
 
-Нормализованная уязвимость безопасности, обнаруженная одним из пяти инструментов сканирования. Каждая находка имеет детерминированный `fingerprint` (SHA-256 от нормализованного пути + rule_id + фрагмента кода) для кросс-скановой дедупликации. Поля ИИ-обогащения (`ai_analysis`, `ai_fix_suggestion`) заполняются после анализа Claude.
+Нормализованная уязвимость безопасности, обнаруженная одним из двенадцати инструментов сканирования. Каждая находка имеет детерминированный `fingerprint` (SHA-256 от нормализованного пути + rule_id + фрагмента кода) для кросс-скановой дедупликации. Поля ИИ-обогащения (`ai_analysis`, `ai_fix_suggestion`) заполняются после анализа Claude.
 
 ### CompoundRisk
 

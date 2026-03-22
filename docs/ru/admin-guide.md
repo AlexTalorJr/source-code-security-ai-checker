@@ -20,35 +20,152 @@ cp config.yml.example config.yml
 
 ## Настройка сканеров
 
-Каждый из пяти инструментов сканирования может быть независимо включён/выключен, ему может быть задан таймаут и дополнительные аргументы:
+Каждый из двенадцати инструментов сканирования может быть независимо настроен: включение/выключение, таймаут, дополнительные аргументы и автоопределение по языкам. Сканеры с `enabled: "auto"` активируются автоматически при обнаружении соответствующих файлов проекта.
 
 ```yaml
 scanners:
   semgrep:
+    adapter_class: "scanner.adapters.semgrep.SemgrepAdapter"
     enabled: true
     timeout: 180
-    extra_args: []
+    extra_args: ["--exclude", ".venv", "--exclude", "node_modules"]
+    languages: ["python", "php", "javascript", "typescript", "go", "java", "kotlin", "ruby", "csharp", "rust"]
   cppcheck:
+    adapter_class: "scanner.adapters.cppcheck.CppcheckAdapter"
     enabled: true
     timeout: 120
-    extra_args: []
+    extra_args: ["-i.venv", "-inode_modules"]
+    languages: ["cpp"]
   gitleaks:
+    adapter_class: "scanner.adapters.gitleaks.GitleaksAdapter"
     enabled: true
     timeout: 120
     extra_args: []
+    languages: []
   trivy:
+    adapter_class: "scanner.adapters.trivy.TrivyAdapter"
     enabled: true
     timeout: 120
     extra_args: []
+    languages: ["docker", "terraform", "yaml"]
   checkov:
+    adapter_class: "scanner.adapters.checkov.CheckovAdapter"
     enabled: true
     timeout: 120
+    extra_args: ["--skip-path", ".venv", "--skip-path", "node_modules"]
+    languages: ["docker", "terraform", "yaml", "ci"]
+  psalm:
+    adapter_class: "scanner.adapters.psalm.PsalmAdapter"
+    enabled: "auto"
+    timeout: 300
     extra_args: []
+    languages: ["php"]
+  enlightn:
+    adapter_class: "scanner.adapters.enlightn.EnlightnAdapter"
+    enabled: "auto"
+    timeout: 120
+    extra_args: []
+    languages: ["laravel"]
+  php_security_checker:
+    adapter_class: "scanner.adapters.php_security_checker.PhpSecurityCheckerAdapter"
+    enabled: "auto"
+    timeout: 30
+    extra_args: []
+    languages: ["php"]
+  gosec:
+    adapter_class: "scanner.adapters.gosec.GosecAdapter"
+    enabled: "auto"
+    timeout: 120
+    extra_args: []
+    languages: ["go"]
+  bandit:
+    adapter_class: "scanner.adapters.bandit.BanditAdapter"
+    enabled: "auto"
+    timeout: 120
+    extra_args: []
+    languages: ["python"]
+  brakeman:
+    adapter_class: "scanner.adapters.brakeman.BrakemanAdapter"
+    enabled: "auto"
+    timeout: 120
+    extra_args: []
+    languages: ["ruby"]
+  cargo_audit:
+    adapter_class: "scanner.adapters.cargo_audit.CargoAuditAdapter"
+    enabled: "auto"
+    timeout: 60
+    extra_args: []
+    languages: ["rust"]
 ```
 
-- **enabled** -- установите `false` для полного пропуска инструмента
+- **adapter_class** -- полный путь к Python-классу, реализующему адаптер сканера (см. раздел Реестр плагинов ниже)
+- **enabled** -- установите `true` (всегда включён), `false` (всегда выключен) или `"auto"` (включается при обнаружении соответствующих файлов)
 - **timeout** -- максимальное время выполнения в секундах до принудительной остановки
 - **extra_args** -- дополнительные аргументы командной строки, передаваемые инструменту
+- **languages** -- типы файлов, запускающие автоопределение; сканеры с пустым списком (например, Gitleaks) работают для всех проектов
+
+## Реестр плагинов
+
+Сканер использует конфигурационный реестр плагинов для динамической загрузки адаптеров сканеров из `config.yml`. Эта архитектура позволяет добавлять новые сканеры без изменения кода приложения.
+
+### Как регистрируются сканеры
+
+Каждая запись сканера в `config.yml` содержит поле `adapter_class`, указывающее полный путь к Python-классу, реализующему интерфейс `ScannerAdapter`. При запуске `ScannerRegistry` считывает все записи из раздела `scanners` и динамически импортирует каждый класс адаптера.
+
+Поле `adapter_class` следует формату:
+
+```
+scanner.adapters.<module_name>.<ClassName>
+```
+
+Например: `scanner.adapters.gosec.GosecAdapter`
+
+### Автоопределение языков
+
+Сканеры с полем `languages` автоматически включаются, когда сканируемый репозиторий содержит соответствующие файлы. Оркестратор определяет расширения файлов в целевом репозитории и активирует сканеры, чей список `languages` пересекается с обнаруженными языками. Сканеры с пустым списком `languages` (как Gitleaks) всегда работают независимо от типа проекта.
+
+### Добавление нового сканера
+
+Чтобы добавить новый сканер на платформу:
+
+1. **Создайте класс адаптера**, реализующий интерфейс `ScannerAdapter`:
+
+```python
+# src/scanner/adapters/my_scanner.py
+from scanner.adapters.base import ScannerAdapter
+
+class MyScannerAdapter(ScannerAdapter):
+    async def run(self, target_path: str, config: dict) -> list[dict]:
+        # Execute scanner binary and parse output
+        ...
+        return findings
+```
+
+2. **Добавьте запись в `config.yml`** в раздел `scanners`:
+
+```yaml
+scanners:
+  my_scanner:
+    adapter_class: "scanner.adapters.my_scanner.MyScannerAdapter"
+    enabled: "auto"
+    timeout: 120
+    extra_args: []
+    languages: ["python"]
+```
+
+3. **Установите бинарный файл сканера** в Dockerfile, если это внешний инструмент.
+
+Никаких других изменений кода не требуется. Реестр автоматически обнаруживает и загружает новый адаптер из конфигурации.
+
+### Список зарегистрированных сканеров
+
+Эндпоинт `/api/scanners` возвращает все зарегистрированные сканеры с их конфигурацией:
+
+```bash
+curl -H "X-API-Key: $SCANNER_API_KEY" http://localhost:8000/api/scanners
+```
+
+Ответ включает название, статус включения, настроенные языки и класс адаптера каждого сканера.
 
 ## Настройка ИИ
 

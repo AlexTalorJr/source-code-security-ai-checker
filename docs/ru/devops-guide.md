@@ -50,13 +50,45 @@ volumes:
 
 ## Dockerfile
 
-Образ основан на `python:3.12-slim`:
+Образ основан на `python:3.12-slim` и включает все 12 инструментов сканирования:
 
-1. **Системные зависимости** -- `curl` (healthcheck), `libpango` и `libharfbuzz` (генерация PDF через WeasyPrint)
+1. **Системные зависимости** -- `curl` (healthcheck), `libpango` и `libharfbuzz` (генерация PDF через WeasyPrint), `ruby` (Brakeman)
 2. **Непривилегированный пользователь** -- пользователь и группа `scanner` созданы для безопасности; директория `/data` принадлежит этому пользователю
-3. **Процесс установки** -- `pyproject.toml` и `src/` копируются, затем `pip install --no-cache-dir .` с использованием бэкенда сборки hatchling
-4. **Файлы приложения** -- `alembic.ini`, директория `alembic/` с миграциями и `config.yml.example` (как `config.yml` по умолчанию) копируются
-5. **Точка входа** -- `uvicorn scanner.main:app --host 0.0.0.0 --port 8000`
+3. **Бинарные файлы сканеров** -- см. раздел Бинарные файлы сканеров ниже для полного списка
+4. **Процесс установки** -- `pyproject.toml` и `src/` копируются, затем `pip install --no-cache-dir .` с использованием бэкенда сборки hatchling
+5. **Файлы приложения** -- `alembic.ini`, директория `alembic/` с миграциями и `config.yml.example` (как `config.yml` по умолчанию) копируются
+6. **Точка входа** -- `uvicorn scanner.main:app --host 0.0.0.0 --port 8000`
+
+## Бинарные файлы сканеров
+
+Все 12 инструментов сканирования устанавливаются внутри Docker-образа:
+
+| Сканер | Метод установки | Примечания |
+|--------|----------------|-----------|
+| **Semgrep** | `pip install semgrep` | Python-пакет, устанавливается вместе с приложением |
+| **cppcheck** | `apt-get install cppcheck` | Системный пакет |
+| **Gitleaks** | Готовый бинарный файл с GitHub releases | Скачивается в `/usr/local/bin`, поддержка amd64/arm64 |
+| **Trivy** | Готовый бинарный файл с GitHub releases | Скачивается в `/usr/local/bin`, поддержка amd64/arm64 |
+| **Checkov** | `pip install checkov` | Python-пакет, устанавливается с `--no-cache-dir` |
+| **Psalm** | `composer global require vimeo/psalm` | PHP Composer пакет, требует `php-cli` |
+| **Enlightn** | `composer global require enlightn/enlightn` | PHP Composer пакет |
+| **PHP Security Checker** | Готовый бинарный файл с GitHub releases | Скачивается в `/usr/local/bin` |
+| **gosec** | Готовый бинарный файл с GitHub releases | Скачивается в `/usr/local/bin`, поддержка amd64/arm64 |
+| **Bandit** | `pip install bandit` | Python-пакет, устанавливается вместе с Semgrep и Checkov |
+| **Brakeman** | `gem install brakeman` | Ruby gem, требует пакет `ruby` (~80 МБ) |
+| **cargo-audit** | Готовый бинарный файл с GitHub releases | Скачивается в `/usr/local/bin`, поддержка amd64/arm64 |
+
+Все загрузки бинарных файлов (Gitleaks, Trivy, gosec, cargo-audit, PHP Security Checker) используют определение архитектуры (`dpkg --print-architecture` / `uname -m`) для скачивания правильного бинарного файла для платформ amd64 или arm64.
+
+### Проверка доступности сканеров
+
+После сборки Docker-образа проверьте корректность установки всех сканеров:
+
+```bash
+make verify-scanners
+```
+
+Эта цель запускает smoke-тест внутри контейнера, проверяя доступность каждого из 12 бинарных файлов сканеров и их отклик на команды version/help. Используйте после любых изменений Dockerfile для проверки целостности сканеров.
 
 ## Переменные окружения
 
@@ -177,6 +209,8 @@ make docker-push REGISTRY=your-registry.example.com
 ```
 
 Цель `docker-multiarch` создаёт сборщик buildx с именем `multiarch`, если он ещё не существует.
+
+Все 12 загружаемых бинарных файлов сканеров (Gitleaks, Trivy, gosec, cargo-audit, PHP Security Checker) поддерживают архитектуры amd64 и arm64. Python-пакеты (Semgrep, Checkov, Bandit) и Ruby gems (Brakeman) не зависят от платформы и работают на обеих архитектурах без модификаций.
 
 ## Мониторинг
 

@@ -175,7 +175,7 @@ curl http://localhost:8000/api/health
 
 ### Сканирования завершаются с ошибкой или по таймауту
 
-- Убедитесь, что инструменты сканирования (semgrep, trivy и др.) доступны внутри Docker-образа
+- Убедитесь, что все 12 инструментов сканирования (semgrep, cppcheck, gitleaks, trivy, checkov, psalm, enlightn, php-security-checker, gosec, bandit, brakeman, cargo-audit) доступны внутри Docker-образа. Запустите `make verify-scanners` для подтверждения
 - Увеличьте `scan_timeout` в `config.yml` для больших репозиториев
 - Для приватных репозиториев убедитесь, что задан `SCANNER_GIT_TOKEN`
 

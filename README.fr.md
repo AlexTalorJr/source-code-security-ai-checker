@@ -161,8 +161,8 @@ Consultez le [Guide DevOps](docs/fr/devops-guide.md) pour les détails complets 
 
 ## Fonctionnalités
 
-- **8 scanners de sécurité avec détection automatique** -- les scanners sont activés automatiquement selon les langages du projet
-- **Support multi-langages** -- Python, PHP/Laravel, C/C++, JavaScript/TypeScript, Go, Rust, Java, C#, Ruby
+- **12 scanners de securite avec detection automatique** -- les scanners sont actives automatiquement selon les langages du projet via un registre de plugins base sur la configuration
+- **Support multi-langages** -- Python, PHP/Laravel, C/C++, JavaScript/TypeScript, Go, Rust, Java, C#, Ruby, Kotlin
 - **Analyse alimentée par l'IA** -- Claude examine les résultats pour le contexte, les risques composés et les suggestions de correction
 - **Rapports HTML et PDF interactifs** -- résultats filtrables avec contexte de code et graphiques
 - **Quality gate configurable** -- blocage des déploiements sur les résultats de sévérité Critical/High
@@ -186,7 +186,11 @@ Les scanners sont activés automatiquement selon les langages détectés (`enabl
 | **Checkov** | Docker, Terraform, CI configs | Bonnes pratiques de sécurité Infrastructure-as-code |
 | **Psalm** | PHP | Analyse de contamination — injection SQL, XSS via suivi du flux de données |
 | **Enlightn** | Laravel | CSRF, mass assignment, mode debug, .env exposé (plus de 120 vérifications) |
-| **PHP Security Checker** | PHP (composer) | CVE connues dans les dépendances composer |
+| **PHP Security Checker** | PHP (composer) | CVE connues dans les dependances composer |
+| **gosec** | Go | Identifiants codes en dur, injection SQL, cryptographie non securisee, permissions de fichiers non securisees |
+| **Bandit** | Python | Mots de passe codes en dur, injection SQL, eval, cryptographie faible |
+| **Brakeman** | Ruby/Rails | Injection SQL, XSS, mass assignment, injection de commandes |
+| **cargo-audit** | Rust | Dependances vulnerables connues via la base de donnees RustSec |
 
 ## Documentation
 
@@ -234,4 +238,4 @@ Apache 2.0
 
 ---
 
-Documentation disponible en d'autres langues : [English](README.md) | [Русский](README.ru.md)
+Documentation disponible en d'autres langues : [English](README.md) | [Русский](README.ru.md) | [Espanol](README.es.md) | [Italiano](README.it.md)

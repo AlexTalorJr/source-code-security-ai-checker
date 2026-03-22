@@ -2,7 +2,129 @@
 
 ## Что такое Security AI Scanner?
 
-Инструмент сканирования безопасности, который анализирует исходный код на наличие уязвимостей с помощью пяти параллельных инструментов статического анализа, обогащает результаты ИИ-анализом через Claude и формирует практические отчёты с рекомендациями по исправлению.
+Инструмент сканирования безопасности, который анализирует исходный код на наличие уязвимостей с помощью двенадцати параллельных инструментов сканирования безопасности, обогащает результаты ИИ-анализом через Claude и формирует практические отчёты с рекомендациями по исправлению. Сканеры автоматически активируются на основе обнаруженных языков проекта.
+
+## Поддерживаемые сканеры
+
+### Semgrep (мультиязычный SAST)
+
+**Language:** Python, PHP, JavaScript, TypeScript, Go, Java, Kotlin, Ruby, C#, Rust
+**Type:** SAST
+**Что обнаруживает:** Инъекционные уязвимости, проблемы аутентификации, небезопасные паттерны и специфичные для языков уязвимости с помощью семантического сопоставления шаблонов.
+**Пример находки:**
+> `python.lang.security.audit.exec-detected`: Use of exec() detected at `app.py:42`
+
+**Активируется:** Автоматически при обнаружении файлов Python, PHP, JS/TS, Go, Java, Kotlin, Ruby, C# или Rust
+
+### cppcheck (C/C++)
+
+**Language:** C/C++
+**Type:** SAST
+**Что обнаруживает:** Проблемы безопасности памяти, переполнение буфера, разыменование нулевых указателей, неопределённое поведение и утечки ресурсов.
+**Пример находки:**
+> `arrayIndexOutOfBounds`: Array index out of bounds at `buffer.cpp:15`
+
+**Активируется:** Автоматически при обнаружении файлов C/C++
+
+### Gitleaks (секреты)
+
+**Language:** Все языки
+**Type:** Обнаружение секретов
+**Что обнаруживает:** Захардкоженные секреты, API-ключи, токены, пароли и учётные данные в исходном коде и истории git.
+**Пример находки:**
+> `generic-api-key`: Generic API Key detected at `config.py:8`
+
+**Активируется:** Всегда включён для всех проектов
+
+### Trivy (инфраструктура)
+
+**Language:** Docker, Terraform, YAML/Kubernetes
+**Type:** SCA / Infrastructure
+**Что обнаруживает:** CVE в образах контейнеров, некорректные конфигурации IaC и проблемы безопасности Kubernetes.
+**Пример находки:**
+> `CVE-2023-44487`: HTTP/2 rapid reset attack in `Dockerfile:1`
+
+**Активируется:** Автоматически при обнаружении Dockerfiles, Terraform или Kubernetes YAML
+
+### Checkov (инфраструктура)
+
+**Language:** Docker, Terraform, YAML, CI configs
+**Type:** Infrastructure
+**Что обнаруживает:** Лучшие практики безопасности Infrastructure-as-code, некорректные облачные конфигурации и безопасность CI-пайплайнов.
+**Пример находки:**
+> `CKV_DOCKER_2`: Ensure that HEALTHCHECK instructions have been added to container images at `Dockerfile:1`
+
+**Активируется:** Автоматически при обнаружении файлов Docker, Terraform, YAML или CI
+
+### Psalm (PHP)
+
+**Language:** PHP
+**Type:** SAST (taint-анализ)
+**Что обнаруживает:** SQL-инъекции, XSS и другие уязвимости, связанные с потоком данных, через отслеживание taint в PHP-коде.
+**Пример находки:**
+> `TaintedSql`: Detected tainted SQL in `UserController.php:34`
+
+**Активируется:** Автоматически при обнаружении файлов PHP
+
+### Enlightn (Laravel)
+
+**Language:** Laravel (PHP)
+**Type:** SAST
+**Что обнаруживает:** CSRF-уязвимости, mass assignment, режим отладки, открытые файлы .env и более 120 специфичных для Laravel проверок безопасности.
+**Пример находки:**
+> `MassAssignmentAnalyzer`: Potential mass assignment vulnerability in `User.php:12`
+
+**Активируется:** Автоматически при обнаружении проекта Laravel
+
+### PHP Security Checker (PHP SCA)
+
+**Language:** PHP (Composer)
+**Type:** SCA
+**Что обнаруживает:** Известные CVE в зависимостях Composer по базе данных SensioLabs.
+**Пример находки:**
+> `CVE-2023-46734`: Twig code injection via sandbox bypass in `composer.lock`
+
+**Активируется:** Автоматически при обнаружении файлов PHP Composer
+
+### gosec (Go SAST)
+
+**Language:** Go
+**Type:** SAST
+**Что обнаруживает:** Захардкоженные учётные данные, SQL-инъекции, небезопасная криптография, небезопасные права файлов и Go-специфичные проблемы безопасности.
+**Пример находки:**
+> `G101`: Potential hardcoded credentials at `config.go:22`
+
+**Активируется:** Автоматически при обнаружении файлов Go
+
+### Bandit (Python SAST)
+
+**Language:** Python
+**Type:** SAST
+**Что обнаруживает:** Захардкоженные пароли, SQL-инъекции, использование eval, слабая криптография и Python-специфичные паттерны безопасности.
+**Пример находки:**
+> `B105`: Possible hardcoded password at `settings.py:15`
+
+**Активируется:** Автоматически при обнаружении файлов Python
+
+### Brakeman (Ruby/Rails SAST)
+
+**Language:** Ruby / Rails
+**Type:** SAST
+**Что обнаруживает:** SQL-инъекции, XSS, mass assignment, инъекции команд и Rails-специфичные уязвимости.
+**Пример находки:**
+> `SQL Injection`: Possible SQL injection near line 15 in `app/models/user.rb`
+
+**Активируется:** Автоматически при обнаружении файлов Ruby
+
+### cargo-audit (Rust SCA)
+
+**Language:** Rust
+**Type:** SCA
+**Что обнаруживает:** Известные уязвимые зависимости через базу данных RustSec путём аудита файлов Cargo.lock.
+**Пример находки:**
+> `RUSTSEC-2019-0009`: Heap overflow in smallvec in `Cargo.lock`
+
+**Активируется:** Автоматически при обнаружении файлов Rust
 
 ## Запуск сканирования
 

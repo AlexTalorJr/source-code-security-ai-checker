@@ -235,6 +235,57 @@ curl -X DELETE http://localhost:8000/api/scans/1/findings/5/suppress \
 
 ---
 
+### GET /api/scanners
+
+Список всех зарегистрированных сканеров с их конфигурацией. Требуется аутентификация.
+
+**Ответ 200:**
+
+```json
+[
+  {
+    "name": "semgrep",
+    "enabled": true,
+    "languages": ["python", "php", "javascript", "typescript", "go", "java", "kotlin", "ruby", "csharp", "rust"],
+    "adapter_class": "scanner.adapters.semgrep.SemgrepAdapter"
+  },
+  {
+    "name": "gosec",
+    "enabled": "auto",
+    "languages": ["go"],
+    "adapter_class": "scanner.adapters.gosec.GosecAdapter"
+  },
+  {
+    "name": "bandit",
+    "enabled": "auto",
+    "languages": ["python"],
+    "adapter_class": "scanner.adapters.bandit.BanditAdapter"
+  },
+  {
+    "name": "brakeman",
+    "enabled": "auto",
+    "languages": ["ruby"],
+    "adapter_class": "scanner.adapters.brakeman.BrakemanAdapter"
+  },
+  {
+    "name": "cargo_audit",
+    "enabled": "auto",
+    "languages": ["rust"],
+    "adapter_class": "scanner.adapters.cargo_audit.CargoAuditAdapter"
+  }
+]
+```
+
+Ответ включает все 12 зарегистрированных сканеров. Пример выше показывает подмножество для краткости.
+
+**Пример:**
+
+```bash
+curl -H "X-API-Key: your-key" http://localhost:8000/api/scanners
+```
+
+---
+
 ### GET /api/trends
 
 Получение трендов находок во времени для диаграмм трендов.

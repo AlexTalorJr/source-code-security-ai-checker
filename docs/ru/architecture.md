@@ -2,7 +2,7 @@
 
 ## Обзор
 
-Security AI Scanner -- это многоуровневый конвейер сканирования безопасности для платформы aipix.ai VSaaS. Он сканирует репозитории исходного кода на наличие уязвимостей с помощью пяти параллельных инструментов статического анализа, обогащает результаты ИИ-анализом через Claude и формирует практические отчёты с рекомендациями по исправлению. Настраиваемый шлюз качества позволяет блокировать развёртывание при обнаружении критических проблем.
+Security AI Scanner -- это многоуровневый конвейер сканирования безопасности для платформы aipix.ai VSaaS. Он сканирует репозитории исходного кода на наличие уязвимостей с помощью двенадцати параллельных инструментов сканирования безопасности, обогащает результаты ИИ-анализом через Claude и формирует практические отчёты с рекомендациями по исправлению. Сканеры загружаются динамически через конфигурационный реестр плагинов. Настраиваемый шлюз качества позволяет блокировать развёртывание при обнаружении критических проблем.
 
 ## Диаграмма компонентов
 
@@ -19,11 +19,19 @@ graph TB
 
         subgraph Scanner Orchestrator
             ORCH[Orchestrator<br/>parallel execution]
+            REG[ScannerRegistry<br/>config-driven loading]
             SEM[Semgrep Adapter]
             CPP[cppcheck Adapter]
             GLK[Gitleaks Adapter]
             TRV[Trivy Adapter]
             CHK[Checkov Adapter]
+            PSA[Psalm Adapter]
+            ENL[Enlightn Adapter]
+            PSC[PHP Security Checker]
+            GSC[gosec Adapter]
+            BND[Bandit Adapter]
+            BRK[Brakeman Adapter]
+            CGA[cargo-audit Adapter]
         end
 
         subgraph AI Analysis
@@ -60,11 +68,19 @@ graph TB
         API --> CFG
         API --> QUEUE
         QUEUE --> ORCH
-        ORCH --> SEM
-        ORCH --> CPP
-        ORCH --> GLK
-        ORCH --> TRV
-        ORCH --> CHK
+        ORCH --> REG
+        REG --> SEM
+        REG --> CPP
+        REG --> GLK
+        REG --> TRV
+        REG --> CHK
+        REG --> PSA
+        REG --> ENL
+        REG --> PSC
+        REG --> GSC
+        REG --> BND
+        REG --> BRK
+        REG --> CGA
         ORCH --> AI
         AI --> CR
         ORCH --> GATE
@@ -98,7 +114,7 @@ sequenceDiagram
     participant API as FastAPI
     participant Q as Scan Queue
     participant O as Orchestrator
-    participant S as Scanners (x5)
+    participant S as Scanners (x12)
     participant AI as AI Analyzer
     participant G as Quality Gate
     participant R as Report Generator
@@ -112,7 +128,7 @@ sequenceDiagram
 
     Q->>O: Dequeue and execute
     O->>DB: Update status=running
-    O->>S: Run 5 tools in parallel (asyncio.gather)
+    O->>S: Run 12 tools in parallel (asyncio.gather)
     S-->>O: Raw findings per tool
     O->>O: Normalize + fingerprint + deduplicate
     O->>DB: Insert Finding records
@@ -142,7 +158,7 @@ sequenceDiagram
 | Async SQLAlchemy | ORM | Неблокирующие операции с БД для асинхронных обработчиков FastAPI |
 | Pydantic v2 | Валидация | Строгая типизация на границе API, отдельно от моделей ORM |
 | FastAPI | API + панель управления | Асинхронность, автогенерация OpenAPI-документации, внедрение зависимостей |
-| asyncio.gather | Параллелизм сканеров | Одновременный запуск 5 инструментов без накладных расходов на потоки |
+| asyncio.gather | Параллелизм сканеров | Одновременный запуск 12 инструментов без накладных расходов на потоки |
 | Fingerprinting | Дедупликация | SHA-256 хеш пути + rule_id + фрагмента кода для кросс-скановой дедупликации |
 | WeasyPrint | Генерация PDF | Чистый Python, CSS-вёрстка для PDF-отчётов |
 | Jinja2 PackageLoader | Шаблоны | Обнаружение шаблонов внутри установленного пакета scanner |

@@ -175,7 +175,7 @@ Vérifiez que `SCANNER_DB_PATH` pointe vers un emplacement inscriptible à l'int
 
 ### Les Analyses Échouent ou Dépassent le Délai
 
-- Vérifiez que les outils du scanner (semgrep, trivy, etc.) sont disponibles à l'intérieur de l'image Docker
+- Verifiez que les 12 outils de scan (semgrep, cppcheck, gitleaks, trivy, checkov, psalm, enlightn, php-security-checker, gosec, bandit, brakeman, cargo-audit) sont disponibles dans l'image Docker. Executez `make verify-scanners` pour confirmer
 - Augmentez `scan_timeout` dans `config.yml` pour les gros référentiels
 - Pour les référentiels privés, assurez-vous que `SCANNER_GIT_TOKEN` est défini
 

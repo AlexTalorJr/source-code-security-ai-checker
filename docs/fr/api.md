@@ -235,6 +235,57 @@ curl -X DELETE http://localhost:8000/api/scans/1/findings/5/suppress \
 
 ---
 
+### GET /api/scanners
+
+Liste de tous les scanners enregistres avec leur configuration. Authentification requise.
+
+**Reponse 200 :**
+
+```json
+[
+  {
+    "name": "semgrep",
+    "enabled": true,
+    "languages": ["python", "php", "javascript", "typescript", "go", "java", "kotlin", "ruby", "csharp", "rust"],
+    "adapter_class": "scanner.adapters.semgrep.SemgrepAdapter"
+  },
+  {
+    "name": "gosec",
+    "enabled": "auto",
+    "languages": ["go"],
+    "adapter_class": "scanner.adapters.gosec.GosecAdapter"
+  },
+  {
+    "name": "bandit",
+    "enabled": "auto",
+    "languages": ["python"],
+    "adapter_class": "scanner.adapters.bandit.BanditAdapter"
+  },
+  {
+    "name": "brakeman",
+    "enabled": "auto",
+    "languages": ["ruby"],
+    "adapter_class": "scanner.adapters.brakeman.BrakemanAdapter"
+  },
+  {
+    "name": "cargo_audit",
+    "enabled": "auto",
+    "languages": ["rust"],
+    "adapter_class": "scanner.adapters.cargo_audit.CargoAuditAdapter"
+  }
+]
+```
+
+La reponse inclut les 12 scanners enregistres. L'exemple ci-dessus montre un sous-ensemble pour plus de brievete.
+
+**Exemple :**
+
+```bash
+curl -H "X-API-Key: your-key" http://localhost:8000/api/scanners
+```
+
+---
+
 ### GET /api/trends
 
 Obtenir les tendances des résultats dans le temps pour les graphiques de tendances.
