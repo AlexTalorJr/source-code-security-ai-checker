@@ -7,7 +7,7 @@ TIMESTAMP := $(shell date +%Y%m%d_%H%M%S)
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install run stop test migrate backup restore package clean docker-multiarch docker-push
+.PHONY: help install run stop test verify-scanners migrate backup restore package clean docker-multiarch docker-push
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -35,6 +35,21 @@ stop: ## Stop scanner
 
 test: ## Run test suite
 	@if [ -f .venv/bin/pytest ]; then .venv/bin/pytest tests/ -v; elif python3 -c "import pytest" 2>/dev/null; then python3 -m pytest tests/ -v; else docker compose exec scanner python -m pytest tests/ -v; fi
+
+verify-scanners: ## Smoke-test all 12 scanner binaries inside Docker
+	@echo "Verifying 12 scanner binaries..."
+	@docker compose exec -T scanner semgrep --version > /dev/null && echo "  semgrep: OK" || echo "  semgrep: FAIL"
+	@docker compose exec -T scanner cppcheck --version > /dev/null && echo "  cppcheck: OK" || echo "  cppcheck: FAIL"
+	@docker compose exec -T scanner gitleaks version > /dev/null && echo "  gitleaks: OK" || echo "  gitleaks: FAIL"
+	@docker compose exec -T scanner trivy --version > /dev/null && echo "  trivy: OK" || echo "  trivy: FAIL"
+	@docker compose exec -T scanner checkov --version > /dev/null && echo "  checkov: OK" || echo "  checkov: FAIL"
+	@docker compose exec -T scanner psalm --version > /dev/null && echo "  psalm: OK" || echo "  psalm: FAIL"
+	@docker compose exec -T scanner local-php-security-checker --help > /dev/null && echo "  php-security-checker: OK" || echo "  php-security-checker: FAIL"
+	@docker compose exec -T scanner gosec --version 2>&1 | head -1 > /dev/null && echo "  gosec: OK" || echo "  gosec: FAIL"
+	@docker compose exec -T scanner bandit --version > /dev/null && echo "  bandit: OK" || echo "  bandit: FAIL"
+	@docker compose exec -T scanner brakeman --version > /dev/null && echo "  brakeman: OK" || echo "  brakeman: FAIL"
+	@docker compose exec -T scanner cargo-audit --version > /dev/null && echo "  cargo-audit: OK" || echo "  cargo-audit: FAIL"
+	@echo "Scanner verification complete."
 
 migrate: ## Run database migrations
 	docker compose exec scanner alembic upgrade head
