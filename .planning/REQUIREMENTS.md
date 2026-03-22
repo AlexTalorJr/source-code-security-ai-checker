@@ -21,8 +21,8 @@
 
 ### Infrastructure
 
-- [ ] **INFRA-01**: Docker image includes gosec, Bandit, Brakeman, and cargo-audit binaries
-- [ ] **INFRA-02**: Multi-arch build (x86_64, ARM64) works with new scanner binaries
+- [x] **INFRA-01**: Docker image includes gosec, Bandit, Brakeman, and cargo-audit binaries
+- [x] **INFRA-02**: Multi-arch build (x86_64, ARM64) works with new scanner binaries
 
 ### Documentation
 
@@ -63,8 +63,8 @@
 | SCAN-02 | Phase 9 | Complete |
 | SCAN-03 | Phase 9 | Complete |
 | SCAN-04 | Phase 9 | Complete |
-| INFRA-01 | Phase 10 | Pending |
-| INFRA-02 | Phase 10 | Pending |
+| INFRA-01 | Phase 10 | Complete |
+| INFRA-02 | Phase 10 | Complete |
 | DOCS-01 | Phase 10 | Pending |
 
 **Coverage:**
