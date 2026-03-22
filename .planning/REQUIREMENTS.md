@@ -26,7 +26,7 @@
 
 ### Documentation
 
-- [ ] **DOCS-01**: Bilingual documentation updated with new scanners and plugin architecture (EN, RU, FR, ES, IT)
+- [x] **DOCS-01**: Bilingual documentation updated with new scanners and plugin architecture (EN, RU, FR, ES, IT)
 
 ## Future Requirements
 
@@ -65,7 +65,7 @@
 | SCAN-04 | Phase 9 | Complete |
 | INFRA-01 | Phase 10 | Complete |
 | INFRA-02 | Phase 10 | Complete |
-| DOCS-01 | Phase 10 | Pending |
+| DOCS-01 | Phase 10 | Complete |
 
 **Coverage:**
 - v1.0.1 requirements: 11 total
