@@ -161,8 +161,8 @@ Consultare la [Guida DevOps](docs/it/devops-guide.md) per i dettagli completi su
 
 ## Funzionalità
 
-- **8 scanner di sicurezza con rilevamento automatico** -- gli scanner vengono attivati automaticamente in base ai linguaggi del progetto
-- **Supporto multi-linguaggio** -- Python, PHP/Laravel, C/C++, JavaScript/TypeScript, Go, Rust, Java, C#, Ruby
+- **12 scanner di sicurezza con rilevamento automatico** -- gli scanner vengono attivati automaticamente in base ai linguaggi del progetto tramite un registro di plugin basato sulla configurazione
+- **Supporto multi-linguaggio** -- Python, PHP/Laravel, C/C++, JavaScript/TypeScript, Go, Rust, Java, C#, Ruby, Kotlin
 - **Analisi basata su AI** -- Claude esamina i risultati per contesto, rischi composti e suggerimenti di correzione
 - **Report interattivi HTML e PDF** -- risultati filtrabili con contesto del codice e grafici
 - **Quality gate configurabile** -- blocco del deployment in caso di risultati Critical/High
@@ -187,6 +187,10 @@ Gli scanner vengono attivati automaticamente in base ai linguaggi rilevati (`ena
 | **Psalm** | PHP | Taint analysis — SQL injection, XSS tramite tracciamento del flusso di dati |
 | **Enlightn** | Laravel | CSRF, mass assignment, modalità debug, .env esposto (oltre 120 controlli) |
 | **PHP Security Checker** | PHP (composer) | CVE noti nelle dipendenze composer |
+| **gosec** | Go | Credenziali hardcoded, SQL injection, crittografia non sicura, permessi di file non sicuri |
+| **Bandit** | Python | Password hardcoded, SQL injection, eval, crittografia debole |
+| **Brakeman** | Ruby/Rails | SQL injection, XSS, mass assignment, command injection |
+| **cargo-audit** | Rust | Dipendenze vulnerabili note tramite il database RustSec |
 
 ## Documentazione
 
@@ -234,4 +238,4 @@ Apache 2.0
 
 ---
 
-Documentazione in altre lingue: [English](README.md) | [Русский](README.ru.md) | [Italiano](README.it.md)
+Documentazione in altre lingue: [English](README.md) | [Русский](README.ru.md) | [Francais](README.fr.md) | [Espanol](README.es.md)

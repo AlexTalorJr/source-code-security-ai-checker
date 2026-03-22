@@ -124,6 +124,46 @@ semgrep --config rules/ /path/to/code
 semgrep --config rules/ --json /path/to/code | python3 -m json.tool
 ```
 
+## Reglas personalizadas para otros escaneres
+
+Ademas de Semgrep, otros escaneres admiten la configuracion de reglas personalizadas:
+
+### gosec (Go)
+
+gosec admite la inclusion o exclusion de identificadores de reglas especificos:
+
+```yaml
+scanners:
+  gosec:
+    extra_args: ["-include=G101,G201,G301"]
+```
+
+Use `-include` para ejecutar solo reglas especificas, o `-exclude` para omitir reglas. Los identificadores de reglas siguen el patron `G1xx` (inyeccion), `G2xx` (cripto), `G3xx` (E/S de archivos), `G4xx` (red), `G5xx` (lista negra).
+
+### Bandit (Python)
+
+Bandit admite perfiles personalizados mediante archivos de configuracion:
+
+```yaml
+scanners:
+  bandit:
+    extra_args: ["-c", "bandit.yml"]
+```
+
+Cree un perfil `bandit.yml` para incluir/excluir pruebas especificas (p. ej., `B105`, `B201`) o configurar umbrales de severidad.
+
+### Brakeman (Ruby/Rails)
+
+Brakeman admite filtrado por tipo para enfocarse en categorias de vulnerabilidad especificas:
+
+```yaml
+scanners:
+  brakeman:
+    extra_args: ["-t", "SQL,XSS,CommandInjection"]
+```
+
+Use `-t` para ejecutar solo tipos de verificacion especificos, o `--except` para excluir tipos.
+
 ## Consejos para el Desarrollo de Reglas
 
 1. **Comience específico, amplíe después** -- inicie con patrones exactos y relaje las restricciones según sea necesario

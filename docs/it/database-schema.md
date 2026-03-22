@@ -40,7 +40,7 @@ erDiagram
         int id PK "autoincrement"
         int scan_id FK "references scans.id, indexed"
         varchar fingerprint "SHA-256 hex, 64 chars, indexed"
-        varchar tool "semgrep/gitleaks/trivy/cppcheck/checkov"
+        varchar tool "semgrep/cppcheck/gitleaks/trivy/checkov/psalm/enlightn/php_security_checker/gosec/bandit/brakeman/cargo_audit"
         varchar rule_id "tool-specific rule identifier"
         varchar file_path "path in scanned repo"
         int line_start "nullable"
@@ -88,7 +88,7 @@ Traccia una singola esecuzione di scansione dall'avvio al completamento. Memoriz
 
 ### Finding
 
-Una vulnerabilità di sicurezza normalizzata rilevata da uno dei cinque strumenti scanner. Ogni risultato ha un `fingerprint` deterministico (SHA-256 di path normalizzato + rule_id + snippet) per la deduplicazione tra scansioni. I campi di arricchimento AI (`ai_analysis`, `ai_fix_suggestion`) vengono popolati dopo l'analisi da parte di Claude.
+Una vulnerabilità di sicurezza normalizzata rilevata da uno dei dodici strumenti scanner. Ogni risultato ha un `fingerprint` deterministico (SHA-256 di path normalizzato + rule_id + snippet) per la deduplicazione tra scansioni. I campi di arricchimento AI (`ai_analysis`, `ai_fix_suggestion`) vengono popolati dopo l'analisi da parte di Claude.
 
 ### CompoundRisk
 

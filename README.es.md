@@ -161,8 +161,8 @@ Consulte la [Guía DevOps](docs/es/devops-guide.md) para obtener todos los detal
 
 ## Características
 
-- **8 escáneres de seguridad con detección automática** -- los escáneres se activan automáticamente según los lenguajes del proyecto
-- **Soporte multilenguaje** -- Python, PHP/Laravel, C/C++, JavaScript/TypeScript, Go, Rust, Java, C#, Ruby
+- **12 escaneres de seguridad con deteccion automatica** -- los escaneres se activan automaticamente segun los lenguajes del proyecto a traves de un registro de plugins basado en la configuracion
+- **Soporte multilenguaje** -- Python, PHP/Laravel, C/C++, JavaScript/TypeScript, Go, Rust, Java, C#, Ruby, Kotlin
 - **Análisis impulsado por IA** -- Claude revisa los hallazgos para evaluar contexto, riesgos compuestos y sugerencias de corrección
 - **Informes interactivos HTML y PDF** -- hallazgos filtrables con contexto de código y gráficos
 - **Quality gate configurable** -- bloquea despliegues ante hallazgos de severidad Critical o High
@@ -187,8 +187,12 @@ Los escáneres se activan automáticamente según los lenguajes detectados (`ena
 | **Psalm** | PHP | Análisis de contaminación — inyección SQL, XSS mediante rastreo del flujo de datos |
 | **Enlightn** | Laravel | CSRF, mass assignment, modo debug, .env expuesto (más de 120 verificaciones) |
 | **PHP Security Checker** | PHP (composer) | CVEs conocidos en dependencias de composer |
+| **gosec** | Go | Credenciales codificadas, inyeccion SQL, criptografia insegura, permisos de archivo inseguros |
+| **Bandit** | Python | Contrasenas codificadas, inyeccion SQL, eval, criptografia debil |
+| **Brakeman** | Ruby/Rails | Inyeccion SQL, XSS, mass assignment, inyeccion de comandos |
+| **cargo-audit** | Rust | Dependencias vulnerables conocidas a traves de la base de datos RustSec |
 
-## Documentación
+## Documentacion
 
 | Documento | Descripción |
 |-----------|-------------|
@@ -234,4 +238,4 @@ Apache 2.0
 
 ---
 
-Documentación en otros idiomas: [Inglés (README.md)](README.md) | [Ruso (README.ru.md)](README.ru.md)
+Documentacion en otros idiomas: [English](README.md) | [Русский](README.ru.md) | [Francais](README.fr.md) | [Italiano](README.it.md)

@@ -235,6 +235,45 @@ curl -X DELETE http://localhost:8000/api/scans/1/findings/5/suppress \
 
 ---
 
+### GET /api/scanners
+
+Lista de todos los escaneres registrados con su configuracion. Requiere autenticacion.
+
+**Respuesta 200:**
+
+```json
+[
+  {
+    "name": "semgrep",
+    "enabled": true,
+    "languages": ["python", "php", "javascript", "typescript", "go", "java", "kotlin", "ruby", "csharp", "rust"],
+    "adapter_class": "scanner.adapters.semgrep.SemgrepAdapter"
+  },
+  {
+    "name": "gosec",
+    "enabled": "auto",
+    "languages": ["go"],
+    "adapter_class": "scanner.adapters.gosec.GosecAdapter"
+  },
+  {
+    "name": "cargo_audit",
+    "enabled": "auto",
+    "languages": ["rust"],
+    "adapter_class": "scanner.adapters.cargo_audit.CargoAuditAdapter"
+  }
+]
+```
+
+La respuesta incluye los 12 escaneres registrados. El ejemplo anterior muestra un subconjunto por brevedad.
+
+**Ejemplo:**
+
+```bash
+curl -H "X-API-Key: your-key" http://localhost:8000/api/scanners
+```
+
+---
+
 ### GET /api/trends
 
 Obtiene las tendencias de hallazgos a lo largo del tiempo para los gráficos de tendencias.

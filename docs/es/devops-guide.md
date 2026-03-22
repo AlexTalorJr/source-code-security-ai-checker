@@ -50,13 +50,43 @@ volumes:
 
 ## Dockerfile
 
-La imagen está basada en `python:3.12-slim`:
+La imagen esta basada en `python:3.12-slim` e incluye las 12 herramientas de escaneo:
 
-1. **Dependencias del sistema** -- `curl` (healthcheck), `libpango` y `libharfbuzz` (generación de PDF con WeasyPrint)
+1. **Dependencias del sistema** -- `curl` (healthcheck), `libpango` y `libharfbuzz` (generacion de PDF con WeasyPrint), `ruby` (Brakeman)
 2. **Usuario sin privilegios root** -- se crea el usuario y grupo `scanner` por seguridad; el directorio `/data` es propiedad de este usuario
-3. **Flujo de instalación** -- se copian `pyproject.toml` y `src/`, luego `pip install --no-cache-dir .` usando el backend de compilación hatchling
-4. **Archivos de la aplicación** -- se copian `alembic.ini`, las migraciones `alembic/` y `config.yml.example` (como `config.yml` por defecto)
-5. **Entrypoint** -- `uvicorn scanner.main:app --host 0.0.0.0 --port 8000`
+3. **Binarios de escaneres** -- consulte la seccion Binarios de escaneres a continuacion para la lista completa
+4. **Flujo de instalacion** -- se copian `pyproject.toml` y `src/`, luego `pip install --no-cache-dir .` usando el backend de compilacion hatchling
+5. **Archivos de la aplicacion** -- se copian `alembic.ini`, las migraciones `alembic/` y `config.yml.example` (como `config.yml` por defecto)
+6. **Entrypoint** -- `uvicorn scanner.main:app --host 0.0.0.0 --port 8000`
+
+## Binarios de escaneres
+
+Las 12 herramientas de escaneo se instalan dentro de la imagen Docker:
+
+| Escaner | Metodo de instalacion | Notas |
+|---------|----------------------|-------|
+| **Semgrep** | `pip install semgrep` | Paquete Python, instalado junto con la aplicacion |
+| **cppcheck** | `apt-get install cppcheck` | Paquete del sistema |
+| **Gitleaks** | Binario precompilado de GitHub releases | Descargado a `/usr/local/bin`, soporta amd64/arm64 |
+| **Trivy** | Binario precompilado de GitHub releases | Descargado a `/usr/local/bin`, soporta amd64/arm64 |
+| **Checkov** | `pip install checkov` | Paquete Python, instalado con `--no-cache-dir` |
+| **Psalm** | `composer global require vimeo/psalm` | Paquete PHP Composer, requiere `php-cli` |
+| **Enlightn** | `composer global require enlightn/enlightn` | Paquete PHP Composer |
+| **PHP Security Checker** | Binario precompilado de GitHub releases | Descargado a `/usr/local/bin` |
+| **gosec** | Binario precompilado de GitHub releases | Descargado a `/usr/local/bin`, soporta amd64/arm64 |
+| **Bandit** | `pip install bandit` | Paquete Python, instalado junto con Semgrep y Checkov |
+| **Brakeman** | `gem install brakeman` | Ruby gem, requiere el paquete `ruby` (~80 MB) |
+| **cargo-audit** | Binario precompilado de GitHub releases | Descargado a `/usr/local/bin`, soporta amd64/arm64 |
+
+### Verificacion de disponibilidad de escaneres
+
+Despues de construir la imagen Docker, verifique que todos los escaneres estan correctamente instalados:
+
+```bash
+make verify-scanners
+```
+
+Este objetivo ejecuta un smoke test dentro del contenedor, verificando que cada uno de los 12 binarios de escaneres esta disponible y responde a comandos version/help. Uselo despues de cualquier cambio en el Dockerfile para asegurar que ningun escaner se rompio.
 
 ## Variables de Entorno
 

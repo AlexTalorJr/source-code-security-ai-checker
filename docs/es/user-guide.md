@@ -1,12 +1,134 @@
-# Guía de Usuario
+# Guia de Usuario
 
-## ¿Qué es Security AI Scanner?
+## Que es Security AI Scanner?
 
-Una herramienta de escaneo de seguridad que analiza el código fuente en busca de vulnerabilidades utilizando cinco herramientas de análisis estático en paralelo, enriquece los hallazgos con análisis de IA a través de Claude, y produce informes accionables con sugerencias de corrección.
+Una herramienta de escaneo de seguridad que analiza el codigo fuente en busca de vulnerabilidades utilizando doce herramientas de escaneo de seguridad en paralelo, enriquece los hallazgos con analisis de IA a traves de Claude, y produce informes accionables con sugerencias de correccion. Los escaneres se activan automaticamente segun los lenguajes detectados en el proyecto.
+
+## Escaneres compatibles
+
+### Semgrep (SAST multilenguaje)
+
+**Language:** Python, PHP, JavaScript, TypeScript, Go, Java, Kotlin, Ruby, C#, Rust
+**Type:** SAST
+**Que detecta:** Fallas de inyeccion, problemas de autenticacion, patrones inseguros y vulnerabilidades especificas de lenguajes mediante coincidencia de patrones semanticos.
+**Ejemplo de hallazgo:**
+> `python.lang.security.audit.exec-detected`: Use of exec() detected at `app.py:42`
+
+**Activado:** Automaticamente cuando se detectan archivos Python, PHP, JS/TS, Go, Java, Kotlin, Ruby, C# o Rust
+
+### cppcheck (C/C++)
+
+**Language:** C/C++
+**Type:** SAST
+**Que detecta:** Problemas de seguridad de memoria, desbordamientos de bufer, desreferencia de punteros nulos, comportamiento indefinido y fugas de recursos.
+**Ejemplo de hallazgo:**
+> `arrayIndexOutOfBounds`: Array index out of bounds at `buffer.cpp:15`
+
+**Activado:** Automaticamente cuando se detectan archivos C/C++
+
+### Gitleaks (secretos)
+
+**Language:** Todos los lenguajes
+**Type:** Deteccion de secretos
+**Que detecta:** Secretos codificados, claves API, tokens, contrasenas y credenciales en el codigo fuente y el historial de git.
+**Ejemplo de hallazgo:**
+> `generic-api-key`: Generic API Key detected at `config.py:8`
+
+**Activado:** Siempre activado para todos los proyectos
+
+### Trivy (infraestructura)
+
+**Language:** Docker, Terraform, YAML/Kubernetes
+**Type:** SCA / Infrastructure
+**Que detecta:** CVE en imagenes de contenedor, configuraciones incorrectas de IaC y problemas de seguridad de Kubernetes.
+**Ejemplo de hallazgo:**
+> `CVE-2023-44487`: HTTP/2 rapid reset attack in `Dockerfile:1`
+
+**Activado:** Automaticamente cuando se detectan Dockerfiles, Terraform o Kubernetes YAML
+
+### Checkov (infraestructura)
+
+**Language:** Docker, Terraform, YAML, CI configs
+**Type:** Infrastructure
+**Que detecta:** Mejores practicas de seguridad de Infrastructure-as-code, configuraciones incorrectas de nube y seguridad de pipelines CI.
+**Ejemplo de hallazgo:**
+> `CKV_DOCKER_2`: Ensure that HEALTHCHECK instructions have been added to container images at `Dockerfile:1`
+
+**Activado:** Automaticamente cuando se detectan archivos Docker, Terraform, YAML o CI
+
+### Psalm (PHP)
+
+**Language:** PHP
+**Type:** SAST (analisis de contaminacion)
+**Que detecta:** Inyeccion SQL, XSS y otras vulnerabilidades relacionadas con contaminacion a traves del rastreo del flujo de datos en codigo PHP.
+**Ejemplo de hallazgo:**
+> `TaintedSql`: Detected tainted SQL in `UserController.php:34`
+
+**Activado:** Automaticamente cuando se detectan archivos PHP
+
+### Enlightn (Laravel)
+
+**Language:** Laravel (PHP)
+**Type:** SAST
+**Que detecta:** Vulnerabilidades CSRF, mass assignment, modo de depuracion expuesto, archivos .env expuestos y mas de 120 verificaciones de seguridad especificas de Laravel.
+**Ejemplo de hallazgo:**
+> `MassAssignmentAnalyzer`: Potential mass assignment vulnerability in `User.php:12`
+
+**Activado:** Automaticamente cuando se detecta un proyecto Laravel
+
+### PHP Security Checker (PHP SCA)
+
+**Language:** PHP (Composer)
+**Type:** SCA
+**Que detecta:** CVE conocidas en dependencias de Composer consultando la base de datos de avisos de seguridad de SensioLabs.
+**Ejemplo de hallazgo:**
+> `CVE-2023-46734`: Twig code injection via sandbox bypass in `composer.lock`
+
+**Activado:** Automaticamente cuando se detectan archivos PHP Composer
+
+### gosec (Go SAST)
+
+**Language:** Go
+**Type:** SAST
+**Que detecta:** Credenciales codificadas, inyeccion SQL, criptografia insegura, permisos de archivo inseguros y problemas de seguridad especificos de Go.
+**Ejemplo de hallazgo:**
+> `G101`: Potential hardcoded credentials at `config.go:22`
+
+**Activado:** Automaticamente cuando se detectan archivos Go
+
+### Bandit (Python SAST)
+
+**Language:** Python
+**Type:** SAST
+**Que detecta:** Contrasenas codificadas, inyeccion SQL, uso de eval, criptografia debil y patrones de seguridad especificos de Python.
+**Ejemplo de hallazgo:**
+> `B105`: Possible hardcoded password at `settings.py:15`
+
+**Activado:** Automaticamente cuando se detectan archivos Python
+
+### Brakeman (Ruby/Rails SAST)
+
+**Language:** Ruby / Rails
+**Type:** SAST
+**Que detecta:** Inyeccion SQL, XSS, mass assignment, inyeccion de comandos y vulnerabilidades especificas de Rails.
+**Ejemplo de hallazgo:**
+> `SQL Injection`: Possible SQL injection near line 15 in `app/models/user.rb`
+
+**Activado:** Automaticamente cuando se detectan archivos Ruby
+
+### cargo-audit (Rust SCA)
+
+**Language:** Rust
+**Type:** SCA
+**Que detecta:** Dependencias vulnerables conocidas a traves de la base de datos RustSec mediante la auditoria de archivos Cargo.lock.
+**Ejemplo de hallazgo:**
+> `RUSTSEC-2019-0009`: Heap overflow in smallvec in `Cargo.lock`
+
+**Activado:** Automaticamente cuando se detectan archivos Rust
 
 ## Ejecutar un Escaneo
 
-### Vía API
+### Via API
 
 ```bash
 curl -X POST http://localhost:8000/api/scans \
@@ -15,9 +137,9 @@ curl -X POST http://localhost:8000/api/scans \
   -d '{"repo_url": "https://github.com/your-org/repo.git", "branch": "main"}'
 ```
 
-La API devuelve un ID de escaneo de inmediato (202 Accepted). El escaneo se ejecuta de forma asíncrona en la cola en segundo plano.
+La API devuelve un ID de escaneo de inmediato (202 Accepted). El escaneo se ejecuta de forma asincrona en la cola en segundo plano.
 
-### Vía CLI
+### Via CLI
 
 ```bash
 scanner scan --repo-url https://github.com/your-org/repo.git --branch main
@@ -25,19 +147,19 @@ scanner scan --repo-url https://github.com/your-org/repo.git --branch main
 
 El CLI ejecuta el escaneo directamente e imprime los resultados en stdout. Use `--format html` o `--format pdf` para generar archivos de informe.
 
-### Vía Panel de Control
+### Via Panel de Control
 
-Navegue a `http://localhost:8000/dashboard`, complete la URL del repositorio y la rama, y envíe el formulario. El panel de control muestra el progreso del escaneo y los resultados en línea.
+Navegue a `http://localhost:8000/dashboard`, complete la URL del repositorio y la rama, y envie el formulario. El panel de control muestra el progreso del escaneo y los resultados en linea.
 
-## Comprensión de los Niveles de Severidad
+## Comprension de los Niveles de Severidad
 
-| Nivel | Significado | Acción |
+| Nivel | Significado | Accion |
 |-------|---------|--------|
-| **CRITICAL** | Riesgo de explotación inmediata (p. ej., inyección SQL, RCE) | Corregir de inmediato; bloquea el despliegue |
-| **HIGH** | Vulnerabilidad grave (p. ej., omisión de autenticación, secretos en el código) | Corregir antes del lanzamiento |
-| **MEDIUM** | Riesgo moderado (p. ej., criptografía débil, encabezados faltantes) | Corregir en el sprint actual |
+| **CRITICAL** | Riesgo de explotacion inmediata (p. ej., inyeccion SQL, RCE) | Corregir de inmediato; bloquea el despliegue |
+| **HIGH** | Vulnerabilidad grave (p. ej., omision de autenticacion, secretos en el codigo) | Corregir antes del lanzamiento |
+| **MEDIUM** | Riesgo moderado (p. ej., criptografia debil, encabezados faltantes) | Corregir en el sprint actual |
 | **LOW** | Problema menor (p. ej., mensajes de error detallados) | Corregir cuando sea conveniente |
-| **INFO** | Hallazgo informativo (p. ej., uso de API obsoleta) | Revisar, no requiere acción |
+| **INFO** | Hallazgo informativo (p. ej., uso de API obsoleta) | Revisar, no requiere accion |
 
 ## Informes
 
@@ -45,62 +167,62 @@ Navegue a `http://localhost:8000/dashboard`, complete la URL del repositorio y l
 
 Los informes HTML interactivos incluyen:
 
-- **Sección de resumen** -- total de hallazgos, desglose por severidad, resultado del quality gate
+- **Seccion de resumen** -- total de hallazgos, desglose por severidad, resultado del quality gate
 - **Tabla de hallazgos con filtros** -- filtre por severidad, herramienta, ruta de archivo
-- **Contexto de código** -- fragmentos de código fuente con líneas vulnerables resaltadas
-- **Sugerencias de corrección con IA** -- código de corrección generado por Claude con explicaciones
-- **Riesgos compuestos** -- hallazgos de correlación entre herramientas identificados por IA
-- **Gráficos** -- gráfico circular de distribución de severidad y gráfico de barras de hallazgos por herramienta
+- **Contexto de codigo** -- fragmentos de codigo fuente con lineas vulnerables resaltadas
+- **Sugerencias de correccion con IA** -- codigo de correccion generado por Claude con explicaciones
+- **Riesgos compuestos** -- hallazgos de correlacion entre herramientas identificados por IA
+- **Graficos** -- grafico circular de distribucion de severidad y grafico de barras de hallazgos por herramienta
 
-Acceda a los informes HTML vía `GET /api/scans/{id}/report/html` o desde el panel de control.
+Acceda a los informes HTML via `GET /api/scans/{id}/report/html` o desde el panel de control.
 
 ### Informes PDF
 
-Los informes PDF proporcionan un documento formal adecuado para revisión gerencial:
+Los informes PDF proporcionan un documento formal adecuado para revision gerencial:
 
 - **Resumen ejecutivo** -- metadatos del escaneo, recuentos de severidad, resultado del gate
-- **Gráficos** -- gráficos PNG embebidos (distribución de severidad, desglose por herramienta)
-- **Hallazgos detallados** -- agrupados por severidad con fragmentos de código
-- **Sección de riesgos compuestos** -- vulnerabilidades entre componentes identificadas por IA
+- **Graficos** -- graficos PNG embebidos (distribucion de severidad, desglose por herramienta)
+- **Hallazgos detallados** -- agrupados por severidad con fragmentos de codigo
+- **Seccion de riesgos compuestos** -- vulnerabilidades entre componentes identificadas por IA
 
-Acceda a los informes PDF vía `GET /api/scans/{id}/report/pdf`.
+Acceda a los informes PDF via `GET /api/scans/{id}/report/pdf`.
 
 ## Quality Gate
 
-El quality gate evalúa los resultados del escaneo frente a umbrales de severidad configurados. Por defecto, cualquier hallazgo CRITICAL o HIGH hace que el gate falle.
+El quality gate evalua los resultados del escaneo frente a umbrales de severidad configurados. Por defecto, cualquier hallazgo CRITICAL o HIGH hace que el gate falle.
 
-- **pass** -- ningún hallazgo en o por encima del umbral de severidad configurado
-- **fail** -- uno o más hallazgos en o por encima del umbral, o riesgos compuestos con severidad Critical/High cuando `include_compound_risks` está habilitado
+- **pass** -- ningun hallazgo en o por encima del umbral de severidad configurado
+- **fail** -- uno o mas hallazgos en o por encima del umbral, o riesgos compuestos con severidad Critical/High cuando `include_compound_risks` esta habilitado
 
-Los resultados del quality gate están disponibles vía `GET /api/scans/{id}/gate` y se muestran en los informes y el panel de control.
+Los resultados del quality gate estan disponibles via `GET /api/scans/{id}/gate` y se muestran en los informes y el panel de control.
 
-## Análisis con IA
+## Analisis con IA
 
-Cada lote de hallazgos se envía a Claude para análisis contextual:
+Cada lote de hallazgos se envia a Claude para analisis contextual:
 
-- **Revisión contextual** -- comprensión de lo que hace el código y si el hallazgo es un verdadero positivo
-- **Sugerencias de corrección** -- cambios de código concretos para remediar la vulnerabilidad
-- **Riesgos compuestos** -- identificación de cadenas de ataque que abarcan múltiples hallazgos (p. ej., omisión de autenticación + IDOR = toma de cuenta)
+- **Revision contextual** -- comprension de lo que hace el codigo y si el hallazgo es un verdadero positivo
+- **Sugerencias de correccion** -- cambios de codigo concretos para remediar la vulnerabilidad
+- **Riesgos compuestos** -- identificacion de cadenas de ataque que abarcan multiples hallazgos (p. ej., omision de autenticacion + IDOR = toma de cuenta)
 
-El costo del análisis con IA por escaneo se registra y está limitado por `ai.max_cost_per_scan` en la configuración.
+El costo del analisis con IA por escaneo se registra y esta limitado por `ai.max_cost_per_scan` en la configuracion.
 
-## Comparación Delta
+## Comparacion Delta
 
-Cuando un repositorio ha sido escaneado anteriormente, el escáner calcula automáticamente un delta:
+Cuando un repositorio ha sido escaneado anteriormente, el escaner calcula automaticamente un delta:
 
 - **Hallazgos nuevos** -- vulnerabilidades no presentes en el escaneo anterior
-- **Hallazgos corregidos** -- vulnerabilidades del escaneo anterior que ya no están presentes
+- **Hallazgos corregidos** -- vulnerabilidades del escaneo anterior que ya no estan presentes
 - **Hallazgos persistentes** -- vulnerabilidades presentes en ambos escaneos
 
-El delta se calcula comparando los fingerprints entre el escaneo actual y el escaneo previo más reciente del mismo repositorio y rama. El primer escaneo no devuelve delta (no hay línea base previa).
+El delta se calcula comparando los fingerprints entre el escaneo actual y el escaneo previo mas reciente del mismo repositorio y rama. El primer escaneo no devuelve delta (no hay linea base previa).
 
-## Gestión de Falsos Positivos
+## Gestion de Falsos Positivos
 
-### Vía Panel de Control
+### Via Panel de Control
 
-Desde la vista de hallazgos, haga clic en el botón de supresión de cualquier hallazgo. Proporcione una razón para la supresión.
+Desde la vista de hallazgos, haga clic en el boton de supresion de cualquier hallazgo. Proporcione una razon para la supresion.
 
-### Vía API
+### Via API
 
 ```bash
 curl -X POST http://localhost:8000/api/suppressions \
@@ -109,4 +231,4 @@ curl -X POST http://localhost:8000/api/suppressions \
   -d '{"fingerprint": "<finding-fingerprint>", "reason": "False positive: test fixture"}'
 ```
 
-Los hallazgos suprimidos quedan excluidos de la evaluación del quality gate y se marcan en los informes.
+Los hallazgos suprimidos quedan excluidos de la evaluacion del quality gate y se marcan en los informes.
