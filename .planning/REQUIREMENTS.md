@@ -72,29 +72,29 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | TBD | Pending |
-| AUTH-02 | TBD | Pending |
-| AUTH-03 | TBD | Pending |
-| AUTH-04 | TBD | Pending |
-| AUTH-05 | TBD | Pending |
-| AUTH-06 | TBD | Pending |
-| AUTH-07 | TBD | Pending |
-| CONF-01 | TBD | Pending |
-| CONF-02 | TBD | Pending |
-| CONF-03 | TBD | Pending |
-| CONF-04 | TBD | Pending |
-| CONF-05 | TBD | Pending |
-| DAST-01 | TBD | Pending |
-| DAST-02 | TBD | Pending |
-| DAST-03 | TBD | Pending |
-| DAST-04 | TBD | Pending |
-| INFRA-03 | TBD | Pending |
-| INFRA-04 | TBD | Pending |
+| AUTH-01 | Phase 12 | Pending |
+| AUTH-02 | Phase 12 | Pending |
+| AUTH-03 | Phase 12 | Pending |
+| AUTH-04 | Phase 12 | Pending |
+| AUTH-05 | Phase 12 | Pending |
+| AUTH-06 | Phase 12 | Pending |
+| AUTH-07 | Phase 12 | Pending |
+| CONF-01 | Phase 14 | Pending |
+| CONF-02 | Phase 14 | Pending |
+| CONF-03 | Phase 14 | Pending |
+| CONF-04 | Phase 15 | Pending |
+| CONF-05 | Phase 15 | Pending |
+| DAST-01 | Phase 13 | Pending |
+| DAST-02 | Phase 13 | Pending |
+| DAST-03 | Phase 13 | Pending |
+| DAST-04 | Phase 13 | Pending |
+| INFRA-03 | Phase 12 | Pending |
+| INFRA-04 | Phase 15 | Pending |
 
 **Coverage:**
 - v1.0.2 requirements: 18 total
-- Mapped to phases: 0
-- Unmapped: 18
+- Mapped to phases: 18
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-22*
