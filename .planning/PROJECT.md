@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A multi-language security scanning platform that analyzes source code using 8 parallel scanners with AI-powered analysis. Auto-detects project languages (Python, PHP/Laravel, C/C++, JavaScript, Go, Rust, Java, C#, Ruby) and enables relevant scanners. Generates HTML/PDF reports with fix suggestions, blocks deployments via configurable quality gate, and integrates with Jenkins CI + Slack/email notifications. Fully self-contained via Docker.
+A multi-language security scanning platform that analyzes source code using 12 parallel scanners with AI-powered analysis. Auto-detects project languages (Python, PHP/Laravel, C/C++, JavaScript, Go, Rust, Java, C#, Ruby) and enables relevant scanners via config-driven plugin registry. Generates HTML/PDF reports with fix suggestions, blocks deployments via configurable quality gate, and integrates with Jenkins CI + Slack/email notifications. Fully self-contained via Docker.
 
 ## Core Value
 
@@ -32,29 +32,18 @@ Every code change is automatically scanned for security vulnerabilities before d
 
 - ✓ Research security scanner ecosystem — tools, configurations, best practices per language — v2.0
 
+### Validated (v1.0.1)
+
+- ✓ Scanner plugin architecture — add/configure scanners without code changes — v1.0.1
+- ✓ Tier 1 scanner integration — gosec, Brakeman, Bandit, cargo-audit — v1.0.1
+- ✓ Infrastructure & documentation — Docker with all 12 scanners, bilingual docs updated — v1.0.1
+- ✓ Cargo-audit runtime fix and documentation corrections — v1.0.1
+
 ### Active
 
-- ✓ Scanner plugin architecture — add/configure scanners without code changes — v1.0.1 Phase 8
-- ✓ Tier 1 scanner integration — gosec, Brakeman, Bandit, cargo-audit — v1.0.1 Phase 9
-- ✓ Infrastructure & documentation — Docker with all 12 scanners, bilingual docs updated — v1.0.1 Phase 10
-- ✓ Cargo-audit fix and documentation corrections — gap closure for v1.0.1 audit — v1.0.1 Phase 11
 - [ ] Advanced scanner configuration UI — manage scanner settings from dashboard
 - [ ] DAST (dynamic application security testing) capabilities
 - [ ] Role-based access control (admin, viewer, scanner roles)
-
-## Current Milestone: v1.0.1 Scanner Plugin Registry
-
-**Goal:** Implement the config-driven plugin registry architecture and integrate 4 Tier-1 scanners (gosec, Brakeman, Bandit, cargo-audit) as recommended by v2.0 research.
-
-**Target features:**
-- Config-driven scanner registration (adapter_class in config.yml)
-- gosec adapter for Go SAST
-- Brakeman adapter for Ruby/Rails SAST
-- Bandit adapter for Python SAST
-- cargo-audit adapter for Rust SCA
-- Updated language detection for new scanners
-- Docker image with new scanner binaries
-- Updated documentation (bilingual)
 
 ### Out of Scope
 
@@ -67,7 +56,8 @@ Every code change is automatically scanned for security vulnerabilities before d
 ## Context
 
 **v1.0 shipped** — 6 phases, 21 plans, 150 commits, 5400+ LOC Python, 320 tests passing.
-**v2.0 shipped** — 1 phase, 2 plans. Research-only milestone producing scanner ecosystem report with priority-ranked tool recommendations.
+**v2.0 shipped** — 1 phase, 2 plans. Research-only milestone producing scanner ecosystem report.
+**v1.0.1 shipped** — 4 phases, 8 plans, 28 commits. Plugin registry + 4 Tier-1 scanners + Docker + docs. 402 tests passing, ~6000 LOC Python.
 
 **Scanner tech stack:**
 - Python 3.12 (orchestrator, FastAPI, reports)
@@ -79,15 +69,9 @@ Every code change is automatically scanned for security vulnerabilities before d
 
 **Architecture — layered scanning:**
 - Layer 1: Language auto-detection → enable relevant scanners
-- Layer 2: Parallel scanner execution (8 tools)
+- Layer 2: Parallel scanner execution (12 tools via config-driven registry)
 - Layer 3: AI enrichment (Claude API) — optional per scan
 - Layer 4: Report generation + quality gate + notifications
-
-**Research outcomes (v2.0):**
-- 9 new tools evaluated, 4 Tier-1 recommended: gosec, Brakeman, Bandit, cargo-audit
-- Config-driven plugin registry architecture recommended
-- SARIF helper pattern for 8/13 tools with native support
-- Incremental scanning feasible for 5 tools (Semgrep, Bandit, gosec, Brakeman, Gitleaks)
 
 ## Constraints
 
@@ -110,10 +94,12 @@ Every code change is automatically scanned for security vulnerabilities before d
 | Apache 2.0 license | Enterprise/partner sharing | ✓ Confirmed |
 | Separate bilingual doc files | docs/{en,ru,fr,es,it}/ — clean separation | ✓ Confirmed |
 | Skip AI per scan | Cost control, faster scans when AI not needed | ✓ Confirmed |
-| Config-driven plugin registry | Extends config.yml with adapter_class — no stevedore needed | ✓ Confirmed v2.0 |
+| Config-driven plugin registry | Extends config.yml with adapter_class — no stevedore needed | ✓ Confirmed v1.0.1 |
 | Keep Semgrep CE, monitor Opengrep | Opengrep fork immature, cross-function taint moved to commercial | ✓ Confirmed v2.0 |
 | Keep Gitleaks over TruffleHog | Speed and simplicity win for CI/CD; TruffleHog as optional complement | ✓ Confirmed v2.0 |
 | Nuclei over ZAP for DAST | CLI-friendly, template-based, 30MB vs 500MB+ | ✓ Confirmed v2.0 |
+| ScannerRegistry over ALL_ADAPTERS | Dynamic loading via importlib, config-driven | ✓ Confirmed v1.0.1 |
+| Underscore convention for config keys | tool_name uses underscores to match config.yml keys | ✓ Confirmed v1.0.1 |
 
 ---
-*Last updated: 2026-03-22 — Phase 11 complete: cargo-audit fix and documentation corrections (gap closure for v1.0.1 audit)*
+*Last updated: 2026-03-22 after v1.0.1 milestone*
