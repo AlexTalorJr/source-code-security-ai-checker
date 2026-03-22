@@ -51,6 +51,24 @@ RUN ARCH=$(dpkg --print-architecture | sed 's/amd64/amd64/;s/arm64/arm64/') && \
     -o /usr/local/bin/local-php-security-checker && \
     chmod +x /usr/local/bin/local-php-security-checker
 
+# Install gosec
+RUN ARCH=$(dpkg --print-architecture) && \
+    curl -sSL "https://github.com/securego/gosec/releases/download/v2.25.0/gosec_2.25.0_linux_${ARCH}.tar.gz" \
+    | tar xz -C /usr/local/bin gosec
+
+# Install bandit via pip
+RUN pip install --no-cache-dir bandit
+
+# Install Ruby + Brakeman
+RUN apt-get update && apt-get install -y --no-install-recommends ruby && \
+    rm -rf /var/lib/apt/lists/* && \
+    gem install brakeman -v '< 8' --no-document
+
+# Install cargo-audit
+RUN ARCH=$(uname -m | sed 's/x86_64/x86_64-unknown-linux-gnu/;s/aarch64/aarch64-unknown-linux-gnu/') && \
+    curl -sSL "https://github.com/rustsec/rustsec/releases/download/cargo-audit%2Fv0.22.1/cargo-audit-${ARCH}-v0.22.1.tgz" \
+    | tar xz -C /usr/local/bin
+
 # Non-root user for security
 RUN groupadd -r scanner && useradd -r -g scanner -d /app scanner
 RUN mkdir -p /data && chown scanner:scanner /data
