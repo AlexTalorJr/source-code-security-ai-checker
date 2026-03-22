@@ -1,188 +1,171 @@
 # Project Research Summary
 
-**Project:** aipix-security-scanner
-**Domain:** Automated security scanning pipeline for VSaaS platform (self-hosted, CI-integrated)
-**Researched:** 2026-03-18
+**Project:** Security AI Scanner v1.0.2 — Scanner Config UI, Nuclei DAST, RBAC
+**Domain:** Self-hosted security scanning platform (SAST/SCA/DAST) with role-based access
+**Researched:** 2026-03-22
 **Confidence:** HIGH
 
 ## Executive Summary
 
-The aipix-security-scanner is a containerized, multi-tool security scanning pipeline that orchestrates five open-source scanners (Semgrep, cppcheck, Gitleaks, Trivy, Checkov) in parallel, enriches findings with Claude AI analysis, and produces actionable reports with quality gate enforcement. This is a well-understood domain -- LinkedIn, AWS, and others have published architectures for multi-scanner orchestration pipelines. The key innovation here is the AI enrichment layer for business-logic analysis specific to the aipix VSaaS platform, and the single-docker-compose portability requirement for partner distribution. All recommended stack components are mature, well-documented, and HIGH confidence.
+This milestone extends an already-functional v1.0.1 scanning platform (FastAPI + Jinja2 + SQLAlchemy + 12 adapters) with three cohesive capabilities: a scanner configuration UI, a Nuclei DAST adapter, and token-based RBAC. All three build on the existing, well-understood architecture rather than introducing new paradigms. The stack additions are minimal and deliberately conservative: PyJWT + pwdlib[bcrypt] for auth (the current FastAPI-recommended replacements for abandoned python-jose and passlib), Nuclei CLI binary via subprocess (the same pattern as the 12 existing adapters), and CodeMirror 5 via CDN for the YAML editor (no build step, consistent with the Jinja2-only frontend). No frontend build pipeline, no new database engine, no external services.
 
-The recommended approach is a four-layer pipeline architecture: parallel tool execution, finding normalization with deduplication, AI-powered semantic analysis, and report generation with quality gate. Python 3.12 with FastAPI provides the async orchestration backbone. SARIF serves as tool output format but NOT as the internal data model -- a purpose-built Finding dataclass is simpler and supports AI enrichment fields that SARIF lacks. The entire system runs in a single Docker container with SQLite for persistence, matching the portability constraint.
+The recommended implementation order is RBAC first, then Nuclei adapter and Scanner Config UI in parallel, then scan profiles. RBAC is a hard dependency because the Scanner Config UI must be admin-gated before any write endpoints are exposed. The Nuclei adapter is independent: it only touches new files and config.yml and can be built without waiting for UI work. The most important architectural constraint is that config.yml must remain the single source of truth for scanner settings — storing them in SQLite instead would silently decouple the UI from actual scan behavior. A critical insight from codebase analysis is that `ScannerSettings` is re-instantiated per scan (the orchestrator creates `ScannerRegistry` fresh on each `run_scan()` call), so config changes written to config.yml by the UI take effect on the next scan without any reload mechanism.
 
-The top risks are: (1) alert fatigue from untuned default rulesets drowning developers in false positives -- mitigate by starting with minimal, high-severity rulesets and building suppression from day one; (2) AI hallucination of non-existent vulnerabilities or fabricated fixes -- mitigate by grounding AI prompts strictly to tool-detected findings with code context, never asking it to "find more"; (3) CI timeout brittleness when any tool hangs or the Claude API is down -- mitigate with per-tool timeouts, graceful degradation (skip AI if unavailable), and pre-baked Trivy vulnerability databases. The deduplication data model must be designed in Phase 1 because retrofitting it later has HIGH recovery cost.
+The principal risks are all architectural decisions that become expensive to reverse: using the wrong config persistence model (HIGH recovery cost), breaking backward compatibility in the auth migration (HIGH recovery cost), and force-fitting Nuclei into the SAST adapter interface (HIGH recovery cost). All three are well-understood and preventable if the correct design is chosen upfront. SQLite write contention is a one-line fix (`busy_timeout` pragma) that should be the first commit of the milestone — it prevents visible user-facing errors and costs nothing to address early.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The stack is entirely Python-based with external scanner binaries containerized in a single Docker image (~1.5-2GB). All technology choices are HIGH confidence with broad community adoption. See `.planning/research/STACK.md` for full details.
+The existing stack requires only two new Python dependencies. PyJWT (>=2.12.1) handles JWT token creation and verification; it is the current FastAPI-recommended library after python-jose was abandoned (~3 years without a release). pwdlib[bcrypt] (>=0.3.0) handles password hashing as the successor to deprecated passlib, which throws warnings on Python 3.12+ and breaks on 3.13+. The bcrypt variant is preferred over argon2 because it requires no C build extensions — appropriate for a self-hosted Docker tool with admin-managed accounts and no self-registration. Nuclei v3.5.x is downloaded as a pre-built binary in the Dockerfile (single `curl` + `unzip`), avoiding any Go toolchain dependency in the image. CodeMirror 5 is loaded from CDN with no npm or build step.
 
 **Core technologies:**
-- **Python 3.12 + FastAPI + Uvicorn**: Async-native API server and scan orchestrator. FastAPI provides auto-generated OpenAPI docs, SSE for live progress, and Pydantic validation.
-- **Semgrep CE + cppcheck**: SAST coverage for PHP, C#, and C++. Semgrep handles most languages; cppcheck fills the C++ gap with proper buffer overflow and memory leak detection for the Mediaserver component.
-- **Gitleaks + Trivy + Checkov**: Secrets detection, container/CVE scanning, and IaC scanning respectively. All produce SARIF output. Together they cover the full vulnerability surface.
-- **Claude claude-sonnet-4-6 via anthropic SDK**: AI-powered semantic analysis at ~$3/1M input tokens. Targets $5/scan budget with 100-200K input tokens.
-- **SQLite + SQLAlchemy 2.0 + aiosqlite**: Zero-config persistence for scan history. WAL mode for concurrent reads. Alembic for schema migrations.
-- **Jinja2 + WeasyPrint**: HTML report templates with PDF conversion. No headless browser needed. WeasyPrint 68.1+ required (security fix).
-- **httpx**: Async HTTP client for Slack webhooks and Bitbucket API calls.
-
-**Critical version notes:** WeasyPrint must be >= 68.1 (security fix). Semgrep >= 1.156.0 (multicore performance). Pin scanner binaries to exact versions in Dockerfile for reproducible builds.
+- PyJWT >=2.12.1: JWT token creation/verification — FastAPI's current official recommendation, actively maintained
+- pwdlib[bcrypt] >=0.3.0: password hashing — replaces deprecated passlib, no C extensions needed
+- Nuclei CLI v3.5.x: DAST scanning — 30MB binary, 12000+ templates, JSONL output, subprocess pattern
+- CodeMirror 5 (CDN): YAML config editor — no build step, native YAML mode, works with plain textarea
+- SQLAlchemy + Alembic (existing): three new tables (users, api_tokens, scan_profiles) via migration
 
 ### Expected Features
 
-See `.planning/research/FEATURES.md` for full feature landscape and dependency graph.
+**Must have (v1.0.2 table stakes):**
+- RBAC: users table, 3 roles (admin/scanner/viewer), bcrypt password hashing — foundation for all other features
+- RBAC: multiple API tokens per user, replacing the single shared api_key — each CI pipeline gets its own token
+- RBAC: endpoint authorization via FastAPI `Depends` injection — one line per endpoint, centralized logic
+- RBAC: dashboard login with username/password user accounts — replaces single-key dashboard login
+- Nuclei DAST adapter: registered in config.yml, runs against target URLs, parses JSONL findings
+- target_url field on ScanRequest: DAST scans as first-class citizens, not a hack on target_path
+- Scanner Config UI: enable/disable toggles + settings display per scanner — core value of the feature
+- Scanner Config UI: config persistence across restarts — config.yml as the single source of truth
 
-**Must have (table stakes):**
-- Multi-tool SAST scanning with parallel execution (Semgrep, cppcheck, Gitleaks, Trivy, Checkov)
-- Unified severity classification (Critical/High/Medium/Low/Info) across all tools
-- Quality gate with configurable severity thresholds (pass/fail for CI)
-- HTML interactive report with code context, severity filtering, collapsible sections
-- PDF formal report for management and compliance
-- Finding deduplication within and across tools
-- Scan history and trending in SQLite
-- Jenkins CI integration and REST API for triggering scans
-- Configurable Slack/email notifications
-
-**Should have (differentiators):**
-- AI-powered semantic analysis for business logic flaws (RTSP auth, tenant isolation, webhook validation)
-- AI-generated fix suggestions with actual code diffs
-- Platform-specific custom Semgrep rules (the "moat" -- encodes institutional aipix security knowledge)
-- Cross-tool finding correlation via AI (compound risk identification)
-- Release-to-release delta comparison (new/fixed/persisting findings)
-- False positive suppression with memory across scans
-- Dual-mode scan input (local path for Jenkins, repo URL for API)
+**Should have (add after v1.0.2 validation):**
+- Scan profiles: named scanner configuration presets (cap at 5-7; store profile name in scan result for reproducibility)
+- Admin UI for user/token management via dashboard — once RBAC is proven via API
+- Token expiration dates (`expires_at` field) with enforcement
+- Audit log for auth events
+- Raw YAML config editor with CodeMirror 5
 
 **Defer (v2+):**
-- Bilingual reports (Russian/English) -- add i18n template structure early, translate later
-- SARIF output format for external integrations
-- Compliance framework mapping (PCI-DSS, SOC2) -- tag with CWE IDs now, map later
-- DAST, IDE integration, user management, Jira integration, auto-remediation PRs
+- Config diff / change history — requires versioned storage, low priority until enterprise use
+- Token scoping per-project — complex, defer until multi-project support exists
+- Authenticated DAST scanning — browser automation and credential management, document manual Nuclei approach first
 
 ### Architecture Approach
 
-The architecture follows a pipeline orchestrator pattern with four sequential layers. Layer 1 runs all five scanner tools in parallel via `asyncio.create_subprocess_exec` with per-tool timeouts. Layer 2 normalizes and deduplicates findings into a unified internal format, then optionally enriches with Claude AI analysis. Layer 3 generates HTML and PDF reports. Layer 4 evaluates the quality gate and fires notifications. The API uses an async job pattern -- POST returns a scan ID immediately, clients poll for status. See `.planning/research/ARCHITECTURE.md` for full component diagrams and data flow.
+The three features integrate into the existing layered architecture with minimal overlap, enabling parallel development after the RBAC foundation is established. New components are: `NucleiAdapter` (new file, follows existing ScannerAdapter pattern exactly), `ConfigService` (YAML round-trip service, config.yml as source of truth), `api/config.py` (REST endpoints for scanner config and profiles), and ORM models for users/tokens/profiles. Modified components are `api/auth.py` (major rewrite with backward compat for legacy api_key), `dashboard/auth.py` (role-aware sessions), and `adapters/registry.py` (add `update_scanner()` method). The orchestrator, the ScannerAdapter base class, and all 12 existing adapters remain unchanged.
 
 **Major components:**
-1. **FastAPI Server** -- REST API, dashboard, scan lifecycle management
-2. **Scan Orchestrator** -- Coordinates parallel tool execution with timeouts and graceful failure
-3. **Scanner Adapters (x5)** -- Uniform interface wrapping each tool (adapter pattern); independently testable, trivial to add/remove tools
-4. **Finding Normalizer** -- Parses tool-native output into unified Finding dataclass, deduplicates cross-tool
-5. **AI Analysis Layer** -- Claude API integration with prompt batching by file, token budgeting, output validation
-6. **Report Generator** -- Jinja2 HTML + WeasyPrint PDF from enriched findings
-7. **Quality Gate** -- Configurable severity thresholds, produces pass/fail + exit code for Jenkins
-8. **Config Manager** -- Three-tier: hardcoded defaults, config.yml overrides, env vars for secrets
+1. `NucleiAdapter(ScannerAdapter)` — runs Nuclei CLI via subprocess, parses JSONL output, normalizes to FindingSchema; config.yml entry is auto-discovered by ScannerRegistry
+2. `ConfigService` — single-responsibility service for reading and writing config.yml; the UI never touches SQLite for scanner settings
+3. Unified RBAC layer — one `get_current_user()` dependency resolving all three entry points (Bearer token, legacy X-API-Key, dashboard cookie) to the same User+Role object
+4. Three new DB tables — users, api_tokens, scan_profiles — added via Alembic migrations
+5. Scanner Config UI pages — Jinja2 templates + vanilla JS `fetch()` + admin-gated dashboard routes
 
 ### Critical Pitfalls
 
-See `.planning/research/PITFALLS.md` for full analysis with warning signs and recovery strategies.
+1. **Config UI creating two sources of truth** — choose config.yml as the single source before writing any UI code; ConfigService reads and writes config.yml directly; never store scanner settings in SQLite. Recovery cost: HIGH.
 
-1. **Alert fatigue from untuned scanners** -- Five tools with default rulesets produce hundreds of findings. Start with minimal, high-severity rulesets. Build suppression mechanism from day one. Target under 20% false positive rate before enabling quality gate blocking. Must address in Phase 1.
-2. **AI hallucinated vulnerabilities** -- Claude may fabricate CVEs, function names, or fixes. Never let AI be the sole source of any finding. Ground prompts to tool-detected findings only. Validate AI output references against actual code. Set temperature=0 and use structured output. Must address in Phase 2.
-3. **Finding deduplication failure** -- Same vulnerability reported by multiple tools inflates counts 30-50%. Design unified Finding model with deterministic dedup keys from day one. Define tool priority for overlapping domains. HIGH recovery cost if retrofitted. Must address in Phase 1.
-4. **CI timeout and brittleness** -- Scanner OOM (Semgrep on large C++), Trivy DB downloads, Claude API outages. Set per-tool timeouts, cache Trivy DB in Docker image, implement graceful degradation (skip failed tools, skip AI if unavailable). Must address in Phase 1 and Phase 3.
-5. **WeasyPrint memory explosion** -- 2-4GB memory for 100+ finding reports. Cap findings per PDF, generate in subprocess with memory limits, make PDF lazy (generate on request, not automatically). Must address in Phase 2/3.
-6. **Claude API cost overrun** -- Pre-filter to HIGH/CRITICAL only for AI. Implement token budget per scan (30K input max). Track cost in SQLite. Must address in Phase 2.
+2. **Breaking existing API consumers during RBAC migration** — implement dual-auth from day one: legacy X-API-Key header continues to work (maps to admin role), new Bearer token runs in parallel; write backward-compat test before any RBAC code is added. Recovery cost: HIGH.
+
+3. **Force-fitting Nuclei into the SAST adapter interface** — DAST targets URLs, not filesystem paths; create a DastAdapter subclass with `run(target_url, ...)` or pass URL via extra_args; never put URLs in FindingSchema `file_path`. Recovery cost: HIGH.
+
+4. **SQLite write contention** — add `PRAGMA busy_timeout=5000` to `db/session.py` as the very first commit of the milestone; one-line fix that prevents user-visible 500 errors during concurrent config saves and scan persistence. Recovery cost: LOW if done first, disruptive if deferred.
+
+5. **Auth system divergence** — build one `get_current_user()` dependency handling all three entry points; do not build separate auth logic for dashboard, API, and legacy key. Recovery cost: HIGH.
 
 ## Implications for Roadmap
 
-Based on combined research, the build order is driven by a clear dependency chain: config/models must exist before adapters, adapters before normalization, normalization before AI, and all findings must exist before reports and quality gate. The architecture and features research both converge on the same phasing.
+Based on research, suggested phase structure:
 
-### Phase 1: Foundation and Core Infrastructure
-**Rationale:** Everything depends on the config system, data models, database, and basic API skeleton. The unified Finding dataclass with dedup key must be designed here -- it is the spine of the entire system. Retrofitting dedup later has HIGH recovery cost per pitfalls research.
-**Delivers:** Project skeleton, config loading (3-tier), Finding/ScanResult data models, SQLite with WAL mode and Alembic migrations, FastAPI app with health endpoint, Docker setup with python:3.12-slim base.
-**Addresses:** Severity classification, configurable quality gate thresholds (data model only).
-**Avoids:** Deduplication failure (designing model upfront), SQLite concurrency issues (WAL mode from day one), hardcoded config (config.yml from day one).
+### Phase 1: SQLite Hardening + RBAC Foundation
+**Rationale:** All three features depend on auth; RBAC must come first. SQLite busy_timeout is a one-line fix that prevents write contention across all subsequent phases. This phase establishes the user/token data model and the unified auth dependency that both Config UI and future admin pages require.
+**Delivers:** `PRAGMA busy_timeout=5000` in db/session.py; users table + api_tokens table via Alembic migration; bcrypt password hashing via pwdlib; token CRUD API (create/list/revoke); legacy X-API-Key backward compatibility; unified `get_current_user()`; 3-role authorization via FastAPI `Depends(require_role(...))`; initial admin bootstrap mechanism
+**Addresses:** All P1 RBAC features from FEATURES.md
+**Avoids:** Pitfall 2 (backward compat), Pitfall 4 (SQLite contention), Pitfall 8 (auth divergence)
+**Research flag:** Standard FastAPI JWT patterns — skip phase research; PyJWT + pwdlib fully documented in official FastAPI tutorials
 
-### Phase 2: Scanner Adapters and Orchestration
-**Rationale:** The scanner adapters and parallel orchestration are the core value of the product. All five adapters can be built independently and in parallel. This phase also includes the normalizer and deduplication logic, which must exist before AI or reports.
-**Delivers:** Five scanner adapters (Semgrep, cppcheck, Gitleaks, Trivy, Checkov), async parallel orchestration with per-tool timeouts, finding normalization and cross-tool deduplication, suppression mechanism.
-**Addresses:** Multi-tool SAST scanning, parallel tool execution, finding deduplication, dual-mode scan input (local path + URL).
-**Avoids:** Alert fatigue (tuned rulesets with severity filtering), CI timeout (per-tool timeouts and graceful degradation), monolithic scanner script (adapter pattern).
+### Phase 2a: Nuclei DAST Adapter
+**Rationale:** Purely additive. Only touches new files, config.yml entry, and Dockerfile. No dependency on Config UI or RBAC (works with existing api_key auth and new Bearer token auth from Phase 1). Can proceed in parallel with Phase 2b.
+**Delivers:** `NucleiAdapter(ScannerAdapter)` class; Nuclei v3.5.x binary in Dockerfile; target_url field on ScanRequest and ScanResult; JSONL output parsing to FindingSchema with `tool="nuclei"` and `scan_type="dast"`; curated default template subset (cves/, vulnerabilities/, misconfiguration/); pinned template version
+**Uses:** Existing `ScannerAdapter` base class, `_execute()` method, `ScannerRegistry` auto-discovery via importlib
+**Avoids:** Pitfall 3 (DAST as SAST — separate interface or extra_args URL passing), Pitfall 7 (template management — pin version, curated tags), Pitfall 10 (DAST findings skewing quality gate — tag with scan_type)
+**Research flag:** Nuclei CLI flags and JSONL output schema well-documented — skip phase research; validate exact JSONL field names during implementation
 
-### Phase 3: AI Analysis Layer
-**Rationale:** AI enrichment depends on normalized, deduplicated findings from Phase 2. This is the hardest phase to get right due to hallucination risk and cost control. Prompt engineering, output validation, and token budgeting must be designed together.
-**Delivers:** Claude API integration, prompt construction with file-grouped batching, output validation (verify referenced files/functions exist), token budget enforcement, cost tracking in SQLite, graceful degradation when API unavailable.
-**Addresses:** AI semantic analysis, AI fix suggestions, cross-tool finding correlation, platform-specific business logic review (RTSP, multi-tenant, webhooks).
-**Avoids:** AI hallucination (grounded prompts, output validation, temperature=0), cost overrun (token budgeting, pre-filtering to HIGH/CRITICAL), full-source-to-AI anti-pattern.
+### Phase 2b: Scanner Configuration UI
+**Rationale:** Depends on RBAC admin role from Phase 1 to gate write endpoints. Independent of Nuclei adapter but benefits from it being registered (shows 13 scanners in the UI). Can proceed in parallel with Phase 2a.
+**Delivers:** `core/config_service.py` with ruamel.yaml round-trip; `api/config.py` REST endpoints (GET/PUT per scanner, scan profile CRUD); dashboard config pages (Jinja2 templates + vanilla JS); enable/disable toggles; per-scanner settings display; config persistence to config.yml; admin-only write gate
+**Implements:** ConfigService component; scanner config dashboard pages
+**Avoids:** Pitfall 1 (two sources of truth — config.yml is the only source), Pitfall 9 (invalid config saves — validate with pydantic before write), Pitfall 12 (YAML comments — use ruamel.yaml for round-trip)
+**Research flag:** ruamel.yaml round-trip behavior with pydantic-settings loading may need a brief validation pass if comment preservation is a hard requirement; otherwise standard patterns apply
 
-### Phase 4: Reports and Quality Gate
-**Rationale:** Reports consume enriched findings from Phase 3. Quality gate evaluates severity counts from normalized findings. These are the user-facing outputs that determine whether the scanner is trusted. WeasyPrint memory issues must be addressed here with finding caps and subprocess isolation.
-**Delivers:** Jinja2 HTML interactive report, WeasyPrint PDF formal report, quality gate with configurable thresholds, pass/fail exit code for Jenkins.
-**Addresses:** HTML/web report, PDF formal report, quality gate, severity-based filtering/sorting in reports.
-**Avoids:** WeasyPrint memory explosion (cap findings, subprocess isolation), hard-coded thresholds (config.yml), zero-finding edge case in reports.
-
-### Phase 5: CI Integration and Notifications
-**Rationale:** Full Jenkins integration requires the complete pipeline (scan, report, gate) to be working. Notifications fire after quality gate decisions. This phase also includes the dashboard for scan history and the full REST API.
-**Delivers:** Jenkins pipeline stage template, scan status polling API, dashboard with scan history and trending, Slack/email notifications with rate limiting, SSE for live scan progress.
-**Addresses:** Jenkins CI integration, scan history/trending, configurable notifications, API for standalone scans.
-**Avoids:** Synchronous API for long scans (async job pattern), notification noise (rate limiting, gate-change-only alerts), quality gate brittleness (degraded mode for scanner failures).
-
-### Phase 6: Custom Rules and Polish
-**Rationale:** Platform-specific Semgrep rules require understanding the aipix codebase patterns discovered during earlier scanning. Docker packaging and portability testing happen after the pipeline is feature-complete. Release-to-release comparison and false positive suppression build on the stable finding fingerprints established in Phase 2.
-**Delivers:** Custom Semgrep rules for aipix patterns (RTSP auth, tenant isolation, webhook validation, MinIO access), release-to-release delta reports, false positive suppression with audit trail, Docker production packaging, documentation.
-**Addresses:** Platform-specific custom rules, release-to-release comparison, false positive suppression, single docker-compose portability.
-**Avoids:** Docker portability issues (pre-baked Trivy DB, non-root user, volume mounts for SQLite), scan cleanup failures (temp directory cleanup on all code paths).
+### Phase 3: Scan Profiles + Admin UI
+**Rationale:** Builds on Config UI (Phase 2b) for the profile management layer and on RBAC (Phase 1) for the user/token admin pages. Lower priority than foundational capabilities; validates user demand before investing in profile complexity.
+**Delivers:** scan_profiles table + CRUD API; named scanner configuration presets (cap 5-7); admin dashboard pages for user/token management; token expiration enforcement (`expires_at` + `revoked_at` fields); profile name stored in scan result for audit reproducibility
+**Addresses:** All P2 features from FEATURES.md (scan profiles, admin UI, token expiration, audit hygiene)
+**Avoids:** Pitfall 5 (profile explosion — cap and validate), Pitfall 11 (no token revocation — revoked_at field from day one)
+**Research flag:** Standard CRUD patterns — skip phase research
 
 ### Phase Ordering Rationale
 
-- **Dependency chain drives order:** Config/Models (P1) -> Adapters/Orchestrator (P2) -> AI (P3) -> Reports/Gate (P4) -> Integration (P5) -> Polish (P6). Each phase produces artifacts consumed by the next.
-- **Feature grouping matches architecture layers:** Phase 2 = Layer 1 (tool execution), Phase 3 = Layer 2 (AI), Phase 4 = Layer 3 (reports) + Layer 4 (gate). This alignment reduces cross-cutting concerns.
-- **Risk front-loading:** The two highest-recovery-cost pitfalls (deduplication failure, CI timeout) are addressed in Phases 1-2. The hardest technical challenge (AI hallucination control) is isolated in Phase 3 where it can be iterated without affecting the working scanner pipeline.
-- **Incremental value:** After Phase 2, the scanner is independently useful (tools run, findings produced, no AI). After Phase 4, it is production-ready for CI. Phases 5-6 add operational maturity.
+- RBAC must precede Config UI because any write endpoint for scanner settings must be admin-gated; building the UI without roles first would require a security retrofit.
+- Nuclei adapter is architecturally independent and can proceed in parallel with Config UI — it only touches new files.
+- The SQLite busy_timeout fix is included in Phase 1 rather than its own phase because it is a one-line change that pays dividends immediately across all subsequent write operations.
+- Backward compatibility with the existing single api_key is a Phase 1 constraint, not a Phase 3 cleanup — breaking CI/CD pipelines on first deploy is unacceptable for a security tool.
+- Scan profiles require the ConfigService to exist, so they follow Config UI naturally and do not block earlier phases.
 
 ### Research Flags
 
 Phases likely needing deeper research during planning:
-- **Phase 3 (AI Analysis):** Prompt engineering for security analysis is not well-documented. Optimal batch sizes, token budgets, and hallucination detection strategies need experimentation. The 29-45% vulnerability rate in AI-generated suggestions is concerning and requires validation testing.
-- **Phase 4 (Reports):** WeasyPrint memory behavior needs profiling with realistic finding volumes (200+ findings). May need fallback plan to Playwright PDF if WeasyPrint proves unworkable for large reports.
-- **Phase 6 (Custom Rules):** Writing effective Semgrep rules for aipix-specific patterns (RTSP, VMS multi-tenant) requires deep understanding of the codebase. Rules need to be developed alongside actual scanning of the aipix repos.
+- **Phase 2b (Scanner Config UI):** The ruamel.yaml round-trip comment preservation behavior warrants a quick validation if preserving inline comments in config.yml is a hard requirement. If the decision is to use raw textarea editing instead of form fields, this is moot.
+- **Phase 3 (Scan Profiles):** Profile-to-scan linkage (storing which profile was active for a given scan result) touches the scan history schema; a brief check of the current scan result model is needed before writing migrations.
 
-Phases with standard patterns (skip research-phase):
-- **Phase 1 (Foundation):** Standard FastAPI + SQLAlchemy + Pydantic setup. Well-documented patterns.
-- **Phase 2 (Scanner Adapters):** Adapter pattern is textbook. asyncio subprocess execution is well-documented. Each tool's CLI and output format has official docs.
-- **Phase 5 (CI Integration):** Jenkins pipeline stages, REST API polling, Slack webhooks are all well-established patterns.
+Phases with standard patterns (skip phase research):
+- **Phase 1 (RBAC Foundation):** FastAPI JWT + pwdlib patterns fully documented in official FastAPI tutorials; PyJWT and pwdlib are both current FastAPI recommendations with clear migration guidance.
+- **Phase 2a (Nuclei DAST Adapter):** Follows existing adapter pattern exactly; Nuclei CLI flags and JSONL schema are stable and well-documented.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All technologies are mature, well-documented, and widely adopted. Version recommendations verified against official release pages. No experimental or bleeding-edge choices. |
-| Features | HIGH | Feature landscape validated against 6+ commercial and open-source competitors (SonarQube, Checkmarx, Snyk, DefectDojo, GitHub Advanced Security, Wiz). Clear consensus on table stakes. |
-| Architecture | HIGH | Pipeline orchestrator pattern validated by LinkedIn SAST pipeline (InfoQ 2026), AWS DevSecOps reference, and multiple open-source implementations. Component boundaries are clean. |
-| Pitfalls | HIGH | All critical pitfalls backed by specific GitHub issues, documented incidents, or research papers. WeasyPrint memory issues confirmed across three separate GitHub issues. AI hallucination rates from published research. |
+| Stack | HIGH | All technology choices validated against official FastAPI docs, PyPI current versions, and GitHub releases as of 2026-03-22 |
+| Features | HIGH | Feature set derived from direct codebase analysis plus industry comparators (DefectDojo, SonarQube); no speculative features |
+| Architecture | HIGH | Architecture based on direct reading of all `src/scanner/` files; integration points are concrete, not theoretical |
+| Pitfalls | HIGH | Pitfalls sourced from SQLite official docs, RBAC best practice guides, and Nuclei DAST community experience; recovery costs assessed against actual code |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Optimal AI prompt structure for security analysis:** No established best practice exists. Requires experimentation during Phase 3 implementation. Start with the grounded-prompt pattern (tool finding + code context + specific question) and iterate.
-- **Actual aipix codebase scan profile:** Scan time, finding volume, memory usage, and tool behavior on the real codebase are unknown. Must profile early in Phase 2 -- do not wait until CI integration. The 10-minute constraint may require additional tuning.
-- **WeasyPrint viability for large reports:** Memory behavior at 200+ findings is a known risk. Validate during Phase 4 with synthetic test data. Have Playwright PDF as a documented fallback if WeasyPrint proves unusable.
-- **Betterleaks vs Gitleaks decision:** Betterleaks (March 2026, same creator as Gitleaks) has 98.6% vs 70.4% recall, but is brand new. Revisit in 6 months. Build Gitleaks adapter with clean interface so swapping is trivial.
-- **Bilingual report scope:** Research identified the need but not the specific translation requirements. Defer implementation but design Jinja2 templates with i18n placeholders from the start.
+- **Nuclei JSONL output field names:** Exact field names in Nuclei's JSON output (e.g., `info.severity`, `matched-at`) need validation against actual Nuclei run output during Phase 2a implementation; the schema is documented but field names change between major versions.
+- **target_url threading decision:** Architecture recommends passing URL via extra_args for v1.0.2 to avoid modifying the ScannerAdapter base class. If the team prefers a cleaner `DastAdapter` subclass, that decision must be made at the start of Phase 2a — it affects the base class contract and all downstream callers.
+- **ruamel.yaml vs PyYAML for config writes:** PITFALLS.md recommends ruamel.yaml for comment preservation; STACK.md does not list it as a new dependency (PyYAML is already present via pydantic-settings). If comment preservation is required, ruamel.yaml must be added to pyproject.toml. If not required (raw textarea editor mode), PyYAML is sufficient.
+- **Initial admin account bootstrap:** RBAC needs a first admin account; the exact mechanism (CLI command, env-var seeding, or printed one-time credentials on first run) is a design decision for Phase 1 that affects deployment documentation.
+- **Multi-arch Nuclei binary in Docker:** The Dockerfile must parameterize the Nuclei download URL by CPU architecture (linux_amd64 vs linux_arm64) for teams running Docker on Apple Silicon or ARM servers.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [Semgrep CE releases and docs](https://semgrep.dev/) -- SAST capabilities, custom rules, multicore performance
-- [Trivy releases and docs](https://github.com/aquasecurity/trivy) -- container/CVE scanning, SARIF output
-- [FastAPI official docs](https://fastapi.tiangolo.com/) -- async patterns, SSE, test client
-- [SQLite WAL mode docs](https://www.sqlite.org/wal.html) -- concurrency handling
-- [LinkedIn SAST Pipeline (InfoQ Feb 2026)](https://www.infoq.com/news/2026/02/linkedin-redesigns-sast-pipeline/) -- multi-scanner orchestration architecture
-- [AWS DevSecOps CI/CD Pipeline](https://aws.amazon.com/blogs/devops/building-end-to-end-aws-devsecops-ci-cd-pipeline-with-open-source-sca-sast-and-dast-tools/) -- parallel execution patterns
+- [FastAPI Official JWT Tutorial](https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/) — PyJWT + pwdlib recommendation
+- [FastAPI Discussion #11345](https://github.com/fastapi/fastapi/discussions/11345) — python-jose abandonment confirmed
+- [FastAPI Discussion #11773](https://github.com/fastapi/fastapi/discussions/11773) — pwdlib adoption confirmed
+- [PyJWT on PyPI](https://pypi.org/project/PyJWT/) — v2.12.1 confirmed as of 2026-03-22
+- [pwdlib on PyPI](https://pypi.org/project/pwdlib/) — v0.3.0 confirmed as of 2026-03-22
+- [Nuclei GitHub](https://github.com/projectdiscovery/nuclei) — v3.5.x current release
+- [Nuclei Running Docs](https://docs.projectdiscovery.io/opensource/nuclei/running) — CLI flags reference
+- [Nuclei Docker Hub](https://hub.docker.com/r/projectdiscovery/nuclei) — Docker integration approach
+- [CodeMirror 5 YAML mode](https://codemirror.net/5/mode/yaml/) — CDN distribution confirmed
+- Existing codebase (`src/scanner/`) — all architectural claims verified against actual source files
 
 ### Secondary (MEDIUM confidence)
-- [WeasyPrint GitHub issues #671, #1104, #2130](https://github.com/Kozea/WeasyPrint/issues/) -- memory behavior documentation
-- [DefectDojo deduplication docs](https://docs.defectdojo.com/en/working_with_findings/finding_deduplication/) -- dedup algorithm reference
-- [LLM hallucinations in code review (DiffRay)](https://diffray.ai/blog/llm-hallucinations-code-review/) -- hallucination rates and mitigation
-- [AI code review architecture (ProjectDiscovery)](https://projectdiscovery.io/blog/ai-code-review-vs-neo) -- LLM + static analysis detection rates
+- [RBAC Best Practices 2025](https://www.osohq.com/learn/rbac-best-practices) — permission-based vs role-based checks recommendation
+- [RBAC Implementation Guide](https://www.permit.io/blog/fastapi-rbac-full-implementation-tutorial) — FastAPI RBAC dependency injection patterns
+- [Nuclei DAST Integration Guide](https://iaraoz.medium.com/how-to-use-nuclei-as-an-appsec-dast-tool-in-devsecops-90d0ab5963bb) — DAST adapter design patterns
+- [SQLite WAL Mode](https://www.sqlite.org/wal.html) — busy_timeout behavior and write contention
 
 ### Tertiary (LOW confidence)
-- **Betterleaks viability:** Single announcement blog post, no production track record. Revisit Q3 2026.
-- **Optimal AI token budget:** $5/scan target is based on Sonnet pricing estimates, not measured data. Validate during Phase 3.
+- [Home Assistant YAML vs UI](https://community.home-assistant.io/t/wth-can-we-edit-yaml-files-in-the-ui/472909) — config source-of-truth failure modes (community experience, not official docs)
+- [Nuclei DAST Payload Bug #5561](https://github.com/projectdiscovery/nuclei/issues/5561) — known DAST template edge cases
 
 ---
-*Research completed: 2026-03-18*
+*Research completed: 2026-03-22*
 *Ready for roadmap: yes*

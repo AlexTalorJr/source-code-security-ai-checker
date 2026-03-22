@@ -1,443 +1,389 @@
 # Architecture Patterns
 
-**Domain:** Automated security scanning pipeline for VSaaS platform
-**Researched:** 2026-03-18
+**Domain:** Scanner Configuration UI, Nuclei DAST Adapter, Token-based RBAC -- integration with existing FastAPI + ScannerRegistry + Orchestrator
+**Researched:** 2026-03-22
 
 ## Recommended Architecture
 
-The scanner follows a **pipeline orchestrator pattern** with four sequential layers, where Layer 1 runs tools in parallel for speed, and subsequent layers depend on prior layer output. This matches how LinkedIn, AWS, and other large-scale SAST pipelines structure multi-tool scanning: parallel execution of independent analyzers, normalized result aggregation, then post-processing.
+Three features integrating into the existing layered architecture. Each touches different layers with minimal overlap, enabling parallel development after a shared RBAC foundation.
 
 ```
-                         +-------------------+
-                         |   Entry Points    |
-                         | (API / Jenkins)   |
-                         +--------+----------+
-                                  |
-                                  v
-                         +-------------------+
-                         |  Scan Orchestrator |
-                         |  (async Python)    |
-                         +--------+----------+
-                                  |
-                    +-------------+-------------+
-                    |             |             |
-                    v             v             v
-              +---------+  +---------+  +-----------+
-              | Semgrep |  |Gitleaks |  |  Trivy    |
-              |+cppcheck|  |         |  | +Checkov  |
-              +---------+  +---------+  +-----------+
-                    |             |             |
-                    v             v             v
-                  +---------------------------+
-                  |   Finding Normalizer      |
-                  |   (unified internal fmt)  |
-                  +------------+--------------+
-                               |
-                               v
-                  +---------------------------+
-                  |   AI Analysis Layer       |
-                  |   (Claude API)            |
-                  +------------+--------------+
-                               |
-                               v
-                  +---------------------------+
-                  |   Report Generator        |
-                  |   (HTML / PDF)            |
-                  +------------+--------------+
-                               |
-                               v
-                  +---------------------------+
-                  |   Quality Gate            |
-                  |   (pass/fail decision)    |
-                  +------------+--------------+
-                               |
-                     +---------+---------+
-                     |                   |
-                     v                   v
-               +-----------+     +-----------+
-               |Notifications|   | Exit Code |
-               |(Slack/Email)|   | (Jenkins) |
-               +-----------+     +-----------+
+                    +-------------------+
+                    |   Dashboard UI    |  (Jinja2 templates)
+                    |  Scanner Config   |  <-- NEW pages
+                    |  Role-aware nav   |  <-- MODIFIED
+                    +--------+----------+
+                             |
+              +--------------+--------------+
+              |                             |
+     +--------v---------+        +---------v----------+
+     |   Dashboard Auth  |        |    API Auth         |
+     |  Cookie + Role    |        |  Token + Role       |
+     |  (MODIFIED)       |        |  (MODIFIED)         |
+     +--------+----------+        +---------+-----------+
+              |                             |
+     +--------v-----------------------------v----------+
+     |              FastAPI Router                      |
+     |  /api/config/*     <-- NEW endpoints             |
+     |  /api/scanners/*   <-- MODIFIED                  |
+     |  /scans/*          <-- EXISTING (add role check) |
+     +--------+-----------------------------------------+
+              |
+     +--------v-----------------------------------------+
+     |              ScannerSettings / Config             |
+     |  config.yml + runtime overrides                  |
+     |  ScannerToolConfig <-- EXISTING (no change)      |
+     |  Scan Profiles     <-- NEW concept               |
+     +--------+-----------------------------------------+
+              |
+     +--------v-----------------------------------------+
+     |              ScannerRegistry                     |
+     |  get_enabled_adapters()  <-- EXISTING            |
+     |  update_scanner()        <-- NEW method          |
+     +--------+-----------------------------------------+
+              |
+     +--------v-----------------------------------------+
+     |              Orchestrator                        |
+     |  run_scan() <-- EXISTING (add profile support)   |
+     +--------+-----------------------------------------+
+              |
+     +--------v-----------------------------------------+
+     |              Scanner Adapters                    |
+     |  BanditAdapter, SemgrepAdapter, ...              |
+     |  NucleiAdapter   <-- NEW adapter                 |
+     +--------------------------------------------------+
 ```
 
 ### Component Boundaries
 
-| Component | Responsibility | Communicates With | Input | Output |
-|-----------|---------------|-------------------|-------|--------|
-| **FastAPI Server** | REST API, dashboard, scan lifecycle management | Scan Orchestrator, SQLite, Report Store | HTTP requests (trigger scan, fetch reports) | JSON responses, HTML dashboard |
-| **Scan Orchestrator** | Coordinates tool execution, manages parallelism, timeouts | All scanner adapters, Finding Normalizer | Scan request (repo path or URL, config) | Raw tool outputs |
-| **Scanner Adapters** (x5) | Wraps each tool (Semgrep, cppcheck, Gitleaks, Trivy, Checkov) with uniform interface | CLI tools via subprocess, Finding Normalizer | Source code path, tool-specific config | Tool-native output (JSON/SARIF) |
-| **Finding Normalizer** | Parses tool-native output into unified internal format, deduplicates | Scanner Adapters, AI Analysis Layer | Raw tool outputs in various formats | Normalized finding list |
-| **AI Analysis Layer** | Semantic analysis of findings, business logic review, fix suggestions | Claude API, Finding Normalizer | Normalized findings + source code context | Enriched findings with AI assessment |
-| **Report Generator** | Renders HTML interactive and PDF formal reports | Jinja2 templates, WeasyPrint | Enriched findings | HTML/PDF files |
-| **Quality Gate** | Evaluates severity thresholds, produces pass/fail decision | Report Generator output, config | Finding severity counts | Pass/fail + exit code |
-| **Notification Service** | Sends Slack/email alerts on findings | Quality Gate, config | Scan summary + severity counts | Slack messages, emails |
-| **SQLite Store** | Persists scan history, finding counts, report references | FastAPI Server, Scan Orchestrator | Scan metadata, finding summaries | Query results for dashboard/API |
-| **Config Manager** | Loads config.yml, env vars, merges defaults | All components | YAML file + env vars | Typed config object |
+| Component | Responsibility | Communicates With | Status |
+|-----------|---------------|-------------------|--------|
+| `src/scanner/adapters/nuclei.py` | Run Nuclei CLI, parse JSONL output, normalize to FindingSchema | ScannerAdapter base, Orchestrator | **NEW** |
+| `src/scanner/api/config.py` | REST endpoints: read/write scanner config, manage profiles | ScannerSettings, ScannerRegistry, ConfigService | **NEW** |
+| `src/scanner/core/config_service.py` | Business logic for config CRUD -- read/write config.yml, validate, reload | ScannerSettings, filesystem (config.yml) | **NEW** |
+| `src/scanner/core/profiles.py` | Scan profile management (named sets of scanner configs) | ConfigService, SQLite | **NEW** |
+| `src/scanner/models/user.py` | User + Token ORM models (username, hashed password, role, API tokens) | SQLAlchemy Base | **NEW** |
+| `src/scanner/models/profile.py` | ScanProfile ORM model | SQLAlchemy Base | **NEW** |
+| `src/scanner/api/auth.py` | Token validation, role-based dependency injection | User model, settings | **MODIFIED** |
+| `src/scanner/dashboard/auth.py` | Cookie session with role awareness | User model | **MODIFIED** |
+| `src/scanner/dashboard/router.py` | Add scanner config pages, role-gated actions | ConfigService, templates | **MODIFIED** |
+| `src/scanner/dashboard/templates/config.html.j2` | Scanner list with enable/disable toggles, settings forms | Dashboard router | **NEW** |
+| `src/scanner/dashboard/templates/config_editor.html.j2` | Raw YAML config editor | Dashboard router | **NEW** |
+| `src/scanner/dashboard/templates/profiles.html.j2` | Scan profiles management | Dashboard router | **NEW** |
+| `src/scanner/main.py` | Add new routers, schema migrations for users/tokens/profiles | All routers | **MODIFIED** |
+| `src/scanner/config.py` | No structural changes needed -- ScannerToolConfig already sufficient | N/A | **UNCHANGED** |
+| `src/scanner/adapters/registry.py` | Add `update_scanner()` for runtime config changes | ScannerToolConfig | **MODIFIED** |
+| `src/scanner/core/orchestrator.py` | Accept optional profile override for scanner selection | ScannerRegistry, profiles | **MODIFIED** |
 
 ### Data Flow
 
-**1. Scan Trigger (two paths converge to one)**
+#### Feature 1: Scanner Configuration UI
 
-- **Jenkins path:** Jenkins pipeline stage calls `POST /api/v1/scans` with local repo path + API key header. FastAPI validates, creates scan record in SQLite, dispatches to Scan Orchestrator.
-- **API path:** External caller hits same endpoint with repo URL. Orchestrator clones repo to temp dir first, then proceeds identically.
-
-**2. Parallel Tool Execution (Layer 1)**
-
-The Scan Orchestrator launches all five tools concurrently using `asyncio.create_subprocess_exec`. Each scanner adapter:
-1. Constructs CLI arguments for its tool
-2. Runs tool as subprocess with timeout (configurable, ~2 min per tool)
-3. Captures stdout/stderr
-4. Parses tool-native output (JSON preferred, SARIF where available)
-5. Returns structured results or error status
-
-Scanner adapters are independent -- if one tool fails/times out, others continue. The orchestrator collects all results and marks failed tools in metadata.
-
-**3. Finding Normalization**
-
-All tool outputs are parsed into a **unified finding format**:
-
-```python
-@dataclass
-class Finding:
-    id: str                    # deterministic hash for dedup
-    tool: str                  # "semgrep", "gitleaks", "trivy", etc.
-    severity: Severity         # CRITICAL, HIGH, MEDIUM, LOW, INFO
-    category: str              # "sast", "secrets", "iac", "cve", "cpp"
-    title: str                 # human-readable finding title
-    description: str           # what the issue is
-    file_path: str | None      # affected file
-    line_start: int | None     # line number
-    line_end: int | None
-    code_snippet: str | None   # relevant code context
-    rule_id: str               # tool-specific rule identifier
-    cwe: str | None            # CWE ID if available
-    confidence: str            # tool's confidence level
-    metadata: dict             # tool-specific extras
+```
+Dashboard form submit
+  --> POST /dashboard/config/scanners/{name}
+  --> ConfigService.update_scanner(name, enabled, timeout, extra_args)
+  --> Writes to config.yml (YAML round-trip)
+  --> Next scan picks up changed config via ScannerSettings()
 ```
 
-Deduplication happens here -- if Semgrep and cppcheck both flag the same line with overlapping rules, the normalizer keeps the higher-confidence finding and links the other as corroborating evidence.
+Key insight: `ScannerSettings` is re-instantiated per scan in `run_scan()` (line 166 of orchestrator.py creates `ScannerRegistry(settings.scanners)`). Config changes to `config.yml` take effect on the next scan without server restart. The `ScannerRegistry` is not a singleton -- it is created fresh each time.
 
-**4. AI Analysis (Layer 2)**
+#### Feature 2: Nuclei DAST Adapter
 
-The AI layer receives normalized findings in batches (to control API costs). It does NOT re-scan all source code -- it analyzes the findings already identified by tools:
-
-- **Triage:** Confirms or dismisses findings as false positives based on code context
-- **Business logic review:** Checks findings against aipix-specific concerns (RTSP auth, multi-tenant isolation, webhook validation)
-- **Fix suggestions:** Generates concrete code patches for confirmed findings
-- **Severity adjustment:** May upgrade/downgrade severity based on semantic understanding
-
-Cost control: Batch findings by file, send code context windows (not entire files), cap token usage per scan. Target under $5/scan means roughly 100K-200K input tokens at Sonnet pricing.
-
-**5. Report Generation (Layer 3)**
-
-Two report types from the same enriched finding data:
-
-- **HTML interactive:** Jinja2 template with collapsible sections, code highlighting, filter/sort by severity/tool/file, diff-style fix suggestions. Served via FastAPI static files or downloadable.
-- **PDF formal:** WeasyPrint renders a print-optimized version with executive summary, severity distribution chart, finding details. For management and telecom operator compliance.
-
-**6. Quality Gate (Layer 4)**
-
-Reads configured thresholds from config.yml:
-
-```yaml
-quality_gate:
-  fail_on:
-    critical: 0    # any critical = fail
-    high: 0        # any high = fail
-  warn_on:
-    medium: 5      # warn if > 5 medium
+```
+config.yml adds nuclei entry
+  --> ScannerRegistry loads NucleiAdapter via importlib
+  --> Orchestrator calls adapter.run(target_path, timeout, extra_args)
+  --> NucleiAdapter runs: nuclei -u <target_url> -jsonl -t <templates>
+  --> Parses JSONL output line-by-line
+  --> Returns list[FindingSchema] with tool="nuclei"
 ```
 
-Produces: pass/fail boolean, exit code (0 or 1 for Jenkins), summary message. This is the final step -- the exit code propagates back through FastAPI response and/or Jenkins pipeline return code.
+DAST difference: Nuclei needs a URL target, not a filesystem path. The `run()` method receives `target_path` which is a local directory. For DAST, we need `target_url` passed differently. Options:
+1. Use `extra_args` to pass `-u <url>` (works with existing interface, no base class changes)
+2. Add optional `target_url` to `ScanRequest` and thread it through orchestrator
 
-**7. Notifications**
+Recommendation: Use `extra_args` for v1.0.2. The adapter checks if target looks like a URL or extracts `-u` from extra_args. This avoids modifying the ScannerAdapter base class contract. The Nuclei adapter's `run()` simply ignores `target_path` when a URL is provided via extra_args or scan request parameters.
 
-Fire-and-forget after quality gate decision. Both Slack and email are optional (configured in config.yml). Include: scan summary, severity counts, pass/fail status, link to HTML report.
+#### Feature 3: Token-based RBAC
+
+```
+Admin creates user via CLI or API
+  --> User stored in SQLite (username, bcrypt hash, role)
+  --> User generates API tokens via dashboard
+  --> Token stored: sha256(token) in DB, raw token shown once
+
+API request with X-API-Key header
+  --> require_api_key() looks up token hash in DB
+  --> Returns (user, role) tuple
+  --> Endpoint checks role via Depends(require_role("admin"))
+
+Dashboard login with username/password
+  --> Validates bcrypt hash
+  --> Sets session cookie with user_id + role
+  --> require_dashboard_auth() checks cookie + loads role
+  --> Templates conditionally render admin-only actions
+```
 
 ## Patterns to Follow
 
-### Pattern 1: Scanner Adapter Interface
+### Pattern 1: Adapter Registration (existing, extend for Nuclei)
 
-Every scanner tool gets wrapped in an adapter class with a uniform interface. This is critical for maintainability -- adding a new tool means writing one adapter, not touching orchestrator logic.
+The Nuclei adapter follows the exact same pattern as Bandit, gosec, etc. Add entry to config.yml, implement the adapter class.
 
-**What:** Abstract base class that all scanner adapters implement.
-**When:** For every external security tool integration.
-**Why:** Isolates tool-specific parsing, CLI invocation, and error handling. Makes it trivial to add/remove/replace tools.
+**What:** Config-driven adapter loading via importlib
+**When:** Adding any new scanner
+**Example:**
 
-```python
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
-
-@dataclass
-class ScannerResult:
-    tool: str
-    success: bool
-    findings: list[Finding]
-    execution_time_seconds: float
-    error_message: str | None = None
-    raw_output: str | None = None
-
-class ScannerAdapter(ABC):
-    @abstractmethod
-    async def scan(self, target_path: str, config: ScannerConfig) -> ScannerResult:
-        """Run the scanner and return normalized results."""
-        ...
-
-    @abstractmethod
-    def is_available(self) -> bool:
-        """Check if the tool binary is installed and accessible."""
-        ...
-
-    @abstractmethod
-    def parse_output(self, raw_output: str) -> list[Finding]:
-        """Parse tool-native output into unified findings."""
-        ...
+```yaml
+# config.yml addition
+nuclei:
+  adapter_class: "scanner.adapters.nuclei.NucleiAdapter"
+  enabled: "auto"
+  timeout: 300
+  extra_args: ["-t", "cves/", "-t", "vulnerabilities/"]
+  languages: []  # DAST is language-agnostic
 ```
 
-**Confidence:** HIGH -- this is a standard adapter pattern, well-established in multi-tool orchestration systems.
-
-### Pattern 2: Async Subprocess Orchestration
-
-**What:** Use `asyncio.create_subprocess_exec` to run scanner tools in parallel, with per-tool timeouts and graceful failure handling.
-**When:** Layer 1 parallel execution.
-**Why:** FastAPI is async-native. Running 5 tools sequentially would take 10-20 minutes; parallel brings it to 2-4 minutes (bounded by slowest tool).
-
 ```python
-import asyncio
+# src/scanner/adapters/nuclei.py
+class NucleiAdapter(ScannerAdapter):
+    @property
+    def tool_name(self) -> str:
+        return "nuclei"
 
-async def run_all_scanners(target_path: str, config: Config) -> list[ScannerResult]:
-    scanners = [
-        SemgrepAdapter(), CppcheckAdapter(), GitleaksAdapter(),
-        TrivyAdapter(), CheckovAdapter()
-    ]
-    tasks = [
-        asyncio.wait_for(
-            scanner.scan(target_path, config),
-            timeout=config.scanner_timeout_seconds
-        )
-        for scanner in scanners
-    ]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-    # Convert exceptions to failed ScannerResult objects
-    return [handle_result(r, s) for r, s in zip(results, scanners)]
+    def _version_command(self) -> list[str]:
+        return ["nuclei", "-version"]
+
+    async def run(self, target_path, timeout, extra_args=None):
+        # Build nuclei command with JSONL output
+        cmd = ["nuclei", "-jsonl", "-silent"]
+        if extra_args:
+            cmd.extend(extra_args)
+        # If no -u in extra_args, skip (DAST needs explicit target)
+        if not any(a == "-u" for a in (extra_args or [])):
+            return []  # No URL target, skip silently
+        stdout, stderr, rc = await self._execute(cmd, timeout)
+        return self._parse_jsonl(stdout, target_path)
 ```
 
-**Confidence:** HIGH -- `asyncio.create_subprocess_exec` works correctly on Linux (the target platform). FastAPI's async model supports this natively.
+### Pattern 2: Role-gated FastAPI Dependencies
 
-### Pattern 3: Configuration Layering
-
-**What:** Three-tier config: defaults (hardcoded) -> config.yml (project) -> env vars (runtime/secrets).
-**When:** All components need configuration.
-**Why:** Portable defaults mean `docker-compose up` works immediately. YAML overrides for project customization. Env vars for secrets (API keys, notification webhooks) that never go in files.
+**What:** Layered dependency injection for auth + role checking
+**When:** Protecting API endpoints with role requirements
 
 ```python
-@dataclass
-class Config:
-    # Defaults
-    scanner_timeout_seconds: int = 120
-    ai_enabled: bool = True
-    ai_max_tokens_per_scan: int = 150000
-    quality_gate_fail_on_critical: int = 0
-    quality_gate_fail_on_high: int = 0
-    # From env only
-    claude_api_key: str = ""  # CLAUDE_API_KEY env var
-    api_auth_key: str = ""    # SCANNER_API_KEY env var
+# src/scanner/api/auth.py (evolved)
+from enum import Enum
+
+class Role(str, Enum):
+    ADMIN = "admin"
+    SCANNER = "scanner"  # CI/CD -- can trigger scans, read results
+    VIEWER = "viewer"    # Read-only dashboard access
+
+async def require_auth(request: Request, x_api_key: str = Header(...)):
+    """Returns (user, role) or raises 401."""
+    # Check legacy single API key first (backward compat)
+    # Then check token table
+    ...
+
+def require_role(*roles: Role):
+    """Dependency factory: require one of the specified roles."""
+    async def checker(auth_result = Depends(require_auth)):
+        user, role = auth_result
+        if role not in roles:
+            raise HTTPException(403, "Insufficient permissions")
+        return auth_result
+    return checker
 ```
 
-**Confidence:** HIGH -- standard pattern for containerized applications.
+### Pattern 3: Config Service with YAML Round-Trip
 
-### Pattern 4: Deterministic Finding IDs
+**What:** Service layer between API/dashboard and config.yml file
+**When:** Reading or writing scanner configuration
 
-**What:** Hash finding attributes (tool + rule_id + file_path + line_start) to create stable IDs.
-**When:** Normalization step.
-**Why:** Enables deduplication across tools, cross-scan comparison ("3 new findings since last release"), and suppression lists (known false positives).
+```python
+# src/scanner/core/config_service.py
+import yaml
+from pathlib import Path
 
-**Confidence:** HIGH -- standard approach in vulnerability management platforms like DefectDojo.
+class ConfigService:
+    def __init__(self, config_path: str = "config.yml"):
+        self.config_path = Path(config_path)
 
-### Pattern 5: AI Prompt Batching by File
+    def read_config(self) -> dict:
+        """Read current config.yml as dict."""
+        return yaml.safe_load(self.config_path.read_text())
 
-**What:** Group findings by file, send file content + its findings as one prompt. Cap at ~4K tokens of code context per file.
-**When:** AI analysis layer.
-**Why:** Reduces API calls (cost), provides semantic context (AI sees the full function, not just a line), and keeps within token budgets.
+    def update_scanner(self, name: str, updates: dict) -> None:
+        """Update a single scanner's config and write back."""
+        config = self.read_config()
+        if name not in config.get("scanners", {}):
+            raise ValueError(f"Unknown scanner: {name}")
+        config["scanners"][name].update(updates)
+        self.config_path.write_text(yaml.dump(config, default_flow_style=False))
 
-**Confidence:** MEDIUM -- the batching strategy is sound, but optimal batch size requires tuning during implementation.
+    def write_full_config(self, raw_yaml: str) -> None:
+        """Validate and write raw YAML (for config editor)."""
+        parsed = yaml.safe_load(raw_yaml)  # Validates syntax
+        # Additional validation: ensure scanners have adapter_class
+        self.config_path.write_text(raw_yaml)
+```
+
+### Pattern 4: Backward-Compatible Auth Migration
+
+**What:** Support both legacy single API key and new token-based auth during migration
+**When:** Evolving auth without breaking existing CI/CD integrations
+
+The current system uses a single `api_key` in settings. New RBAC must not break existing Jenkins integrations that pass `X-API-Key: <value>`.
+
+```python
+async def require_auth(request, x_api_key):
+    # 1. Check if it matches legacy settings.api_key (admin role)
+    if settings.api_key and compare_digest(x_api_key, settings.api_key):
+        return LegacyUser(role=Role.ADMIN)
+
+    # 2. Check token table
+    token_hash = hashlib.sha256(x_api_key.encode()).hexdigest()
+    user = await lookup_token(token_hash)
+    if user:
+        return user
+
+    raise HTTPException(401)
+```
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Monolithic Scanner Script
+### Anti-Pattern 1: Modifying ScannerAdapter Base Class for DAST
 
-**What:** One giant Python script that runs all tools sequentially, parses all outputs inline, generates reports, and makes gate decisions.
-**Why bad:** Untestable, fragile (one tool failure kills entire scan), impossible to add/remove tools without risk. Any change risks regression across the entire pipeline.
-**Instead:** Use the adapter pattern with clear component boundaries. Each adapter is independently testable. Orchestrator only coordinates.
+**What:** Adding `target_url` parameter to the abstract `run()` method
+**Why bad:** Breaks all 12 existing adapters. Every adapter must be updated even though only Nuclei uses URLs.
+**Instead:** Pass DAST target URL via `extra_args` (e.g., `["-u", "https://target.com"]`). The Nuclei adapter extracts it from extra_args. Alternatively, add an optional `scan_context: dict` parameter with a default of `None` -- but extra_args is simpler for v1.0.2.
 
-### Anti-Pattern 2: SARIF as Internal Format
+### Anti-Pattern 2: In-Memory Config State
 
-**What:** Using SARIF as the internal data interchange format between all components.
-**Why bad:** SARIF is verbose, complex (the spec is 200+ pages), and designed for interchange between organizations/tools -- not as an internal data model. Parsing SARIF from 5 different tools (each implementing a subset differently) adds unnecessary complexity. SARIF also lacks fields needed for this project (AI enrichment, aipix-specific metadata).
-**Instead:** Define a simple internal `Finding` dataclass. Write SARIF exporters if needed for external integrations later, but keep the internal model lean and purpose-built.
+**What:** Storing config changes in app.state and losing them on restart
+**Why bad:** Config changes vanish after container restart. Users expect persistence.
+**Instead:** Always write through to config.yml. The existing `ScannerSettings` YAML loading already handles reading it back. Config.yml is the source of truth.
 
-### Anti-Pattern 3: Full Source Code to AI
+### Anti-Pattern 3: Inline Role Checks
 
-**What:** Sending entire repository contents to Claude API for analysis.
-**Why bad:** Exceeds cost target ($5/scan) by 10-50x. Token limits become a problem. AI analysis works better on focused context than entire codebases.
-**Instead:** Send only the code context around findings identified by Layer 1 tools. The static analyzers do the broad sweep; AI does targeted deep analysis.
+**What:** Checking `if user.role == "admin"` inside every route handler
+**Why bad:** Scattered auth logic, easy to forget, hard to audit
+**Instead:** Use FastAPI dependency injection: `Depends(require_role(Role.ADMIN))`. One line per endpoint, centralized logic, easy to grep for coverage.
 
-### Anti-Pattern 4: Hard-Coding Severity Thresholds
+### Anti-Pattern 4: Storing Raw Tokens
 
-**What:** Embedding quality gate thresholds directly in code.
-**Why bad:** Different teams/partners will have different risk tolerance. Changing thresholds requires code changes and redeployment.
-**Instead:** config.yml with sensible defaults. Partners can override without touching code.
+**What:** Storing API tokens as plaintext in SQLite
+**Why bad:** Database leak exposes all tokens
+**Instead:** Store `sha256(token)` in the database. Show the raw token exactly once at creation time. On each request, hash the incoming token and compare hashes.
 
-### Anti-Pattern 5: Synchronous API for Long Scans
+### Anti-Pattern 5: Separate Auth Systems
 
-**What:** Having the `/api/v1/scans` endpoint block until the scan completes (2-10 minutes).
-**Why bad:** HTTP timeouts, Jenkins stage timeouts, poor UX. Connection drops lose all progress.
-**Instead:** Async job pattern: POST returns scan ID immediately, client polls `GET /api/v1/scans/{id}` for status. Dashboard shows live progress. Jenkins wrapper script polls until complete.
+**What:** Building completely separate auth for dashboard vs API
+**Why bad:** Two codepaths to maintain, inconsistent behavior, double the bugs
+**Instead:** Shared User model and role logic. Dashboard uses cookie sessions (stores user_id). API uses bearer tokens. Both resolve to the same User+Role. The `require_auth` function handles both paths.
 
-## Component Interaction Detail
+## Integration Points: Detailed Analysis
 
-### Internal Module Structure
+### What Changes in Existing Code
 
-```
-src/
-  scanner/
-    __init__.py
-    config.py              # Config loading and validation
-    models.py              # Finding, ScanResult, Severity dataclasses
-    orchestrator.py        # Scan lifecycle, parallel tool execution
-    adapters/
-      __init__.py
-      base.py              # ScannerAdapter ABC
-      semgrep.py
-      cppcheck.py
-      gitleaks.py
-      trivy.py
-      checkov.py
-    normalizer.py          # Tool output -> unified Finding
-    ai_analyzer.py         # Claude API integration, prompt construction
-    report/
-      __init__.py
-      html_generator.py    # Jinja2 HTML report
-      pdf_generator.py     # WeasyPrint PDF report
-      templates/           # Jinja2 templates
-    quality_gate.py        # Threshold evaluation, pass/fail
-    notifications/
-      __init__.py
-      slack.py
-      email.py
-    db.py                  # SQLite operations
-  api/
-    __init__.py
-    app.py                 # FastAPI app factory
-    routes/
-      scans.py             # Scan CRUD endpoints
-      reports.py           # Report download endpoints
-      health.py            # Health check
-      dashboard.py         # Dashboard HTML serving
-    auth.py                # API key middleware
-    dependencies.py        # FastAPI dependency injection
-  cli.py                   # CLI entry point for direct invocation
-  main.py                  # Uvicorn entry point
-```
+| File | Change Type | Details |
+|------|-------------|---------|
+| `src/scanner/api/auth.py` | **Major rewrite** | From single-key comparison to token lookup + role resolution. Must keep backward compat with legacy `api_key` setting. |
+| `src/scanner/api/router.py` | **Minor addition** | Include new config router: `api_router.include_router(config_router)` |
+| `src/scanner/api/scans.py` | **Minor modification** | Replace `Depends(require_api_key)` with `Depends(require_role(Role.SCANNER))` |
+| `src/scanner/api/scanners.py` | **Minor modification** | Add role check, add detail/update endpoints |
+| `src/scanner/dashboard/auth.py` | **Moderate rewrite** | From API key hash cookie to user session with role |
+| `src/scanner/dashboard/router.py` | **Moderate addition** | Add config pages, pass role to templates, gate admin actions |
+| `src/scanner/dashboard/templates/base.html.j2` | **Minor modification** | Add nav items for config pages, conditionally show admin links |
+| `src/scanner/main.py` | **Minor modification** | Schema migrations for new tables (users, tokens, profiles) |
+| `config.yml` | **Addition** | Add nuclei scanner entry |
+| `Dockerfile` | **Addition** | Install nuclei binary |
 
-### Key Interfaces Between Components
+### What Stays Unchanged
 
-**API -> Orchestrator:**
-```python
-# api/routes/scans.py calls orchestrator
-scan_id = await orchestrator.start_scan(
-    target=ScanTarget(path="/repo/path", mode="local"),
-    config=scan_config,
-)
-# Returns immediately, scan runs in background task
-```
+| File | Why |
+|------|-----|
+| `src/scanner/adapters/base.py` | Base class contract is sufficient -- no changes needed |
+| `src/scanner/config.py` | `ScannerToolConfig` already has all fields Nuclei needs |
+| `src/scanner/core/orchestrator.py` | Nuclei fits existing parallel execution model (minor profile support later) |
+| `src/scanner/schemas/finding.py` | `FindingSchema` handles Nuclei output as-is |
+| `src/scanner/db/session.py` | SQLite engine setup unchanged |
+| All existing adapters | No interface changes |
 
-**Orchestrator -> Adapters:**
-```python
-# orchestrator.py runs adapters in parallel
-results: list[ScannerResult] = await run_all_scanners(target_path, config)
-```
+## New Database Tables
 
-**Orchestrator -> Normalizer -> AI:**
-```python
-# Sequential: normalize, then AI analysis
-findings = normalizer.normalize(results)
-if config.ai_enabled:
-    findings = await ai_analyzer.enrich(findings, source_files)
+```sql
+-- Users table
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(200) NOT NULL,  -- bcrypt
+    role VARCHAR(20) NOT NULL DEFAULT 'viewer',  -- admin, scanner, viewer
+    created_at DATETIME DEFAULT (datetime('now')),
+    is_active BOOLEAN NOT NULL DEFAULT 1
+);
+
+-- API tokens table (multiple per user)
+CREATE TABLE api_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    token_hash VARCHAR(64) NOT NULL UNIQUE,  -- sha256 hex
+    label VARCHAR(100),  -- e.g., "jenkins-prod", "local-dev"
+    created_at DATETIME DEFAULT (datetime('now')),
+    last_used_at DATETIME,
+    is_active BOOLEAN NOT NULL DEFAULT 1
+);
+
+-- Scan profiles table
+CREATE TABLE scan_profiles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    scanner_overrides TEXT NOT NULL,  -- JSON: {"semgrep": {"enabled": true}, ...}
+    created_by INTEGER REFERENCES users(id),
+    created_at DATETIME DEFAULT (datetime('now'))
+);
 ```
 
-**Orchestrator -> Report -> Gate -> Notify:**
-```python
-# Sequential: generate reports, evaluate gate, notify
-html_path = report.generate_html(findings, scan_metadata)
-pdf_path = report.generate_pdf(findings, scan_metadata)
-gate_result = quality_gate.evaluate(findings, config.quality_gate)
-await notifications.send(gate_result, scan_metadata)
-return ScanResult(gate_result=gate_result, report_paths=[html_path, pdf_path])
+## Build Order (dependency-driven)
+
+The three features have a dependency chain:
+
 ```
+1. RBAC (foundation) -- other features need auth/roles to gate access
+   |
+   +---> 2a. Scanner Config UI (needs admin role gate)
+   |
+   +---> 2b. Nuclei Adapter (independent, but config UI shows it)
+```
+
+**Recommended build order:**
+
+1. **RBAC: User model + token auth** -- New tables, auth rewrite, backward compat with legacy API key. Everything else depends on role-based access.
+
+2. **Nuclei DAST Adapter** -- Purely additive, follows existing adapter pattern exactly. Can be built in parallel with step 3 since it only touches new files + config.yml.
+
+3. **Scanner Configuration UI** -- Depends on RBAC (admin-only access). Depends on ScannerRegistry existing (already does). Benefits from Nuclei being registered (shows 13 scanners in UI).
+
+4. **Scan Profiles** -- Nice-to-have built on top of Config UI. Depends on config service and RBAC.
 
 ## Scalability Considerations
 
-| Concern | At 1 scan/day | At 10 scans/day | At 50+ scans/day |
-|---------|---------------|-----------------|-------------------|
-| **SQLite contention** | No issue | No issue (WAL mode) | May need read replicas or move to PostgreSQL (out of scope for v1) |
-| **Disk usage (reports)** | Trivial (~5MB/scan) | ~50MB/day, monthly cleanup | Retention policy, S3 archival |
-| **Claude API costs** | ~$5/day | ~$50/day | Caching layer for identical findings, reduce AI scope |
-| **Concurrent scans** | N/A | Queue with max 2-3 concurrent | Job queue (but out of scope -- v1 targets sequential or low-concurrency) |
-| **Container resources** | 2GB RAM, 2 CPU | 4GB RAM, 4 CPU | Horizontal scaling (out of scope for v1) |
-
-For v1, the target is 1-5 scans/day for release branches. SQLite and single-container Docker are perfectly adequate. Do not over-engineer for scale that is not needed.
-
-## Suggested Build Order (Dependencies)
-
-Build order is driven by component dependencies -- you cannot build downstream components without upstream ones existing.
-
-```
-Phase 1: Foundation
-  config.py -> models.py -> db.py -> basic FastAPI app with health endpoint
-  (Everything depends on config and models; DB needed for scan tracking)
-
-Phase 2: Scanner Core
-  base.py adapter interface -> individual adapters (can be built in parallel)
-  -> normalizer.py -> orchestrator.py
-  (This is the core value: tools run, findings produced)
-
-Phase 3: AI Enrichment
-  ai_analyzer.py (depends on normalized findings from Phase 2)
-  (Can be toggled off, so Phase 2 is independently useful)
-
-Phase 4: Reports + Quality Gate
-  html_generator.py -> pdf_generator.py -> quality_gate.py
-  (Depends on enriched findings from Phase 2/3)
-
-Phase 5: Integration Layer
-  Full API routes -> Jenkins integration -> notifications
-  Dashboard (depends on DB, reports, scan history)
-  (Everything upstream must work first)
-
-Phase 6: Polish + Portability
-  Custom Semgrep rules, Docker packaging, docs, migration scripts
-  (Refinement after core pipeline works end-to-end)
-```
-
-**Critical path:** Config/Models -> Scanner Adapters -> Normalizer -> Orchestrator -> Reports -> Quality Gate. Every other component hangs off this spine.
-
-**Parallelizable work within phases:**
-- All 5 scanner adapters can be built independently (Phase 2)
-- HTML and PDF report generators are independent (Phase 4)
-- Slack and email notification handlers are independent (Phase 5)
-- English and Russian docs are independent (Phase 6)
+| Concern | Current (v1.0.1) | After v1.0.2 |
+|---------|-------------------|--------------|
+| Auth overhead | Single string compare per request | Token hash lookup in SQLite -- negligible for single-user/small-team use |
+| Config writes | Manual config.yml editing | ConfigService writes YAML -- file lock needed for concurrent writes |
+| Nuclei scan time | N/A | Nuclei template scans can be slow (5-10min for full template set). Use timeout + template subset via extra_args |
+| User count | Single shared API key | Dozens of users max (self-hosted tool). SQLite handles this fine |
+| Token table size | N/A | Hundreds of tokens max. SHA-256 index lookup is O(1) |
 
 ## Sources
 
-- [LinkedIn SAST Pipeline Architecture (InfoQ, Feb 2026)](https://www.infoq.com/news/2026/02/linkedin-redesigns-sast-pipeline/) -- parallel multi-scanner orchestration, SARIF normalization, scale patterns
-- [AWS DevSecOps CI/CD Pipeline](https://aws.amazon.com/blogs/devops/building-end-to-end-aws-devsecops-ci-cd-pipeline-with-open-source-sca-sast-and-dast-tools/) -- parallel SCA/SAST execution, Security Hub aggregation
-- [SARIF Standard (OASIS)](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html) -- interchange format specification (used as reference, not as internal format)
-- [Sonar Guide to SARIF](https://www.sonarsource.com/resources/library/sarif/) -- normalization and aggregation patterns
-- [ARMO: Security Gates in CI/CD](https://www.armosec.io/blog/securing-ci-cd-pipelines-security-gates/) -- quality gate severity threshold patterns
-- [Wiz: DevSecOps Pipeline Best Practices](https://www.wiz.io/academy/application-security/devsecops-pipeline-best-practices) -- progressive security, scanner integration
-- [GitLab Pipeline with Gitleaks, Semgrep, Trivy, Checkov (Medium)](https://manabpokhrel7.medium.com/building-a-secure-gitlab-ci-cd-pipeline-with-sast-tools-gitleaks-hadolint-checkov-semgrep-8bd5501ec841) -- multi-tool pipeline staging pattern
-- [AI Code Review Architecture (ProjectDiscovery)](https://projectdiscovery.io/blog/ai-code-review-vs-neo) -- LLM combined with static analysis tools raises detection to 94%
-- [FastAPI Async Patterns](https://fastapi.tiangolo.com/async/) -- async subprocess handling in FastAPI context
-- [DefectDojo Integration with SAST Tools (Medium)](https://medium.com/@alirezamokhtari82/integrating-sast-tools-with-defectdojo-in-a-kubernetes-based-ci-cd-pipeline-fa7e1ca79213) -- centralized findings aggregation pattern
+- Codebase analysis: `src/scanner/` directory (all files read directly)
+- Existing architecture established in v1.0 through v1.0.1
+- Nuclei DAST decision documented in PROJECT.md key decisions (confirmed v2.0 research)
+- FastAPI dependency injection: established pattern in existing `auth.py`
+- SQLite for auth: consistent with project constraint (SQLite only, no external DB)

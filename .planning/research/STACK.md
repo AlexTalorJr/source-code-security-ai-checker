@@ -1,224 +1,177 @@
 # Technology Stack
 
-**Project:** aipix-security-scanner
-**Researched:** 2026-03-18
+**Project:** Security AI Scanner v1.0.2 -- Scanner UI, DAST & RBAC
+**Researched:** 2026-03-22
 
-## Recommended Stack
+## Existing Stack (NO CHANGES)
 
-### Core Runtime
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| Python | 3.12 | Runtime |
+| FastAPI | latest (via `fastapi[standard]`) | REST API + dashboard |
+| Jinja2 | >=3.1.6 | Server-rendered HTML templates |
+| SQLAlchemy | >=2.0 | ORM |
+| aiosqlite | latest | Async SQLite driver |
+| Alembic | latest | DB migrations |
+| Pydantic Settings | latest (via `pydantic-settings[yaml]`) | Config with YAML + env vars |
+| 12 scanner adapters | various | SAST/SCA via config-driven ScannerRegistry |
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| Python | 3.12.x | Orchestrator, API, reports | Most deployed production Python version in 2026. 3.13's free-threading and JIT are experimental and unnecessary here. 3.12-slim Docker image is the community standard base. | HIGH |
-| Docker + Compose | Latest stable | Full containerization | Single `docker-compose up` requirement per PROJECT.md. Compose v2 is the standard. | HIGH |
+## Recommended Stack Additions
 
-### Security Scanning Tools (Layer 1)
+### Auth & RBAC
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| Semgrep CE | 1.156.0+ | Static analysis (PHP, C#, limited C++) | Industry standard open-source SAST. 30+ languages, custom rule authoring, SARIF output. Fall 2025 release added 3x perf with multicore. Community Edition is free and sufficient for self-hosted use. | HIGH |
-| cppcheck | 2.19.0+ | C++ static analysis (Mediaserver) | Semgrep has limited C++ support (no dataflow analysis). cppcheck provides proper buffer overflow, memory leak, format string detection -- exactly what the Mediaserver needs. Open source, no license cost. | HIGH |
-| Gitleaks | 8.24.x+ | Secrets detection in code and git history | Proven, stable, widely adopted. Regex + entropy-based detection. `--no-git` mode for directory scanning, `--report-format sarif` for integration. | HIGH |
-| Trivy | 0.69.x+ | Container images, K8s manifests, CVE scanning | Swiss-army knife: scans Docker images, Kubernetes YAML, Helm charts, and filesystem for CVEs. SARIF output. Actively maintained by Aqua Security. Replaces the need for separate image and K8s scanners. | HIGH |
-| Checkov | 3.2.x+ | IaC scanning (Helm, docker-compose, K8s) | 2,500+ built-in policies for Kubernetes, Docker, Helm. Graph-based analysis catches resource relationship issues. Complements Trivy's CVE focus with configuration/misconfiguration focus. SARIF output. | HIGH |
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| PyJWT | >=2.12.1 | JWT token creation and verification | FastAPI official docs now recommend PyJWT over abandoned python-jose. Lightweight, actively maintained, focused API. HS256 is sufficient for single-instance local auth -- no RSA/ECDSA overhead needed. |
+| pwdlib[bcrypt] | >=0.3.0 | Password hashing | Replaces abandoned passlib (which breaks on Python 3.13+). FastAPI docs updated to pwdlib. bcrypt extra chosen over argon2 because bcrypt requires no extra system C libraries and is proven sufficient for admin-created accounts at this scale. |
 
-### AI Analysis (Layer 2)
+**Why NOT python-jose:** Abandoned (~3 years since last release). FastAPI docs officially switched to PyJWT.
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| anthropic (Python SDK) | 0.85.x+ | Claude API integration | Official SDK with async support, streaming, proper error handling. Required for claude-sonnet-4-6 semantic analysis. | HIGH |
-| Claude claude-sonnet-4-6 | API | AI-powered security analysis | Good balance of cost vs capability for code analysis. At ~$3/1M input tokens, fits the $5/scan budget. Handles business logic analysis (RTSP auth, IDOR, webhook validation) that static tools miss. | HIGH |
+**Why NOT passlib:** Deprecated, throws warnings on Python 3.12+. The `crypt` module it depends on was removed in Python 3.13. FastAPI docs switched to pwdlib.
 
-### Web Framework & API
+**Why NOT argon2 (via pwdlib[argon2]):** Argon2 is technically superior but requires the `argon2-cffi` C extension build. For a self-hosted Docker tool with admin-created accounts (no self-registration), bcrypt is more than sufficient and avoids build complexity.
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| FastAPI | 0.135.x+ | REST API + dashboard | Async-native, auto-generates OpenAPI docs, built-in request validation via Pydantic. Modern Python standard for APIs. SSE support added recently for live scan progress streaming. | HIGH |
-| Uvicorn | 0.42.x+ | ASGI server | Standard production server for FastAPI. Lightweight, fast, supports graceful shutdown. | HIGH |
-| Pydantic | 2.x (bundled) | Data validation | Comes with FastAPI. V2 is significantly faster than V1. Use for scan configs, API request/response models, report data models. | HIGH |
+### DAST -- Nuclei Integration
 
-### Report Generation (Layer 3)
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| Nuclei (CLI binary) | v3.5.x | DAST vulnerability scanner | Already decided in v2.0 research. CLI-friendly, template-based, ~30MB binary vs ZAP 500MB+. 8000+ community templates. JSONL output parses cleanly line-by-line. |
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| Jinja2 | 3.1.6 | HTML template engine | Mature, stable, well-documented. Used by Flask, Ansible, and most Python templating. Perfect for HTML report templates with code diffs. | HIGH |
-| WeasyPrint | 68.1+ | HTML-to-PDF conversion | Renders HTML/CSS to PDF. No headless browser needed (unlike Playwright/Puppeteer). Smaller Docker footprint. CSS @page support for formal reports with headers/footers. Security fix in 68.1 -- use this version or later. | MEDIUM |
+**No Python wrapper library needed.** Nuclei is invoked via `asyncio.create_subprocess_exec()` -- the exact same pattern used by all 12 existing adapters via the `ScannerAdapter._execute()` method. Do NOT add PyNuclei (unofficial, poorly maintained wrapper that adds indirection with no value).
 
-### Database
+**Docker integration:** Download pre-built Nuclei binary from GitHub releases in Dockerfile. Do NOT use `go install` -- avoids adding Go toolchain to the image.
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| SQLite | 3.x (system) | Scan history storage | Per PROJECT.md constraint: single-file DB, zero config, easy backup/transfer. Sufficient for scan history workload (writes are infrequent, reads are dashboard queries). | HIGH |
-| SQLAlchemy | 2.0.x+ | ORM / query builder | Type-safe query building, migration support via Alembic, async support via aiosqlite. Prevents raw SQL injection in dashboard queries. | HIGH |
-| aiosqlite | 0.20.x+ | Async SQLite driver | Required for non-blocking SQLite access in async FastAPI. SQLAlchemy 2.0 supports `sqlite+aiosqlite:///` connection string natively. | HIGH |
-| Alembic | 1.x+ | Database migrations | Schema evolution without manual SQL. Essential for upgrading deployed scanners without data loss. | HIGH |
+**Key CLI flags for the adapter:**
+- `-jsonl` -- machine-readable output, one JSON object per finding per line
+- `-silent` -- suppress banner/progress noise
+- `-severity` -- filter by severity level
+- `-tags` -- filter templates by category
+- `-t` -- specify template paths (custom or built-in)
+- `-u` / `-target` -- single target URL
 
-### Notifications
+### Scanner Configuration UI
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| httpx | 0.27.x+ | HTTP client (Slack webhooks, API calls) | Async-native HTTP client. Better than requests for async FastAPI context. Used for Slack webhook POSTs and Bitbucket API calls. | HIGH |
-| aiosmtplib | 3.x+ | Async email sending | Async SMTP client for email notifications. Lightweight, no heavy dependencies. | MEDIUM |
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| CodeMirror 5 (CDN) | 5.65.x | YAML config editor in browser | Server-rendered Jinja2 app has no build step. CodeMirror 5 loads from CDN (`cdnjs.cloudflare.com`), has native YAML mode, and works with a plain `<textarea>`. CodeMirror 6 requires a bundler -- over-engineering for this stack. |
 
-### Testing & Quality
+**No npm/webpack/build step.** The existing dashboard is pure Jinja2 templates + CDN assets. Adding a JavaScript build pipeline for one editor widget is not justified. CodeMirror 5 via CDN keeps the stack consistent.
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| pytest | 8.x+ | Test framework | Standard Python test framework. Rich plugin ecosystem. | HIGH |
-| pytest-asyncio | 0.24.x+ | Async test support | Required for testing FastAPI async endpoints and async scan orchestration. | HIGH |
-| httpx (TestClient) | -- | API integration tests | FastAPI recommends httpx for async test client. | HIGH |
-| ruff | 0.9.x+ | Linter + formatter | Replaces flake8 + black + isort. 10-100x faster (Rust-based). Single tool for all Python code quality. | HIGH |
-| mypy | 1.x+ | Type checking | Catches type errors before runtime. Essential for a security tool where correctness matters. | MEDIUM |
+**No frontend framework needed.** Scanner config UI (toggle switches, settings forms, profile selector) is standard HTML forms rendered by Jinja2. Alpine.js or htmx would add dependency for minimal gain -- vanilla JS with `fetch()` for AJAX updates is sufficient for the 4-5 interactive elements needed.
 
-### Configuration & CLI
+### Database Schema Additions
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| PyYAML | 6.x | Config file parsing | `config.yml` for scanner settings, thresholds, notification toggles. YAML is human-readable for ops teams. | HIGH |
-| python-dotenv | 1.x | Environment variable loading | `.env` file support for local development. Secrets stay in env vars per PROJECT.md constraint. | HIGH |
-| typer | 0.15.x+ | CLI interface | Modern CLI framework built on Click. Auto-generates help, type-safe args. For `scanner scan --repo-url ...` style commands. | MEDIUM |
+No new dependencies needed. New tables use the existing SQLAlchemy + Alembic + aiosqlite stack.
 
-### Data Exchange Format
-
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| SARIF 2.1.0 | -- | Standardized scan output | Industry standard for static analysis results. Semgrep, Trivy, Checkov, and Gitleaks all support SARIF output. Use as the internal interchange format between Layer 1 tools and the aggregator. Enables future integration with GitHub/GitLab/Bitbucket code scanning. | HIGH |
+| Table | Purpose | Key Columns |
+|-------|---------|-------------|
+| `users` | Auth accounts | id, username, password_hash, role, created_at, is_active |
+| `api_tokens` | Bearer tokens for CI/CD | id, user_id, token_hash, name, role, created_at, expires_at, last_used_at |
+| `scan_profiles` | Named scanner configurations | id, name, description, scanner_config (JSON blob), created_by, created_at |
 
 ## Alternatives Considered
 
 | Category | Recommended | Alternative | Why Not |
 |----------|-------------|-------------|---------|
-| Secrets detection | Gitleaks 8.x | Betterleaks 1.x | Betterleaks launched March 2026 by the Gitleaks creator. BPE tokenization is promising (98.6% vs 70.4% recall). However, it is brand new with no production track record. Gitleaks is battle-tested. **Revisit in 6 months** -- Betterleaks may become the better choice once it stabilizes. |
-| Secrets detection | Gitleaks 8.x | TruffleHog | TruffleHog is heavier, slower, more opinionated. Gitleaks is lighter and sufficient for the scan-time budget. |
-| Static analysis | Semgrep CE | SonarQube CE | SonarQube requires a running server (Java), is heavier to containerize, and Community Edition has limited language support. Semgrep CE is CLI-first, lighter, and supports custom rules more easily. |
-| Static analysis | Semgrep CE | CodeQL | CodeQL requires compilation database setup, is GitHub-centric, and has restrictive licensing for non-GitHub use. Semgrep is more portable. |
-| IaC scanning | Checkov | tfsec / KICS | Checkov covers Helm + docker-compose + K8s in one tool. tfsec is Terraform-focused (less relevant here). KICS works but Checkov has broader policy coverage and better Python integration. |
-| Container scanning | Trivy | Grype + Syft | Trivy handles images + K8s + filesystem in one binary. Grype + Syft requires two tools for the same coverage. Trivy's SARIF output is more mature. |
-| PDF generation | WeasyPrint | Playwright/wkhtmltopdf | WeasyPrint is pure Python (no headless browser). Smaller Docker image. wkhtmltopdf is deprecated. Playwright adds ~400MB to the Docker image for browser binaries. |
-| PDF generation | WeasyPrint | ReportLab | ReportLab requires programmatic PDF construction (no HTML/CSS). WeasyPrint lets you write reports as HTML templates and convert to PDF -- much faster development. |
-| Web framework | FastAPI | Flask | Flask lacks native async, auto-generated OpenAPI docs, and request validation. FastAPI is the modern standard for Python APIs. |
-| HTTP client | httpx | aiohttp | httpx has a cleaner API, is recommended by FastAPI docs, and supports both sync and async. aiohttp is heavier. |
-| HTTP client | httpx | requests | requests is sync-only. In an async FastAPI app, blocking HTTP calls would stall the event loop. |
-| Python version | 3.12 | 3.13 | 3.13's free-threading (no-GIL) and JIT are experimental, behind flags, and not production-ready. 3.12 has the broadest library compatibility and is the most deployed version. |
-| Linter | ruff | flake8 + black + isort | ruff replaces all three in a single Rust-based tool. 10-100x faster. Fewer dev dependencies. Industry momentum is strongly toward ruff in 2025-2026. |
-| ORM | SQLAlchemy 2.0 | Tortoise ORM | SQLAlchemy has the largest ecosystem, best documentation, and Alembic for migrations. Tortoise is newer with smaller community. |
-| CLI | typer | argparse | typer provides auto-generated help, type validation, and cleaner code. argparse is verbose and error-prone for complex CLIs. |
+| JWT library | PyJWT | python-jose | Abandoned, FastAPI docs switched away |
+| Password hashing | pwdlib[bcrypt] | passlib | Deprecated, breaks on Python 3.13+ |
+| Password hashing | pwdlib[bcrypt] | bcrypt (direct) | pwdlib provides cleaner hash/verify API wrapping the same underlying bcrypt library |
+| DAST scanner | Nuclei CLI | ZAP | 500MB+ image, complex config, decided in v2.0 research |
+| DAST Python wrapper | subprocess (existing pattern) | PyNuclei | Unofficial, poorly maintained, unnecessary abstraction |
+| Config editor | CodeMirror 5 (CDN) | CodeMirror 6 | Requires bundler/build step, no CDN distribution |
+| Config editor | CodeMirror 5 (CDN) | Monaco Editor | 5MB+ JS payload, massive overkill for YAML editing |
+| Config editor | CodeMirror 5 (CDN) | Plain textarea | No syntax highlighting, poor UX for YAML |
+| Frontend | None (vanilla JS) | Alpine.js / htmx | Adds dependency for ~5 interactive elements |
+| Auth framework | Simple local JWT | FastAPI-Users | Full user management framework -- too heavy for 3 fixed roles with admin-only account creation |
+| Auth protocol | Local JWT | OAuth2/OIDC/LDAP | Explicitly out of scope per PROJECT.md: "simple local auth only for v1.0.2" |
+| Session store | SQLite api_tokens table | Redis | No need for external store. JWT is stateless; token revocation via DB check on api_tokens is sufficient at this scale |
 
-## What NOT to Use
+## What NOT to Add
 
-| Technology | Why Not |
-|------------|---------|
-| PostgreSQL/MySQL | PROJECT.md constraint: SQLite only for portability |
-| SonarQube | Too heavy for containerized pipeline; requires persistent server |
-| Bandit | Overlaps with Semgrep for Python. Semgrep has broader language coverage and better custom rules |
-| wkhtmltopdf | Deprecated, unmaintained, known security issues |
-| requests (as primary HTTP client) | Sync-only, blocks async event loop |
-| flake8/black/isort separately | ruff replaces all three, faster and simpler |
-| Celery | Overkill for scan job queuing. Use Python asyncio with background tasks. Scans are triggered individually, not at high volume. |
-| Redis | No need for external cache/queue. SQLite handles scan state. asyncio handles concurrency. |
-| Node.js/React for dashboard | Over-engineered for an internal tool dashboard. Use FastAPI + Jinja2 server-rendered HTML with HTMX for interactivity. |
-| HTMX | Worth considering for dashboard interactivity, but keep as optional enhancement. Start with server-rendered HTML and add if needed. |
+These were explicitly evaluated and rejected:
 
-## Docker Architecture
-
-```
-aipix-security-scanner/
-  Dockerfile           # Single multi-stage image
-  docker-compose.yml   # Single-container + volume mounts
-```
-
-**Base image:** `python:3.12-slim` (Debian Bookworm based, ~45MB compressed)
-
-**Tool installation strategy:**
-- Semgrep: `pip install semgrep` (Python package, installs OCaml binary)
-- cppcheck: `apt-get install cppcheck` (system package)
-- Gitleaks: Download Go binary from GitHub releases
-- Trivy: Download binary from GitHub releases (or use aquasec apt repo)
-- Checkov: `pip install checkov` (Python package)
-- WeasyPrint: `apt-get install` system deps (libpango, libcairo) + `pip install weasyprint`
-
-**Image size estimate:** ~1.5-2GB (Semgrep alone is ~500MB due to OCaml runtime)
-
-**Optimization:** Multi-stage build where tool binaries are compiled/downloaded in builder stage, then copied to slim runtime stage.
+1. **No frontend build pipeline** -- No npm, webpack, vite. Stays pure Jinja2 + CDN.
+2. **No PyNuclei** -- Subprocess pattern already proven across 12 adapters.
+3. **No OAuth/SSO/LDAP** -- Explicitly out of scope per PROJECT.md.
+4. **No user self-registration** -- Admin creates accounts, per PROJECT.md.
+5. **No FastAPI-Users** -- Overkill for 3 fixed roles (admin, viewer, scanner).
+6. **No Redis/session store** -- JWT tokens are stateless. DB-based token revocation is sufficient.
+7. **No argon2** -- bcrypt is sufficient for this use case. Avoids C extension complexity.
 
 ## Installation
 
-```bash
-# Core application
-pip install fastapi[standard] uvicorn[standard] pydantic
-
-# Security scanning tools (Python-based)
-pip install semgrep checkov
-
-# AI analysis
-pip install anthropic
-
-# Database
-pip install sqlalchemy[asyncio] aiosqlite alembic
-
-# Report generation
-pip install jinja2 weasyprint
-
-# HTTP client & notifications
-pip install httpx aiosmtplib
-
-# Configuration
-pip install pyyaml python-dotenv typer
-
-# Dev dependencies
-pip install -D pytest pytest-asyncio ruff mypy httpx
+```toml
+# pyproject.toml -- add to dependencies list
+"PyJWT>=2.12.1",
+"pwdlib[bcrypt]>=0.3.0",
 ```
 
 ```bash
-# System packages (Dockerfile apt-get)
-apt-get install -y cppcheck git
-
-# Binary tools (Dockerfile wget/curl)
-# Gitleaks - download from https://github.com/gitleaks/gitleaks/releases
-# Trivy - download from https://github.com/aquasecurity/trivy/releases
+# Install new Python deps
+pip install PyJWT>=2.12.1 "pwdlib[bcrypt]>=0.3.0"
 ```
 
-## Version Pinning Strategy
-
-Pin **major.minor** in requirements, allow patch updates:
-
-```
-# requirements.txt
-fastapi>=0.135,<1.0
-uvicorn>=0.42,<1.0
-semgrep>=1.156,<2.0
-anthropic>=0.85,<1.0
-sqlalchemy>=2.0,<3.0
-aiosqlite>=0.20,<1.0
-jinja2>=3.1,<4.0
-weasyprint>=68.1,<69.0
-checkov>=3.2,<4.0
-httpx>=0.27,<1.0
-pyyaml>=6.0,<7.0
-typer>=0.15,<1.0
-ruff>=0.9
-```
-
-Pin **exact versions** for security scanning binaries in Dockerfile (reproducible builds):
 ```dockerfile
-ARG GITLEAKS_VERSION=8.24.3
-ARG TRIVY_VERSION=0.69.3
-ARG CPPCHECK_VERSION=2.19
+# Dockerfile addition for Nuclei binary
+ARG NUCLEI_VERSION=3.5.0
+RUN curl -sSL "https://github.com/projectdiscovery/nuclei/releases/download/v${NUCLEI_VERSION}/nuclei_${NUCLEI_VERSION}_linux_amd64.zip" \
+    -o /tmp/nuclei.zip && \
+    unzip /tmp/nuclei.zip -d /usr/local/bin/ && \
+    rm /tmp/nuclei.zip && \
+    chmod +x /usr/local/bin/nuclei
+# Templates downloaded at first run or via: nuclei -update-templates
 ```
+
+```html
+<!-- CDN includes for CodeMirror 5 YAML editor (add to config editor Jinja2 template) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/yaml/yaml.min.js"></script>
+```
+
+## Integration Points with Existing Stack
+
+### Auth Migration Path
+
+Current auth: single shared `api_key` in config.yml, checked via `X-API-Key` header (API) and SHA-256 cookie (dashboard). New system replaces this:
+
+- **API routes:** Bearer JWT tokens with role claim. `require_api_key()` dependency in `src/scanner/api/auth.py` evolves to `require_token(roles=[...])` using FastAPI's `Depends()`.
+- **Dashboard:** Cookie-based JWT session. `require_dashboard_auth()` in `src/scanner/dashboard/auth.py` evolves to check JWT cookie with role verification.
+- **Backward compatibility:** Keep `X-API-Key` header support during migration, mapping it to admin role. Allows existing Jenkins integrations to keep working while migrating to tokens.
+
+### Nuclei Adapter Pattern
+
+Follows the exact same pattern as all 12 existing adapters:
+1. Create `NucleiAdapter(ScannerAdapter)` in `src/scanner/adapters/nuclei.py`
+2. Add config entry in `config.yml` under `scanners.nuclei` with `adapter_class: "scanner.adapters.nuclei.NucleiAdapter"`
+3. `ScannerRegistry` auto-discovers via importlib
+4. Runs via `self._execute()` with `-jsonl -silent` flags
+5. Parses JSONL output into `FindingSchema` list
+
+**Key difference from SAST adapters:** Nuclei targets a URL, not a file path. The adapter's `run()` method will use `target_url` (from scan request) instead of `target_path`. The orchestrator needs minor extension to pass target URL for DAST-type scans.
+
+### Scanner Config UI API
+
+The existing `/api/scanners` GET endpoint (in `src/scanner/api/scanners.py`) returns scanner list from `ScannerRegistry.all_scanners_info()`. New endpoints extend this:
+- `PUT /api/scanners/{name}` -- update scanner settings (enabled, timeout, extra_args)
+- `GET /api/scan-profiles` -- list saved profiles
+- `POST /api/scan-profiles` -- create profile
+- `PUT /api/scan-profiles/{id}` -- update profile
+- `DELETE /api/scan-profiles/{id}` -- delete profile
+
+Config changes persist to `config.yml` (runtime updates) or to `scan_profiles` table (named profiles). The existing `ScannerSettings` Pydantic model reloads from file.
+
+Dashboard pages render forms via Jinja2 templates in `src/scanner/dashboard/templates/`, submit via `fetch()` to API endpoints.
 
 ## Sources
 
-- [Semgrep releases](https://github.com/semgrep/semgrep/releases) -- v1.156.0 confirmed March 2026
-- [Semgrep CE Fall 2025 release](https://semgrep.dev/blog/2025/semgrep-community-edition-fall-release-2025/) -- multicore performance
-- [Gitleaks GitHub](https://github.com/gitleaks/gitleaks) -- v8.30.0 Nov 2025
-- [Betterleaks announcement](https://www.aikido.dev/blog/betterleaks-gitleaks-successor) -- March 2026, too new
-- [Trivy releases](https://github.com/aquasecurity/trivy/releases) -- v0.69.3 March 2026
-- [Checkov PyPI](https://pypi.org/project/checkov/) -- v3.2.509
-- [cppcheck releases](https://github.com/danmar/cppcheck/releases) -- v2.19.0 Jan 2026
-- [FastAPI releases](https://github.com/fastapi/fastapi/releases) -- v0.135.1 March 2026
-- [Anthropic Python SDK](https://pypi.org/project/anthropic/) -- v0.85.0 March 2026
-- [WeasyPrint changelog](https://doc.courtbouillon.org/weasyprint/stable/changelog.html) -- v68.1 Jan 2026
-- [Jinja2 PyPI](https://pypi.org/project/Jinja2/) -- v3.1.6 March 2025
-- [Uvicorn PyPI](https://pypi.org/project/uvicorn/) -- v0.42.0 March 2026
-- [Python Docker base images guide](https://pythonspeed.com/articles/base-image-python-docker-images/) -- recommends 3.12-slim
-- [SARIF standard](https://www.sonarsource.com/resources/library/sarif/) -- v2.1.0 industry standard
+- [FastAPI Official JWT Tutorial](https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/) -- PyJWT + pwdlib recommendation (HIGH confidence)
+- [FastAPI Discussion #11345: Abandon python-jose](https://github.com/fastapi/fastapi/discussions/11345) -- python-jose deprecation (HIGH confidence)
+- [FastAPI Discussion #11773: passlib replacement](https://github.com/fastapi/fastapi/discussions/11773) -- pwdlib adoption (HIGH confidence)
+- [pwdlib on PyPI](https://pypi.org/project/pwdlib/) -- v0.3.0, Oct 2025 (HIGH confidence)
+- [PyJWT on PyPI](https://pypi.org/project/PyJWT/) -- v2.12.1, Mar 2026 (HIGH confidence)
+- [Nuclei GitHub](https://github.com/projectdiscovery/nuclei) -- v3.5.x (HIGH confidence)
+- [Nuclei Running Docs](https://docs.projectdiscovery.io/opensource/nuclei/running) -- CLI flags reference (HIGH confidence)
+- [Nuclei Docker Hub](https://hub.docker.com/r/projectdiscovery/nuclei) -- Docker image info (HIGH confidence)
+- [CodeMirror 5 YAML mode](https://codemirror.net/5/mode/yaml/) -- CDN-compatible YAML editor (HIGH confidence)
+- [PROJECT.md constraints](../PROJECT.md) -- Scope boundaries and existing decisions (HIGH confidence)

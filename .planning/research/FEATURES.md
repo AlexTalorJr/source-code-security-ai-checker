@@ -1,129 +1,223 @@
-# Feature Landscape
+# Feature Research
 
-**Domain:** Automated security scanning pipeline for VSaaS platform (self-hosted, CI-integrated)
-**Researched:** 2026-03-18
+**Domain:** Security scanning platform -- Scanner Configuration UI, Nuclei DAST adapter, Token-based RBAC
+**Researched:** 2026-03-22
+**Confidence:** HIGH (features well-understood from existing codebase + industry patterns)
 
-## Table Stakes
+## Feature Landscape
 
-Features users expect. Missing = product feels incomplete or untrustworthy.
+### A. Scanner Configuration UI
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Multi-tool SAST scanning | Every serious scanner aggregates multiple engines. SonarQube, Checkmarx, and Snyk all cover SAST as baseline. Single-tool scanners are toys. | Medium | Semgrep + cppcheck covers PHP/C#/C++. Already planned. |
-| Secrets detection | GitHub Advanced Security ships push protection and secret scanning as a standalone product ($19/mo/committer). It is the minimum bar. Gitleaks is the standard OSS choice. | Low | Gitleaks already planned. Must scan git history, not just current files. |
-| Container and dependency CVE scanning | Snyk's core value prop is SCA/container scanning. Trivy is the OSS standard. Not having this means missing an entire vulnerability class. | Low | Trivy already planned. Covers Docker images + K8s manifests. |
-| IaC scanning | Checkov/tfsec are expected for any pipeline touching Kubernetes or Docker Compose. Wiz, Bridgecrew (now Palo Alto) established this as table stakes. | Low | Checkov already planned for Helm charts and docker-compose. |
-| Quality gate (pass/fail on severity) | SonarQube popularized quality gates. Every CI security tool now supports fail-on-severity. Without this, the scanner is advisory-only and gets ignored. | Low | Block on Critical/High. Must be configurable (threshold per severity level). |
-| CI/CD pipeline integration | Must run as a stage in existing CI. Jenkins, GitLab CI, GitHub Actions -- the tool must fit into the build, not replace it. | Low | Jenkins integration planned. Provide shell script / stage template. |
-| Severity classification | Findings must map to severity levels (Critical/High/Medium/Low/Info). Users expect CVSS or equivalent scoring. Without it, prioritization is impossible. | Low | Normalize severities across all tools to a unified scale. |
-| HTML/web report with findings detail | Every tool from SonarQube to Checkmarx provides a web view of findings with code context, file paths, and severity. PDF-only is not enough for developers. | Medium | Interactive HTML report with code snippets, line numbers, collapsible sections. Already planned. |
-| PDF formal report | Management and compliance teams expect downloadable PDF summaries. DefectDojo, Checkmarx, and Veracode all provide this. | Medium | WeasyPrint for PDF generation. Already planned. |
-| Scan history and trending | DefectDojo's core value is tracking findings over time. Users need to see "are we getting better or worse?" | Medium | SQLite-backed scan history. Show finding counts over time per release. |
-| Configurable notifications | Slack/email alerts on scan completion or findings above threshold. Every CI tool supports this. | Low | Already planned. Make channels configurable per severity level. |
-| API for triggering scans | REST API to kick off scans programmatically. Every enterprise scanner provides this. Without it, the tool is Jenkins-only. | Low | FastAPI already planned. POST /scan with repo URL or local path. |
-| Parallel tool execution | Running SAST tools sequentially wastes CI time. SonarQube and commercial scanners run analyses in parallel. Users expect scans under 10 minutes. | Medium | Layer 1 parallel execution already in architecture. Critical for the 10-min constraint. |
-| Finding deduplication (same tool, across runs) | The same vulnerability found in consecutive scans must be recognized as the same issue. DefectDojo's deduplication algorithm is the gold standard. Without this, every scan looks like a new disaster. | Medium | Hash findings by file + line + rule ID + snippet. Track across scan runs. |
+#### Table Stakes (Users Expect These)
 
-## Differentiators
+| Feature | Why Expected | Complexity | Dependencies |
+|---------|--------------|------------|--------------|
+| Enable/disable scanners via UI toggle | Every scanner management UI has this. Current config.yml-only approach requires restart and file editing. | LOW | Existing `ScannerRegistry`, `/api/scanners` endpoint already returns scanner list with enabled status |
+| Per-scanner settings display | Users need to see timeout, extra_args, languages for each scanner without reading YAML | LOW | Existing `ScannerToolConfig` model has all fields |
+| Config editor (raw YAML) | Power users expect to edit the full config directly; this is table stakes for self-hosted tools | MEDIUM | Must validate YAML before save, handle config reload without restart |
+| Scanner status/health indicators | Users must see which scanners loaded successfully vs load_error. Existing `status` field in registry covers this. | LOW | Existing `RegisteredScanner.status` property (enabled/disabled/load_error) |
+| Settings persistence across restarts | Changed settings must survive container restarts -- write back to config.yml or a separate overrides file | MEDIUM | Must decide: overwrite config.yml or use overlay pattern (e.g., config.local.yml) |
 
-Features that set the product apart. Not expected in every scanner, but high-value.
+#### Differentiators (Competitive Advantage)
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| AI-powered semantic analysis | No OSS scanner does this. Claude API reviewing aggregated findings for business logic flaws (RTSP auth bypass, tenant isolation, webhook validation) is genuinely novel. Checkmarx has "KICS AI" but it's marketing fluff. | High | Layer 2 in the architecture. Must be cost-controlled ($5/scan target). Send summarized findings + code context, not raw output. |
-| AI-generated fix suggestions | Snyk provides "fix PRs" for dependency upgrades. AI fix suggestions for SAST findings with actual code diffs are a step beyond what OSS tools offer. | High | Generate as part of AI analysis. Show before/after code in reports. Key value for developers who don't know how to fix security issues. |
-| Platform-specific custom rules | Generic Semgrep rules miss domain-specific issues. Custom rules for RTSP stream auth, VMS multi-tenant authorization, webhook signature verification, and MinIO access patterns catch what generic scanners cannot. | High | Write custom .yaml Semgrep rules. This is the moat -- rules encode institutional security knowledge specific to aipix. |
-| Cross-tool finding correlation | When Semgrep finds an auth bypass AND Gitleaks finds a hardcoded API key in the same component, that is worse than either alone. Correlating findings across tools is something only DefectDojo does well, and even then it's manual. | High | AI layer can do this -- feed findings from all tools, ask Claude to identify compound risks. |
-| Release-to-release comparison (delta report) | Show what's new, what's fixed, and what persists between releases. Checkmarx supports incremental scans and delta views. Most OSS pipelines don't. | Medium | Compare current scan against previous scan for same project. Requires stable finding fingerprints. |
-| Dual-mode scan input (path + URL) | Jenkins passes local paths; API users pass repo URLs. Supporting both makes the tool usable standalone and in CI. Most scanners support only one mode. | Low | Already planned. Clone repo if URL provided, use local path otherwise. |
-| Bilingual reports (Russian/English) | Specific to the aipix ecosystem serving Russian telecom operators. No generic scanner handles this. | Medium | Jinja2 templates with i18n. Report language as a scan parameter. |
-| Single docker-compose portability | Enterprise scanners require complex deployments. "Transfer to partner, run docker-compose up" is a genuine advantage for the aipix partner ecosystem. | Low | Already a constraint. Keep all state in mounted volumes. |
-| False positive suppression with memory | Mark a finding as false positive once, and it stays suppressed in future scans. DefectDojo does this well. Most OSS pipelines re-report everything every time. | Medium | Store suppression decisions in SQLite keyed by finding fingerprint. Carry forward across scans. |
-| SARIF output format | SARIF is the OASIS standard for static analysis interchange. GitHub Code Security, Azure DevOps, and many tools consume SARIF. Producing SARIF output makes the scanner composable with other platforms. | Low | Semgrep and Trivy already produce SARIF. Aggregate into unified SARIF for the full scan. |
+| Feature | Value Proposition | Complexity | Dependencies |
+|---------|-------------------|------------|--------------|
+| Scan profiles (named presets) | Save combinations of scanner settings as named profiles (e.g., "quick-sast", "full-audit", "php-only"). DefectDojo and SonarQube both offer scan configurations / quality profiles. Reduces repetitive config for teams with multiple projects. | MEDIUM | Needs new DB table or config section for profiles; scan trigger must accept profile_id |
+| Live config validation | Validate config changes before applying (test adapter_class import, check tool binary exists) | LOW | Existing `load_adapter_class()` can be reused for validation |
+| Config diff / change history | Show what changed between config versions. Valuable for audit trails in security tools. | HIGH | Needs versioned config storage -- defer to future milestone |
 
-## Anti-Features
+#### Anti-Features (Commonly Requested, Often Problematic)
 
-Features to explicitly NOT build. These add complexity without matching the project's constraints.
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Auto-discovery of new scanner binaries | "Just detect what's installed" | Unreliable in containers, security risk (arbitrary binary execution), breaks reproducibility | Explicit registration via config.yml with adapter_class -- already implemented |
+| Per-scan custom scanner selection via UI | "Let me pick scanners for each scan" | Adds complexity to scan trigger, conflicts with language auto-detection, profiles solve this better | Scan profiles that pre-select scanner combinations |
+| Drag-and-drop scanner ordering | "Control execution order" | Scanners run in parallel -- ordering is meaningless. Would mislead users about execution model. | Show scanners grouped by type (SAST/SCA/DAST) instead |
 
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| DAST (dynamic testing) | Out of scope for v1 per PROJECT.md. DAST requires running application, network access, and vastly different architecture. ZAP/Burp integration would double complexity. | Focus on SAST + SCA + IaC + secrets. DAST is a separate tool/project. |
-| SaaS-hosted scanner | Violates the self-hosted constraint. The entire value prop is portability and no external dependencies. | Keep everything in Docker containers. No phone-home, no cloud dependency. |
-| Real-time code monitoring / IDE integration | File watchers, LSP servers, and IDE plugins are a separate product category. The scanner is batch-oriented (scan-on-demand and CI-triggered). | Provide clear CLI invocation so developers can run locally if they want, but don't build IDE plugins. |
-| User management / RBAC | SQLite + API key auth is appropriate for an internal tool. Building user accounts, roles, and permissions is enterprise scanner territory (SonarQube has this) and adds massive complexity. | Single API key in environment variable. If multi-user needed later, put a reverse proxy with SSO in front. |
-| Vulnerability database / CVE tracking | Trivy already pulls CVE databases. Building and maintaining your own CVE database is a full-time job (see NVD, OSV). | Rely on Trivy's vulnerability DB updates. Don't reinvent this. |
-| Jira / issue tracker integration | DefectDojo's bi-directional Jira sync is complex and brittle. For v1, creating Jira tickets manually from report links is sufficient. | Export findings as structured data (JSON/SARIF). Let users integrate downstream. |
-| Compliance framework mapping (PCI-DSS, SOC2) | Mapping findings to compliance controls requires deep domain expertise and ongoing maintenance. DefectDojo and Checkmarx charge enterprise prices for this. | Tag findings with CWE IDs where available. Compliance mapping is a v2+ concern. |
-| Auto-remediation / auto-fix PRs | Snyk's auto-fix PRs work for dependency upgrades (bump version). Auto-fixing code vulnerabilities is unreliable and dangerous. AI suggestions in reports are safer. | Provide fix suggestions in reports. Never auto-commit changes. |
-| Windows host support | Linux containers only per PROJECT.md. Docker Desktop on Windows is not targeted. | Document that Windows users should use WSL2. |
-| Mobile app scanning (Flutter/Dart) | Deferred per PROJECT.md. Flutter analysis tooling is immature for security. | Focus on server-side (PHP, C++, C#, K8s). Revisit when Semgrep Dart support matures. |
-| PostgreSQL/MySQL support | SQLite is the right choice for portability. External DB adds deployment complexity that contradicts the single-compose goal. | SQLite with WAL mode for concurrent reads. Backup is just copying a file. |
+---
+
+### B. Nuclei DAST Adapter
+
+#### Table Stakes (Users Expect These)
+
+| Feature | Why Expected | Complexity | Dependencies |
+|---------|--------------|------------|--------------|
+| NucleiAdapter implementing ScannerAdapter | Must follow existing adapter pattern (tool_name, run(), _version_command()) for registry compatibility | MEDIUM | Existing `ScannerAdapter` base class, `ScannerRegistry` |
+| Target URL parameter for DAST scans | DAST scans target live URLs, not file paths. `run()` currently takes `target_path` -- Nuclei needs a URL. | MEDIUM | Requires extending scan trigger to accept `target_url` alongside `target_path`, or overloading `target_path` for DAST |
+| Template tag selection | Nuclei has 12,000+ templates. Users must be able to filter by tags (cve, exposure, misconfiguration, etc.) via `extra_args` | LOW | Map to Nuclei CLI flags: `-tags cve,exposure`. Fits existing `extra_args` pattern |
+| JSON output parsing | Nuclei outputs JSON/JSONL. Adapter must parse into `FindingSchema` with severity mapping. | MEDIUM | Nuclei severities (info/low/medium/high/critical) map directly to existing `Severity` enum |
+| Timeout handling | Nuclei scans can run long against live targets. Must respect `timeout` config. | LOW | Existing `_execute()` with `asyncio.wait_for` handles this |
+| Nuclei binary in Docker image | Tool must be available in the container | LOW | Nuclei is a single Go binary (~30MB). Add to Dockerfile. |
+
+#### Differentiators (Competitive Advantage)
+
+| Feature | Value Proposition | Complexity | Dependencies |
+|---------|-------------------|------------|--------------|
+| Custom Nuclei template directory | Allow users to mount their own templates alongside official ones. Security teams write custom checks. | LOW | Nuclei supports `-t /path/to/custom-templates` via extra_args |
+| DAST-aware scan trigger | API/dashboard support `target_url` field so DAST scans are first-class citizens, not a hack on `target_path` | MEDIUM | New `target_url` field on ScanRequest and ScanResult model; dashboard form update |
+| Template severity filtering | Only run templates matching minimum severity (e.g., skip info-level templates for speed) | LOW | Nuclei `-severity high,critical` flag via extra_args or dedicated config field |
+
+#### Anti-Features (Commonly Requested, Often Problematic)
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Full DAST target management (target inventory, scheduling) | "Manage all our DAST targets" | Massive scope creep -- turns scanner into asset management tool. Out of scope per PROJECT.md. | Single target_url per scan; external scheduling via CI/CD or cron |
+| Authenticated DAST scanning (login sequences, session tokens) | "Scan behind login" | Requires complex browser automation, credential management, state handling. Nuclei supports it but setup is non-trivial. | Defer to future milestone; document Nuclei's `-header` flag for simple auth headers |
+| DAST-specific report sections | "Separate DAST report format" | Findings already normalize to FindingSchema. Separate reports fragment the user experience. | Tag findings with `tool: nuclei` -- existing report handles it. Add DAST tag filter to dashboard. |
+| Real-time crawling / spider integration | "Automatically discover all endpoints" | Massively increases scan time, false positives, and scope. Separate concern. | User provides target URLs explicitly; Nuclei handles the rest |
+
+---
+
+### C. Token-Based RBAC
+
+#### Table Stakes (Users Expect These)
+
+| Feature | Why Expected | Complexity | Dependencies |
+|---------|--------------|------------|--------------|
+| Multiple API tokens (not single shared key) | Current single `api_key` is a security anti-pattern for multi-user/multi-pipeline setups. Each CI pipeline and user needs its own token. | MEDIUM | New `api_tokens` DB table; replace `require_api_key` dependency |
+| Three roles: admin, viewer, scanner | Minimum viable RBAC. Admin manages config/users, viewer sees results, scanner triggers scans. Matches PROJECT.md spec. | MEDIUM | New `users` and `tokens` tables; role field on each |
+| Dashboard login with user accounts | Replace current single-API-key login with username/password per user | MEDIUM | Replace `dashboard/auth.py` hashing approach; add user management |
+| API endpoint authorization by role | Scanner role can POST /scans but not change config. Viewer can GET but not POST. Admin can do everything. | MEDIUM | FastAPI dependency injection -- extend `require_api_key` to `require_role(min_role)` |
+| Token generation and revocation | Admin must create tokens for CI pipelines, revoke compromised tokens | LOW | CRUD endpoints: POST/DELETE /api/tokens; admin-only |
+| Password hashing (bcrypt/argon2) | Plaintext or SHA-256 passwords are unacceptable for a security product | LOW | Use `passlib` with bcrypt; replace current SHA-256 session tokens |
+
+#### Differentiators (Competitive Advantage)
+
+| Feature | Value Proposition | Complexity | Dependencies |
+|---------|-------------------|------------|--------------|
+| Token scoping (per-project or per-scanner) | Tokens that only work for specific scanners or scan targets. Fine-grained CI/CD security. | HIGH | Needs scope field on tokens, evaluation at scan trigger time -- defer |
+| Admin UI for user/token management | Manage users and tokens from the dashboard, not just CLI/API | MEDIUM | New dashboard pages; depends on admin role being implemented first |
+| Audit log of auth events | Log login attempts, token usage, role changes. Critical for security products. | MEDIUM | New `audit_log` table; middleware to capture events |
+| API token expiration dates | Tokens that auto-expire force rotation. Good security hygiene. | LOW | `expires_at` field on tokens table; check at auth time |
+
+#### Anti-Features (Commonly Requested, Often Problematic)
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| OAuth/SSO/LDAP integration | "Enterprise needs SSO" | Massive complexity (redirect flows, token exchange, provider config). Out of scope per PROJECT.md. SQLite constraint makes this impractical. | Simple local auth. Document how to put a reverse proxy with SSO in front. |
+| User self-registration | "Let users sign up" | Security scanning platform should not have open registration. Admin controls access. | Admin creates accounts; PROJECT.md explicitly excludes self-registration |
+| Complex permission matrices (per-resource ACLs) | "Fine-grained permissions on every object" | Overkill for a self-hosted tool with 3 roles. Adds complexity with little value. | Three fixed roles cover all use cases. Add scope later if needed. |
+| Session-based API auth (cookies for API) | "Why not just use cookies for API too?" | Breaks CI/CD integration, stateful, harder to manage programmatically | Bearer tokens for API, cookies for dashboard -- standard separation |
+
+---
 
 ## Feature Dependencies
 
 ```
-Severity Classification --> Quality Gate (gate needs severity levels)
-Severity Classification --> Notifications (alert thresholds need severity)
-Multi-tool SAST Scanning --> Finding Deduplication (dedup needs normalized findings)
-Multi-tool SAST Scanning --> AI Semantic Analysis (AI reviews aggregated findings)
-Finding Deduplication --> Release-to-Release Comparison (delta needs stable fingerprints)
-Finding Deduplication --> False Positive Suppression (suppression needs stable fingerprints)
-Scan History --> Release-to-Release Comparison (delta needs historical data)
-AI Semantic Analysis --> AI Fix Suggestions (fixes come from the same AI pass)
-AI Semantic Analysis --> Cross-tool Finding Correlation (correlation is an AI task)
-HTML/Web Report --> PDF Report (PDF is rendered from same data, different template)
-API for Triggering Scans --> Dual-mode Scan Input (API accepts URL; Jenkins passes path)
-Parallel Tool Execution --> CI Time Constraint (parallelism is how you hit 10 min)
+[RBAC: Users & Tokens table]
+    |-- requires --> [Password hashing]
+    |-- requires --> [DB migration (add users, tokens tables)]
+    |-- enables --> [Dashboard login with user accounts]
+    |-- enables --> [API endpoint authorization by role]
+    |-- enables --> [Admin UI for user/token management]
+
+[Scanner Config UI]
+    |-- requires --> [RBAC: admin role] (only admins should change scanner config)
+    |-- requires --> [Config persistence mechanism]
+    |-- enables --> [Scan profiles]
+    |-- uses ----> [Existing ScannerRegistry + /api/scanners]
+
+[Nuclei DAST Adapter]
+    |-- requires --> [Nuclei binary in Docker]
+    |-- requires --> [target_url field on scan model]
+    |-- follows --> [Existing ScannerAdapter pattern]
+    |-- independent of --> [Scanner Config UI] (can be config.yml only initially)
+    |-- independent of --> [RBAC] (works with existing api_key auth)
+
+[Scan Profiles]
+    |-- requires --> [Scanner Config UI]
+    |-- enhances --> [Nuclei DAST Adapter] (DAST profile with target_url preset)
 ```
 
-## MVP Recommendation
+### Dependency Notes
 
-**Prioritize (Phase 1 -- working pipeline):**
+- **Scanner Config UI requires RBAC admin role:** Without role-based access, any authenticated user can change scanner configuration -- unacceptable for a security tool. RBAC must come first or in parallel.
+- **Nuclei adapter is independent:** Can be implemented with config.yml registration only, no UI dependency. Lowest coupling to other features.
+- **Scan profiles require Scanner Config UI:** Profiles are saved scanner configurations -- need the config management layer first.
+- **target_url field is a cross-cutting concern:** Both Nuclei adapter and scan trigger API need this. Small schema change but touches DB model, API schema, and dashboard form.
 
-1. **Multi-tool SAST scanning** with unified output -- Semgrep, cppcheck, Gitleaks, Trivy, Checkov running in parallel
-2. **Severity classification** -- normalize all tool outputs to Critical/High/Medium/Low/Info
-3. **Quality gate** -- pass/fail based on configurable severity thresholds
-4. **HTML interactive report** -- findings with code context, severity, tool source
-5. **Jenkins integration** -- run as a pipeline stage, local path input
-6. **Finding deduplication** within a single scan (cross-tool, same file+line+type)
+---
 
-**Prioritize (Phase 2 -- AI and reporting):**
+## MVP Definition
 
-7. **AI semantic analysis** -- Claude reviews findings for business logic issues
-8. **AI fix suggestions** -- code-level remediation guidance in reports
-9. **Platform-specific custom Semgrep rules** -- RTSP, VMS, webhook patterns
-10. **PDF formal report** -- management-ready output
-11. **Scan history** in SQLite -- track scans over time
+### Launch With (v1.0.2)
 
-**Prioritize (Phase 3 -- operational maturity):**
+- [ ] **RBAC: users table + 3 roles + password hashing** -- Foundation that all other features depend on for security
+- [ ] **RBAC: multiple API tokens per user** -- Replace single shared api_key; each CI pipeline gets its own token
+- [ ] **RBAC: endpoint authorization by role** -- Scanner role triggers scans, viewer reads, admin manages
+- [ ] **RBAC: dashboard login with user accounts** -- Replace current single-key login
+- [ ] **Scanner Config UI: enable/disable toggles + settings display** -- Core value of the feature
+- [ ] **Scanner Config UI: config persistence** -- Settings must survive restarts
+- [ ] **Nuclei DAST adapter** -- Register in config.yml, run against target URLs, parse JSON output
+- [ ] **target_url field on scan model** -- Enable DAST scans as first-class citizens
 
-12. **Release-to-release delta comparison** -- what changed since last scan
-13. **False positive suppression** -- mark and remember across scans
-14. **Notifications** -- Slack and email on findings
-15. **REST API** for standalone scans (URL input mode)
-16. **Cross-tool finding correlation** via AI
+### Add After Validation (v1.0.x)
 
-**Defer:**
+- [ ] **Scan profiles** -- Once config UI is stable and users request preset combinations
+- [ ] **Admin UI for user/token management** -- Once RBAC is proven via API, add dashboard management
+- [ ] **Token expiration dates** -- Once token management is working
+- [ ] **Audit log** -- Once auth events are well-defined
+- [ ] **Config editor (raw YAML)** -- Once config persistence pattern is established
 
-- **Bilingual reports**: Low priority until partner transfer is imminent. Add i18n template support early but translate later.
-- **SARIF output**: Nice to have. Most value if integrating with GitHub/Azure later.
-- **Compliance mapping**: v2+ territory. Tag with CWE IDs now, map to frameworks later.
+### Future Consideration (v2+)
 
-**Rationale:** The dependency chain drives ordering. You cannot build AI analysis without normalized multi-tool output. You cannot build delta reports without scan history and deduplication. You cannot suppress false positives without stable finding fingerprints. Phase 1 builds the foundation that everything else depends on.
+- [ ] **Config diff / change history** -- Needs versioned storage, low priority until enterprise use
+- [ ] **Token scoping (per-project)** -- Complex, defer until multi-project support exists
+- [ ] **Authenticated DAST scanning** -- Complex Nuclei setup, document manual approach first
+
+---
+
+## Feature Prioritization Matrix
+
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| RBAC: users + roles + tokens | HIGH | MEDIUM | P1 |
+| RBAC: endpoint authorization | HIGH | MEDIUM | P1 |
+| RBAC: dashboard user login | HIGH | LOW | P1 |
+| Nuclei DAST adapter | HIGH | MEDIUM | P1 |
+| target_url field on scan model | HIGH | LOW | P1 |
+| Scanner Config UI: toggles + display | MEDIUM | LOW | P1 |
+| Scanner Config UI: persistence | MEDIUM | MEDIUM | P1 |
+| Password hashing (bcrypt) | HIGH | LOW | P1 |
+| Token generation/revocation API | HIGH | LOW | P1 |
+| Scan profiles | MEDIUM | MEDIUM | P2 |
+| Admin UI for user/token management | MEDIUM | MEDIUM | P2 |
+| Token expiration | MEDIUM | LOW | P2 |
+| Live config validation | LOW | LOW | P2 |
+| Audit log | MEDIUM | MEDIUM | P2 |
+| Config editor (raw YAML) | LOW | MEDIUM | P3 |
+| Custom Nuclei template directory | LOW | LOW | P3 |
+
+**Priority key:**
+- P1: Must have for v1.0.2 launch
+- P2: Should have, add when possible
+- P3: Nice to have, future consideration
+
+---
+
+## Competitor Feature Analysis
+
+| Feature | DefectDojo | SonarQube | Our Approach |
+|---------|------------|-----------|--------------|
+| Scanner config | Tool Configuration pages per scanner type, separate scan configs per API/UI | Quality Profiles with inheritance, per-project assignment | Dashboard page with enable/disable toggles + per-scanner settings form, backed by config.yml overlay |
+| DAST integration | Imports DAST results (Nuclei, ZAP, Burp) as findings | No native DAST -- relies on plugins | Native Nuclei adapter in scanner registry, first-class target_url support |
+| Auth model | Full user management, LDAP/SSO, API tokens per user | Built-in users + LDAP/SAML, project-level permissions | Simple local auth: username/password + API tokens, 3 fixed roles (admin/viewer/scanner) |
+| Scan profiles | Product-level scan configurations | Quality Gates + Quality Profiles | Named presets selecting scanner combinations + settings |
+| Config persistence | PostgreSQL-backed | PostgreSQL-backed | config.yml overlay file (config.local.yml) or SQLite-backed settings table |
+
+---
 
 ## Sources
 
-- [Snyk vs SonarQube 2026 Comparison](https://konvu.com/compare/snyk-vs-sonarqube)
-- [SonarQube vs Checkmarx Comparison](https://www.aikido.dev/blog/sonarqube-vs-checkmarx)
-- [Checkmarx vs Snyk vs SonarQube Comparison](https://sourceforge.net/software/compare/Checkmarx-vs-Snyk-vs-SonarQube/)
-- [DefectDojo Platform Overview](https://defectdojo.com/platform)
-- [DefectDojo Auto-Triage and Deduplication](https://defectdojo.com/blog/auto-triage-and-deduplicate-security-findings-to-reduce-alert-fatigue)
-- [GitHub Advanced Security Restructuring](https://github.blog/changelog/2025-03-04-introducing-github-secret-protection-and-github-code-security/)
-- [GitHub Security Features Docs](https://docs.github.com/en/code-security/getting-started/github-security-features)
-- [SARIF Standard Overview - Sonar](https://www.sonarsource.com/resources/library/sarif/)
-- [Semgrep CI Integration](https://semgrep.dev/docs/semgrep-ci/overview/)
-- [Semgrep Policy Management API](https://semgrep.dev/blog/2025/automating-security-workflows-with-the-semgrep-policy-management-api/)
-- [Checkmarx Incremental Scanning](https://docs.checkmarx.com/en/34965-68557-scanning-projects.html)
-- [CI/CD Security Scanning Best Practices - Wiz](https://www.wiz.io/academy/application-security/ci-cd-security-scanning)
-- [DevSecOps CI/CD Security Gate](https://infosecwriteups.com/devsecops-phase-3-build-stage-ci-cd-security-gate-with-sast-sca-a61d988d32d7)
-- [False Positives in Vulnerability Scanning - Anchore](https://anchore.com/blog/false-positives-and-false-negatives-in-vulnerability-scanning/)
+- [ProjectDiscovery Nuclei documentation](https://docs.projectdiscovery.io/opensource/nuclei/overview)
+- [Nuclei GitHub repository](https://github.com/projectdiscovery/nuclei)
+- [DefectDojo SonarQube API Import documentation](https://docs.defectdojo.com/en/connecting_your_tools/parsers/api/sonarqube/)
+- [Rapid7 InsightAppSec scan configuration](https://docs.rapid7.com/insightappsec/scan-configuration/)
+- [FastAPI RBAC with JWT - Logto](https://docs.logto.io/api-protection/python/fastapi)
+- [FastAPI RBAC implementation tutorial - Permit.io](https://www.permit.io/blog/fastapi-rbac-full-implementation-tutorial)
+- [Nuclei vs Nikto DAST comparison](https://appsecsanta.com/nuclei-vs-nikto)
+- Existing codebase: `scanner/adapters/registry.py`, `scanner/api/auth.py`, `scanner/dashboard/auth.py`, `scanner/config.py`
+
+---
+*Feature research for: Security scanning platform v1.0.2 -- Scanner Configuration UI, Nuclei DAST, RBAC*
+*Researched: 2026-03-22*
