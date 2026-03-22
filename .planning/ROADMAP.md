@@ -32,6 +32,7 @@
 - [ ] **Phase 8: Plugin Registry Architecture** - Config-driven scanner registration replacing hard-coded adapter list
 - [ ] **Phase 9: Tier-1 Scanner Adapters** - gosec, Bandit, Brakeman, and cargo-audit adapters
 - [x] **Phase 10: Infrastructure and Documentation** - Docker image with new binaries and bilingual docs update (completed 2026-03-22)
+- [ ] **Phase 11: Cargo-Audit Fix and Documentation Corrections** - Fix cargo-audit key mismatch, Makefile wording, admin-guide signatures
 
 ## Phase Details
 
@@ -77,6 +78,18 @@ Plans:
 - [ ] 10-01-PLAN.md — Dockerfile scanner installs, Makefile verify-scanners, smoke test samples
 - [ ] 10-02-PLAN.md — English documentation update (8 docs + README)
 - [ ] 10-03-PLAN.md — Translated documentation update (32 docs + 4 READMEs)
+
+### Phase 11: Cargo-Audit Fix and Documentation Corrections
+**Goal**: Rust project scans complete without errors and documentation examples match actual API signatures
+**Depends on**: Phase 10 (gap closure for audit findings)
+**Requirements**: SCAN-04
+**Gap Closure**: Closes gaps from v1.0.1 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. Scanning a Rust project with cargo-audit completes without KeyError — tool_name matches config key
+  2. Integration test verifies orchestrator can look up cargo-audit settings from config
+  3. admin-guide.md "Adding a New Scanner" example has correct `run()` signature in all 5 languages
+  4. Makefile verify-scanners describes "12 scanners (11 binaries)"
+Plans: 0 plans (pending /gsd:plan-phase 11)
 
 ## Progress
 
