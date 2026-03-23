@@ -76,11 +76,12 @@ Plans:
   1. User can trigger a DAST scan by providing a target_url via API and Nuclei executes against that URL
   2. Nuclei findings appear in HTML and PDF reports alongside SAST findings with severity and template info
   3. Nuclei binary is installed in the Docker image and works on both x86_64 and ARM64
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 13-01: TBD
-- [ ] 13-02: TBD
+- [ ] 13-01-PLAN.md — NucleiAdapter with JSONL parsing, severity mapping, and unit tests
+- [ ] 13-02-PLAN.md — Dockerfile Nuclei installation and config.yml.example entry
+- [ ] 13-03-PLAN.md — API target_url field, orchestrator DAST routing, DB migration, scan queue integration
 
 ### Phase 14: Scanner Configuration UI
 **Goal**: Admins can manage scanner settings from the dashboard without editing config files manually
@@ -128,7 +129,7 @@ Phases 13 and 14 can execute in parallel after Phase 12 completes.
 | 9. Tier-1 Scanner Adapters | v1.0.1 | 2/2 | Complete | 2026-03-21 |
 | 10. Infrastructure and Documentation | v1.0.1 | 3/3 | Complete | 2026-03-22 |
 | 11. Cargo-Audit Fix and Doc Corrections | v1.0.1 | 1/1 | Complete | 2026-03-22 |
-| 12. RBAC Foundation | 5/5 | Complete    | 2026-03-23 | - |
-| 13. Nuclei DAST Adapter | v1.0.2 | 0/? | Not started | - |
+| 12. RBAC Foundation | v1.0.2 | 5/5 | Complete | 2026-03-23 |
+| 13. Nuclei DAST Adapter | v1.0.2 | 0/3 | Planning | - |
 | 14. Scanner Configuration UI | v1.0.2 | 0/? | Not started | - |
 | 15. Scan Profiles and Documentation | v1.0.2 | 0/? | Not started | - |
