@@ -57,7 +57,7 @@ class TestScanModelColumns:
         """ScanResult model has all expected columns."""
         columns = {c.name for c in ScanResult.__table__.columns}
         expected = {
-            "id", "target_path", "repo_url", "branch", "commit_hash",
+            "id", "target_path", "target_url", "repo_url", "branch", "commit_hash",
             "skip_ai",
             "status", "started_at", "completed_at", "duration_seconds",
             "total_findings", "critical_count", "high_count",
