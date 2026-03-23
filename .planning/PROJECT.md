@@ -44,10 +44,12 @@ Every code change is automatically scanned for security vulnerabilities before d
 - ✓ RBAC — user accounts, API tokens, role-based access (admin, scanner, viewer) — v1.0.2 Phase 12
 - ✓ DAST — Nuclei adapter for template-based dynamic scanning — v1.0.2 Phase 13
 - ✓ Scanner configuration UI — enable/disable scanners, per-scanner settings, YAML config editor — v1.0.2 Phase 14
+- ✓ Scan profiles — named scanner configurations selectable via API and dashboard — v1.0.2 Phase 15
+- ✓ Bilingual documentation (EN, RU, FR, ES, IT) updated for all v1.0.2 features — v1.0.2 Phase 15
 
 ### Active
 
-- [ ] Scan profiles and documentation — v1.0.2 Phase 15
+(No active requirements — v1.0.2 milestone complete)
 
 ## Current Milestone: v1.0.2 Scanner UI, DAST & RBAC
 
@@ -76,6 +78,7 @@ Every code change is automatically scanned for security vulnerabilities before d
 **v1.0 shipped** — 6 phases, 21 plans, 150 commits, 5400+ LOC Python, 320 tests passing.
 **v2.0 shipped** — 1 phase, 2 plans. Research-only milestone producing scanner ecosystem report.
 **v1.0.1 shipped** — 4 phases, 8 plans, 28 commits. Plugin registry + 4 Tier-1 scanners + Docker + docs. 402 tests passing, ~6000 LOC Python.
+**v1.0.2 shipped** — 4 phases, 13 plans. RBAC, Nuclei DAST, scanner config UI, scan profiles, bilingual docs. 487+ tests passing.
 
 **Scanner tech stack:**
 - Python 3.12 (orchestrator, FastAPI, reports)
@@ -120,4 +123,4 @@ Every code change is automatically scanned for security vulnerabilities before d
 | Underscore convention for config keys | tool_name uses underscores to match config.yml keys | ✓ Confirmed v1.0.1 |
 
 ---
-*Last updated: 2026-03-23 — Phase 14 Scanner Configuration UI complete*
+*Last updated: 2026-03-23 — Phase 15 Scan Profiles and Documentation complete (v1.0.2 milestone complete)*
