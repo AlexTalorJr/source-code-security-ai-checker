@@ -5,9 +5,11 @@ services:
       - "${SCANNER_PORT:-8000}:8000"
     volumes:
       - scanner_data:/data
-      - ./config.yml:/app/config.yml:ro
+      - ./config.yml:/app/config.yml
       - /home:/home:ro  # Mount host /home for local path scanning
     environment:
+      - SCANNER_ADMIN_USER=${SCANNER_ADMIN_USER:-}
+      - SCANNER_ADMIN_PASSWORD=${SCANNER_ADMIN_PASSWORD:-}
       - SCANNER_DB_PATH=/data/scanner.db
       - SCANNER_API_KEY=${SCANNER_API_KEY:-}
       - SCANNER_CLAUDE_API_KEY=${SCANNER_CLAUDE_API_KEY:-}

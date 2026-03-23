@@ -78,10 +78,10 @@ RUN curl -sSL "https://github.com/projectdiscovery/nuclei/releases/download/v3.7
     rm /tmp/nuclei.zip
 
 # Bake Nuclei templates into image (runs as root, before USER switch)
-# Templates stored in /root/.local/nuclei-templates/ then copied for scanner user
+# nuclei v3.7.x stores templates in /root/nuclei-templates (not .local)
 RUN nuclei -update-templates && \
     mkdir -p /home/scanner/.local && \
-    cp -r /root/.local/nuclei-templates /home/scanner/.local/nuclei-templates
+    cp -r /root/nuclei-templates /home/scanner/.local/nuclei-templates
 
 # Non-root user for security
 RUN groupadd -r scanner && useradd -r -g scanner -d /app scanner
