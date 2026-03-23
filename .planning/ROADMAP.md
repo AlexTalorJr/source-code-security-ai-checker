@@ -130,6 +130,6 @@ Phases 13 and 14 can execute in parallel after Phase 12 completes.
 | 10. Infrastructure and Documentation | v1.0.1 | 3/3 | Complete | 2026-03-22 |
 | 11. Cargo-Audit Fix and Doc Corrections | v1.0.1 | 1/1 | Complete | 2026-03-22 |
 | 12. RBAC Foundation | v1.0.2 | 5/5 | Complete | 2026-03-23 |
-| 13. Nuclei DAST Adapter | 3/3 | Complete   | 2026-03-23 | - |
+| 13. Nuclei DAST Adapter | 3/3 | Complete    | 2026-03-23 | - |
 | 14. Scanner Configuration UI | v1.0.2 | 0/? | Not started | - |
 | 15. Scan Profiles and Documentation | v1.0.2 | 0/? | Not started | - |
