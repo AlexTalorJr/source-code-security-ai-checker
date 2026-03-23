@@ -64,6 +64,7 @@ class TestScanModelColumns:
             "medium_count", "low_count", "info_count", "gate_passed",
             "scanner_version", "tool_versions", "error_message",
             "ai_cost_usd",
+            "profile_name",
             "created_at",
         }
         assert expected == columns
