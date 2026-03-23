@@ -91,11 +91,11 @@ Plans:
   1. Admin can enable or disable individual scanners from the dashboard and changes persist across restarts
   2. Admin can edit per-scanner settings (timeout, extra args) from the dashboard and the next scan uses the updated values
   3. Admin can edit config.yml via a web-based YAML editor with syntax highlighting
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 14-01: TBD
-- [ ] 14-02: TBD
+- [ ] 14-01-PLAN.md -- Config API endpoints, test infrastructure, dashboard scanner route
+- [ ] 14-02-PLAN.md -- Scanner configuration page template (cards + YAML editor) and navbar
 
 ### Phase 15: Scan Profiles and Documentation
 **Goal**: Users can select predefined scan configurations and all v1.0.2 features are documented
@@ -131,5 +131,5 @@ Phases 13 and 14 can execute in parallel after Phase 12 completes.
 | 11. Cargo-Audit Fix and Doc Corrections | v1.0.1 | 1/1 | Complete | 2026-03-22 |
 | 12. RBAC Foundation | v1.0.2 | 5/5 | Complete | 2026-03-23 |
 | 13. Nuclei DAST Adapter | 3/3 | Complete    | 2026-03-23 | - |
-| 14. Scanner Configuration UI | v1.0.2 | 0/? | Not started | - |
+| 14. Scanner Configuration UI | v1.0.2 | 0/2 | Planned | - |
 | 15. Scan Profiles and Documentation | v1.0.2 | 0/? | Not started | - |
