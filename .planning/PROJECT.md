@@ -43,10 +43,11 @@ Every code change is automatically scanned for security vulnerabilities before d
 
 - ✓ RBAC — user accounts, API tokens, role-based access (admin, scanner, viewer) — v1.0.2 Phase 12
 - ✓ DAST — Nuclei adapter for template-based dynamic scanning — v1.0.2 Phase 13
+- ✓ Scanner configuration UI — enable/disable scanners, per-scanner settings, YAML config editor — v1.0.2 Phase 14
 
 ### Active
 
-- [ ] Scanner configuration UI — enable/disable scanners, per-scanner settings, config editor, scan profiles
+- [ ] Scan profiles and documentation — v1.0.2 Phase 15
 
 ## Current Milestone: v1.0.2 Scanner UI, DAST & RBAC
 
@@ -119,4 +120,4 @@ Every code change is automatically scanned for security vulnerabilities before d
 | Underscore convention for config keys | tool_name uses underscores to match config.yml keys | ✓ Confirmed v1.0.1 |
 
 ---
-*Last updated: 2026-03-23 — Phase 13 Nuclei DAST Adapter complete*
+*Last updated: 2026-03-23 — Phase 14 Scanner Configuration UI complete*
