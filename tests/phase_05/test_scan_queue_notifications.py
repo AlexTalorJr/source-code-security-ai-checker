@@ -35,7 +35,9 @@ async def test_worker_calls_notify_with_correct_arg_order(
     db_path = str(tmp_path / "test.db")
     monkeypatch.setenv("SCANNER_DB_PATH", db_path)
     monkeypatch.setenv("SCANNER_CONFIG_PATH", str(tmp_path / "nonexistent.yml"))
-    monkeypatch.setenv("SCANNER_API_KEY", "test-key-notify")
+    monkeypatch.setenv("SCANNER_ADMIN_USER", "testadmin")
+    monkeypatch.setenv("SCANNER_ADMIN_PASSWORD", "testpass123")
+    monkeypatch.setenv("SCANNER_SECRET_KEY", "test-secret-key-for-notify")
     monkeypatch.setenv("SCANNER_SLACK_WEBHOOK_URL", "https://hooks.slack.com/test")
 
     fake_result = ScanResultSchema(
@@ -108,7 +110,9 @@ async def test_worker_notification_failure_does_not_crash_worker(
     db_path = str(tmp_path / "test.db")
     monkeypatch.setenv("SCANNER_DB_PATH", db_path)
     monkeypatch.setenv("SCANNER_CONFIG_PATH", str(tmp_path / "nonexistent.yml"))
-    monkeypatch.setenv("SCANNER_API_KEY", "test-key-notify2")
+    monkeypatch.setenv("SCANNER_ADMIN_USER", "testadmin")
+    monkeypatch.setenv("SCANNER_ADMIN_PASSWORD", "testpass123")
+    monkeypatch.setenv("SCANNER_SECRET_KEY", "test-secret-key-for-notify2")
 
     fake_result = ScanResultSchema(
         id=1, status="completed", gate_passed=True,

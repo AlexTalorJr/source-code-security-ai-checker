@@ -1,6 +1,8 @@
 """Shared test fixtures for Phase 05: API, Dashboard, CI, and Notifications."""
 
+import hashlib
 import os
+import secrets as sec
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -20,11 +22,13 @@ from scanner.schemas.scan import ScanResultSchema
 
 @pytest.fixture
 def test_env(tmp_path, monkeypatch):
-    """Set up environment for test app with temporary DB and API key."""
+    """Set up environment for test app with temporary DB and admin bootstrap."""
     db_path = str(tmp_path / "test.db")
     monkeypatch.setenv("SCANNER_DB_PATH", db_path)
     monkeypatch.setenv("SCANNER_CONFIG_PATH", str(tmp_path / "nonexistent.yml"))
-    monkeypatch.setenv("SCANNER_API_KEY", "test-api-key-12345")
+    monkeypatch.setenv("SCANNER_ADMIN_USER", "testadmin")
+    monkeypatch.setenv("SCANNER_ADMIN_PASSWORD", "testpass123")
+    monkeypatch.setenv("SCANNER_SECRET_KEY", "test-secret-key-for-phase05")
     return db_path
 
 
@@ -39,16 +43,40 @@ async def _lifespan_client(app):
 
 @pytest.fixture
 async def auth_client(test_env):
-    """Create an async test client with active lifespan and API key configured."""
+    """Create an async test client with active lifespan and admin user bootstrapped."""
     app = create_app()
     async with _lifespan_client(app) as ac:
         yield ac
 
 
 @pytest.fixture
-def api_headers():
-    """Return headers with a valid API key."""
-    return {"X-API-Key": "test-api-key-12345"}
+async def api_headers(auth_client):
+    """Return headers with a valid Bearer token.
+
+    Creates an API token for the bootstrapped admin user by inserting
+    directly into the database (avoids circular dependency on API endpoints).
+    """
+    from scanner.models.user import APIToken, User
+    from sqlalchemy import select
+
+    app = auth_client._transport.app  # type: ignore
+    raw_token = f"nvsec_{sec.token_hex(32)}"
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+
+    async with app.state.session_factory() as session:
+        result = await session.execute(
+            select(User).where(User.username == "testadmin")
+        )
+        user = result.scalar_one()
+        token = APIToken(
+            user_id=user.id,
+            token_hash=token_hash,
+            name="phase05-test-token",
+        )
+        session.add(token)
+        await session.commit()
+
+    return {"Authorization": f"Bearer {raw_token}"}
 
 
 async def seed_scan(
