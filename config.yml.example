@@ -45,6 +45,12 @@ scanners:
     enabled: auto  # PHP projects with composer.lock (CVE detection)
     timeout: 30
     extra_args: []
+  nuclei:
+    enabled: true  # DAST scanner (not language-dependent, runs when target_url provided)
+    timeout: 300
+    extra_args: []
+    adapter_class: "scanner.adapters.nuclei.NucleiAdapter"
+    languages: []
 
 ai:
   max_cost_per_scan: 5.0
