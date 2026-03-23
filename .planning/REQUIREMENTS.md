@@ -20,8 +20,8 @@
 - [x] **CONF-01**: Admin can enable/disable individual scanners from the dashboard
 - [x] **CONF-02**: Admin can edit per-scanner settings (timeout, extra args) from the dashboard
 - [x] **CONF-03**: Admin can edit config.yml via web-based YAML editor with syntax highlighting
-- [ ] **CONF-04**: Admin can create and save named scan profiles (e.g. "Quick scan", "Full audit")
-- [ ] **CONF-05**: User can select a scan profile when triggering a scan via API or dashboard
+- [x] **CONF-04**: Admin can create and save named scan profiles (e.g. "Quick scan", "Full audit")
+- [x] **CONF-05**: User can select a scan profile when triggering a scan via API or dashboard
 
 ### DAST (Nuclei)
 
@@ -82,8 +82,8 @@
 | CONF-01 | Phase 14 | Complete |
 | CONF-02 | Phase 14 | Complete |
 | CONF-03 | Phase 14 | Complete |
-| CONF-04 | Phase 15 | Pending |
-| CONF-05 | Phase 15 | Pending |
+| CONF-04 | Phase 15 | Complete |
+| CONF-05 | Phase 15 | Complete |
 | DAST-01 | Phase 13 | Complete |
 | DAST-02 | Phase 13 | Complete |
 | DAST-03 | Phase 13 | Complete |
