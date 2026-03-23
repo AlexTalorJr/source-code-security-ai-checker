@@ -62,7 +62,7 @@ async def test_list_scanners_returns_200(scanners_config):
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
-        resp = await client.get("/api/scanners")
+        resp = await client.get("/scanners")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -76,7 +76,7 @@ async def test_enabled_scanner_status(scanners_config):
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
-        resp = await client.get("/api/scanners")
+        resp = await client.get("/scanners")
 
     data = resp.json()
     semgrep = next(s for s in data if s["name"] == "semgrep")
@@ -92,7 +92,7 @@ async def test_load_error_in_api(scanners_config):
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
-        resp = await client.get("/api/scanners")
+        resp = await client.get("/scanners")
 
     data = resp.json()
     bad = next(s for s in data if s["name"] == "bad_scanner")
@@ -107,7 +107,7 @@ async def test_disabled_scanner_status(scanners_config):
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
-        resp = await client.get("/api/scanners")
+        resp = await client.get("/scanners")
 
     data = resp.json()
     disabled = next(s for s in data if s["name"] == "disabled_tool")
@@ -121,7 +121,7 @@ async def test_scanner_response_keys(scanners_config):
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
-        resp = await client.get("/api/scanners")
+        resp = await client.get("/scanners")
 
     data = resp.json()
     required_keys = {"name", "status", "enabled", "languages", "load_error"}

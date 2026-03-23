@@ -7,7 +7,7 @@ from scanner.adapters.registry import ScannerRegistry
 from scanner.api.auth import get_current_user
 from scanner.models.user import User
 
-router = APIRouter(prefix="/api", tags=["scanners"])
+router = APIRouter(prefix="/scanners", tags=["scanners"])
 
 
 class ScannerInfo(BaseModel):
@@ -20,7 +20,7 @@ class ScannerInfo(BaseModel):
     load_error: str | None = None
 
 
-@router.get("/scanners", response_model=list[ScannerInfo])
+@router.get("", response_model=list[ScannerInfo])
 async def list_scanners(
     request: Request,
     current_user: User = Depends(get_current_user),
