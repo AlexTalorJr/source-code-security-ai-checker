@@ -33,7 +33,7 @@
 ### Infrastructure
 
 - [x] **INFRA-03**: SQLite busy_timeout configured to prevent write contention
-- [ ] **INFRA-04**: Bilingual documentation updated with RBAC, scanner config UI, and DAST features (EN, RU, FR, ES, IT)
+- [x] **INFRA-04**: Bilingual documentation updated with RBAC, scanner config UI, and DAST features (EN, RU, FR, ES, IT)
 
 ## Future Requirements
 
@@ -89,7 +89,7 @@
 | DAST-03 | Phase 13 | Complete |
 | DAST-04 | Phase 13 | Complete |
 | INFRA-03 | Phase 12 | Complete |
-| INFRA-04 | Phase 15 | Pending |
+| INFRA-04 | Phase 15 | Complete |
 
 **Coverage:**
 - v1.0.2 requirements: 18 total
