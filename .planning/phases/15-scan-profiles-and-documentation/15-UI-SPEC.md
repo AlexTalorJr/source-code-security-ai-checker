@@ -35,7 +35,7 @@ Declared values (must be multiples of 4):
 |-------|-------|-------|
 | xs | 4px | Icon gaps, inline padding, checkbox-to-label gap, badge margin |
 | sm | 8px | Compact element spacing, button padding vertical, input padding, table cell padding, navbar gap |
-| md | 16px | Default element spacing, card padding, form-group margin-bottom, form-row gap, button padding horizontal |
+| md | 16px | Default element spacing, card padding, form-group margin-bottom, form-row gap, button padding horizontal, btn-row margin-top |
 | lg | 24px | Section padding, content area padding, navbar horizontal padding, scanner-grid gap, page-heading margin-bottom |
 | xl | 32px | Not currently used -- available for future layout gaps |
 | 2xl | 48px | Empty state vertical padding |
@@ -52,13 +52,13 @@ Exceptions: navbar height is 48px (not a spacing token, a fixed element dimensio
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 14px | 400 (regular) | 1.5 |
-| Label | 12px | 600 (semibold) | 1.4 |
+| Label / Badge | 12px | 600 (semibold) | 1.4 |
 | Heading | 20px | 600 (semibold) | 1.2 |
-| Badge | 12px | 600 (semibold) | 1.4 |
+| Role badge | 10px | 600 (semibold) | 1.4 |
 
-Font sizes used: 10px (role badge only), 11px (scanner name badge in profile cards), 12px (label, badge, table header), 14px (body, input, button, nav link), 20px (page heading, empty state heading).
+Font sizes in use (4 total): 10px (role badge only), 12px (label, badge, table header, scanner name badge in profile cards), 14px (body, input, button, nav link), 20px (page heading, empty state heading).
 
-Phase 15 introduces no new font sizes. Profile scanner badges use 11px (from RESEARCH.md code example) which sits between the existing 10px role badge and 12px label. This is acceptable as a single exception for compact badge display.
+Phase 15 introduces no new font sizes. Profile scanner badges use 12px (same as label/badge role), keeping the total at 4 sizes.
 
 **Source:** base.html.j2 body, .page-heading, .badge, .btn, .form-input, th CSS rules.
 
@@ -84,6 +84,14 @@ Accent reserved for: primary CTA buttons ("Save Profile", "Create Profile"), act
 
 ---
 
+## Visual Hierarchy
+
+**Primary focal point:** "New Profile" button (accent color, positioned above the profile grid). Draws user attention to the main action on the Profiles tab.
+
+**Secondary focal points:** Profile card titles (14px semibold, --color-text). Each card title anchors the user's scan within the grid.
+
+---
+
 ## Component Inventory (Phase 15 Additions)
 
 ### 1. Profiles Tab Button
@@ -101,7 +109,7 @@ Accent reserved for: primary CTA buttons ("Save Profile", "Create Profile"), act
 - Card title row: reuse `.card-title-row` (flex, space-between)
 - Card title: profile name, `.card-title` (14px, weight 600)
 - Description line: reuse `.card-languages` class (12px, --color-text-secondary, margin-top 4px)
-- Scanner badges: `<span class="badge badge--success">` per scanner name, font-size 11px, margin 2px
+- Scanner badges: `<span class="badge badge--success">` per scanner name, font-size 12px, margin 4px
 - Edit/Delete buttons: bottom-right of card, `.btn--small` for edit, `.btn--small.btn--destructive` for delete
 
 ### 3. Profile Edit Form (Inline Expanded)
@@ -120,9 +128,9 @@ Accent reserved for: primary CTA buttons ("Save Profile", "Create Profile"), act
     - Scanner name label (14px, regular weight)
     - Optional timeout override: number input (inline, width 80px), min 30, max 900, placeholder from base config
   - Checklist container: max-height 400px, overflow-y auto (scrollable if many scanners)
-- Action buttons: `.btn-row` (flex, justify-content flex-end, margin-top 12px)
+- Action buttons: `.btn-row` (flex, justify-content flex-end, margin-top 16px)
   - "Save Profile" button: `.btn .btn--accent`
-  - "Cancel" button: `.btn` with default styling (no accent, just border)
+  - "Discard Changes" button: `.btn` with default styling (no accent, just border)
 
 ### 4. New Profile Button
 
@@ -159,7 +167,7 @@ Accent reserved for: primary CTA buttons ("Save Profile", "Create Profile"), act
 |---------|------|
 | Primary CTA (create) | "New Profile" |
 | Primary CTA (save) | "Save Profile" |
-| Secondary action (cancel) | "Cancel" |
+| Secondary action (discard) | "Discard Changes" |
 | Destructive action | "Delete" |
 | Empty state heading | "No scan profiles" |
 | Empty state body | "Create a scan profile to save a specific scanner configuration. Use the button above to get started." |
@@ -194,7 +202,7 @@ Accent reserved for: primary CTA buttons ("Save Profile", "Create Profile"), act
 
 - Click card body (not buttons): toggle `.card-settings--open` on that card's settings panel
 - Accordion behavior: expanding one card collapses all others (same as scanner cards in Phase 14)
-- Click Save/Cancel/Delete buttons: `event.stopPropagation()` to prevent card toggle
+- Click Save/Discard Changes/Delete buttons: `event.stopPropagation()` to prevent card toggle
 
 ### New Profile Flow
 
@@ -204,7 +212,7 @@ Accent reserved for: primary CTA buttons ("Save Profile", "Create Profile"), act
 4. All scanner checkboxes unchecked by default
 5. User fills name, optionally description, checks desired scanners, optionally sets timeout overrides
 6. Click "Save Profile": POST to `/api/config/profiles`, on success show success alert and collapse form, reload profile list
-7. Click "Cancel": remove the blank card from DOM
+7. Click "Discard Changes": remove the blank card from DOM
 
 ### Edit Profile Flow
 
@@ -212,7 +220,7 @@ Accent reserved for: primary CTA buttons ("Save Profile", "Create Profile"), act
 2. Form shows current values: name (disabled), description, scanner checkboxes pre-checked, timeout overrides pre-filled
 3. User modifies values
 4. Click "Save Profile": PUT to `/api/config/profiles/{name}`, on success show success alert and collapse
-5. Click "Cancel": collapse form, discard changes
+5. Click "Discard Changes": collapse form, discard changes
 
 ### Delete Profile Flow
 
