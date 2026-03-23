@@ -14,14 +14,25 @@ class ScanRequest(BaseModel):
     path: str | None = None
     repo_url: str | None = None
     branch: str | None = None
+    target_url: str | None = None  # DAST target URL
     skip_ai: bool = False
 
     @model_validator(mode="after")
     def validate_target(self) -> "ScanRequest":
+        if self.target_url:
+            # DAST mode -- path and repo_url must be absent
+            if self.path or self.repo_url:
+                raise ValueError(
+                    'target_url cannot be combined with "path" or "repo_url".'
+                )
+            return self
+        # Existing SAST validation
         if self.path and self.repo_url:
             raise ValueError('Provide either "path" or "repo_url", not both.')
         if not self.path and not self.repo_url:
-            raise ValueError('Provide either "path" or "repo_url", not both.')
+            raise ValueError(
+                'Provide "path", "repo_url", or "target_url".'
+            )
         return self
 
 
@@ -40,6 +51,7 @@ class ScanDetailResponse(BaseModel):
     target_path: str | None = None
     repo_url: str | None = None
     branch: str | None = None
+    target_url: str | None = None
     commit_hash: str | None = None
     started_at: datetime | None = None
     completed_at: datetime | None = None

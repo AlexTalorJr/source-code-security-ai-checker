@@ -107,120 +107,174 @@ async def run_scan(
     target_path: str | None = None,
     repo_url: str | None = None,
     branch: str | None = None,
+    target_url: str | None = None,
     persist: bool = True,
     progress_callback=None,
     skip_ai: bool = False,
 ) -> tuple[ScanResultSchema, list[FindingSchema], list[CompoundRiskSchema]]:
     """Run all enabled scanners against a target, deduplicate, and persist.
 
-    Either ``target_path`` or ``repo_url`` (with ``branch``) must be provided,
-    but not both.
+    Either ``target_path``, ``repo_url`` (with ``branch``), or ``target_url``
+    must be provided, but not combined.
 
     Args:
         settings: Application settings including per-tool config.
         target_path: Local filesystem path to scan.
         repo_url: Git repository URL to clone and scan.
         branch: Git branch (required when repo_url is provided).
+        target_url: DAST target URL (triggers Nuclei-only mode).
 
     Returns:
         Tuple of (ScanResultSchema, list[FindingSchema], list[CompoundRiskSchema])
         populated with findings summary, gate result, and database ID.
 
     Raises:
-        ValueError: If arguments are invalid (both/neither target and repo).
+        ValueError: If arguments are invalid.
     """
-    if target_path and repo_url:
-        raise ValueError(
-            "Provide either target_path or repo_url, not both."
-        )
-    if not target_path and not repo_url:
-        raise ValueError(
-            "Provide either target_path or repo_url."
-        )
+    if target_url:
+        if target_path or repo_url:
+            raise ValueError(
+                "target_url cannot be combined with target_path or repo_url."
+            )
+    else:
+        if target_path and repo_url:
+            raise ValueError(
+                "Provide either target_path or repo_url, not both."
+            )
+        if not target_path and not repo_url:
+            raise ValueError(
+                "Provide either target_path or repo_url."
+            )
 
     started_at = datetime.utcnow()
     clone_path: str | None = None
 
     try:
-        # Clone repo if needed
-        if repo_url:
-            # Gitleaks needs full history, so shallow=False when it is enabled
-            gitleaks_config = settings.scanners.get("gitleaks")
-            gitleaks_enabled = gitleaks_config.enabled if gitleaks_config else False
-            shallow = not gitleaks_enabled
-            clone_path = await clone_repo(
-                repo_url,
-                branch,
-                shallow=shallow,
-                git_token=settings.git_token or None,
+        # Shared variables set by both DAST and SAST branches
+        all_findings: list[FindingSchema] = []
+        warnings: list[str] = []
+        tool_versions: dict[str, str] = {}
+
+        if target_url:
+            # DAST mode: run only Nuclei against target URL
+            registry = ScannerRegistry(settings.scanners)
+            nuclei_entry = registry.get_scanner_config("nuclei")
+            if nuclei_entry is None or nuclei_entry.adapter_class is None:
+                raise ValueError(
+                    "Nuclei adapter not configured. Add nuclei entry to config.yml."
+                )
+
+            adapter = nuclei_entry.adapter_class()
+
+            if progress_callback:
+                progress_callback("scanning", {
+                    "tools": ["nuclei"],
+                    "completed": [],
+                })
+
+            tool_name, result = await _run_adapter(
+                adapter,
+                target_url,  # URL passed as target_path parameter
+                nuclei_entry.timeout,
+                nuclei_entry.extra_args or None,
+                on_complete=lambda tn, fc, err: (
+                    progress_callback("scanning", {
+                        "tools": ["nuclei"],
+                        "completed": [{"tool": tn, "findings": fc, "error": err}],
+                    }) if progress_callback else None
+                ),
             )
-            target_path = clone_path
 
-        # Auto-detect languages for smart scanner selection
-        from scanner.core.language_detect import detect_languages
+            if isinstance(result, Exception):
+                warnings = [f"{tool_name}: {result!s}"]
+            else:
+                all_findings = result
 
-        detected_langs = detect_languages(target_path)
-        logger.info("Detected languages: %s", detected_langs or "none")
+            # Get nuclei version
+            try:
+                version = await adapter.get_version()
+                tool_versions["nuclei"] = version
+            except Exception:
+                tool_versions["nuclei"] = "unknown"
 
-        # Build enabled adapters via registry
-        registry = ScannerRegistry(settings.scanners)
-        enabled_adapters = registry.get_enabled_adapters(detected_langs)
+        else:
+            # SAST mode (existing flow)
+            # Clone repo if needed
+            if repo_url:
+                # Gitleaks needs full history, so shallow=False when it is enabled
+                gitleaks_config = settings.scanners.get("gitleaks")
+                gitleaks_enabled = gitleaks_config.enabled if gitleaks_config else False
+                shallow = not gitleaks_enabled
+                clone_path = await clone_repo(
+                    repo_url,
+                    branch,
+                    shallow=shallow,
+                    git_token=settings.git_token or None,
+                )
+                target_path = clone_path
 
-        # Notify: scanning stage with tool list
-        if progress_callback:
-            progress_callback("scanning", {
-                "tools": [a.tool_name for a in enabled_adapters],
-                "completed": [],
-            })
+            # Auto-detect languages for smart scanner selection
+            from scanner.core.language_detect import detect_languages
 
-        # Track per-tool completion
-        completed_tools = []
+            detected_langs = detect_languages(target_path)
+            logger.info("Detected languages: %s", detected_langs or "none")
 
-        def _on_tool_complete(tool_name, finding_count, error):
-            completed_tools.append({
-                "tool": tool_name,
-                "findings": finding_count,
-                "error": error,
-            })
+            # Build enabled adapters via registry
+            registry = ScannerRegistry(settings.scanners)
+            enabled_adapters = registry.get_enabled_adapters(detected_langs)
+
+            # Notify: scanning stage with tool list
             if progress_callback:
                 progress_callback("scanning", {
                     "tools": [a.tool_name for a in enabled_adapters],
-                    "completed": completed_tools,
+                    "completed": [],
                 })
 
-        # Run all adapters in parallel
-        tasks = [
-            _run_adapter(
-                adapter,
-                target_path,
-                settings.scanners[adapter.tool_name].timeout,
-                settings.scanners[adapter.tool_name].extra_args or None,
-                on_complete=_on_tool_complete,
-            )
-            for adapter in enabled_adapters
-        ]
-        results = await asyncio.gather(*tasks)
+            # Track per-tool completion
+            completed_tools = []
 
-        # Separate successes and warnings
-        all_findings: list[FindingSchema] = []
-        warnings: list[str] = []
-        successful_adapters: list[ScannerAdapter] = []
+            def _on_tool_complete(tool_name, finding_count, error):
+                completed_tools.append({
+                    "tool": tool_name,
+                    "findings": finding_count,
+                    "error": error,
+                })
+                if progress_callback:
+                    progress_callback("scanning", {
+                        "tools": [a.tool_name for a in enabled_adapters],
+                        "completed": completed_tools,
+                    })
 
-        for i, (tool_name, result) in enumerate(results):
-            if isinstance(result, Exception):
-                warnings.append(f"{tool_name}: {result!s}")
-            else:
-                all_findings.extend(result)
-                successful_adapters.append(enabled_adapters[i])
+            # Run all adapters in parallel
+            tasks = [
+                _run_adapter(
+                    adapter,
+                    target_path,
+                    settings.scanners[adapter.tool_name].timeout,
+                    settings.scanners[adapter.tool_name].extra_args or None,
+                    on_complete=_on_tool_complete,
+                )
+                for adapter in enabled_adapters
+            ]
+            results = await asyncio.gather(*tasks)
 
-        # Collect tool versions
-        tool_versions: dict[str, str] = {}
-        for adapter in successful_adapters:
-            try:
-                version = await adapter.get_version()
-                tool_versions[adapter.tool_name] = version
-            except Exception:
-                tool_versions[adapter.tool_name] = "unknown"
+            # Separate successes and warnings
+            successful_adapters: list[ScannerAdapter] = []
+
+            for i, (tool_name, result) in enumerate(results):
+                if isinstance(result, Exception):
+                    warnings.append(f"{tool_name}: {result!s}")
+                else:
+                    all_findings.extend(result)
+                    successful_adapters.append(enabled_adapters[i])
+
+            # Collect tool versions
+            for adp in successful_adapters:
+                try:
+                    version = await adp.get_version()
+                    tool_versions[adp.tool_name] = version
+                except Exception:
+                    tool_versions[adp.tool_name] = "unknown"
 
         # Deduplicate
         if progress_callback:
@@ -278,6 +332,7 @@ async def run_scan(
             target_path=target_path,
             repo_url=repo_url,
             branch=branch,
+            target_url=target_url,
             ai_cost_usd=ai_result.cost_usd if ai_result.cost_usd > 0 else None,
             ai_skipped=ai_result.skipped,
             ai_skip_reason=ai_result.skip_reason,
@@ -296,6 +351,7 @@ async def run_scan(
                         target_path=scan_result.target_path,
                         repo_url=scan_result.repo_url,
                         branch=scan_result.branch,
+                        target_url=scan_result.target_url,
                         status=scan_result.status,
                         started_at=scan_result.started_at,
                         completed_at=scan_result.completed_at,

@@ -37,6 +37,7 @@ def _scan_to_detail(scan: ScanResult) -> ScanDetailResponse:
         target_path=scan.target_path,
         repo_url=scan.repo_url,
         branch=scan.branch,
+        target_url=scan.target_url,
         commit_hash=scan.commit_hash,
         started_at=scan.started_at,
         completed_at=scan.completed_at,
@@ -70,6 +71,7 @@ async def trigger_scan(
                 target_path=body.path,
                 repo_url=body.repo_url,
                 branch=body.branch,
+                target_url=body.target_url,
                 skip_ai=body.skip_ai,
                 status="queued",
             )

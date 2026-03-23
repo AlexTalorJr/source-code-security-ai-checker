@@ -11,6 +11,7 @@ class ScanResultSchema(BaseModel):
     id: int | None = None
     target_path: str | None = None
     repo_url: str | None = None
+    target_url: str | None = None
     branch: str | None = None
     commit_hash: str | None = None
     status: str = "pending"  # pending/running/completed/failed

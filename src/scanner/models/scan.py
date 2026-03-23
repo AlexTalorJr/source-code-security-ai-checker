@@ -16,6 +16,7 @@ class ScanResult(Base):
     # Target
     target_path = Column(String(500), nullable=True)
     repo_url = Column(String(500), nullable=True)
+    target_url = Column(String(500), nullable=True)  # DAST target URL
     branch = Column(String(200), nullable=True)
     commit_hash = Column(String(40), nullable=True)
 

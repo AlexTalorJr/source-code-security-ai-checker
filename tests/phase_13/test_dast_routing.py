@@ -68,7 +68,7 @@ class TestDastRouting:
     async def test_sast_mode_skips_nuclei(self, mock_settings):
         """When target_path provided (no target_url), standard SAST flow executes."""
         with patch(
-            "scanner.core.orchestrator.detect_languages", return_value={"python"}
+            "scanner.core.language_detect.detect_languages", return_value={"python"}
         ), patch(
             "scanner.core.orchestrator.ScannerRegistry"
         ) as MockRegistry:

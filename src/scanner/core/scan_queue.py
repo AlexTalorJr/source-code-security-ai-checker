@@ -74,6 +74,7 @@ class ScanQueue:
                     repo_url = db_scan.repo_url
                     branch = db_scan.branch
                     skip_ai = db_scan.skip_ai
+                    target_url = db_scan.target_url
 
                 # Progress callback
                 def _progress_cb(stage, details):
@@ -87,9 +88,10 @@ class ScanQueue:
                 # Run scan (worker persists results itself, skip run_scan's persist)
                 scan_result, findings, compound_risks = await run_scan(
                     app.state.settings,
-                    target_path=target_path,
-                    repo_url=repo_url,
-                    branch=branch,
+                    target_path=target_path if not target_url else None,
+                    repo_url=repo_url if not target_url else None,
+                    branch=branch if not target_url else None,
+                    target_url=target_url,
                     persist=False,
                     progress_callback=_progress_cb,
                     skip_ai=skip_ai,
