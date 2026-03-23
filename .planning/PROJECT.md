@@ -42,11 +42,11 @@ Every code change is automatically scanned for security vulnerabilities before d
 ### Validated (v1.0.2)
 
 - ✓ RBAC — user accounts, API tokens, role-based access (admin, scanner, viewer) — v1.0.2 Phase 12
+- ✓ DAST — Nuclei adapter for template-based dynamic scanning — v1.0.2 Phase 13
 
 ### Active
 
 - [ ] Scanner configuration UI — enable/disable scanners, per-scanner settings, config editor, scan profiles
-- [ ] DAST — Nuclei adapter for template-based dynamic scanning
 
 ## Current Milestone: v1.0.2 Scanner UI, DAST & RBAC
 
@@ -78,7 +78,7 @@ Every code change is automatically scanned for security vulnerabilities before d
 
 **Scanner tech stack:**
 - Python 3.12 (orchestrator, FastAPI, reports)
-- 12 scanners: Semgrep, cppcheck, Gitleaks, Trivy, Checkov, Psalm, Enlightn, PHP Security Checker, gosec, Bandit, Brakeman, cargo-audit
+- 13 scanners: Semgrep, cppcheck, Gitleaks, Trivy, Checkov, Psalm, Enlightn, PHP Security Checker, gosec, Bandit, Brakeman, cargo-audit, Nuclei (DAST)
 - Claude API (AI semantic analysis)
 - Jinja2 + WeasyPrint (HTML/PDF reports)
 - SQLite/WAL (scan history)
@@ -119,4 +119,4 @@ Every code change is automatically scanned for security vulnerabilities before d
 | Underscore convention for config keys | tool_name uses underscores to match config.yml keys | ✓ Confirmed v1.0.1 |
 
 ---
-*Last updated: 2026-03-23 — Phase 12 RBAC Foundation complete*
+*Last updated: 2026-03-23 — Phase 13 Nuclei DAST Adapter complete*
