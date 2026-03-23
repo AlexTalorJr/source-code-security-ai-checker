@@ -17,9 +17,9 @@
 
 ### Scanner Configuration
 
-- [ ] **CONF-01**: Admin can enable/disable individual scanners from the dashboard
-- [ ] **CONF-02**: Admin can edit per-scanner settings (timeout, extra args) from the dashboard
-- [ ] **CONF-03**: Admin can edit config.yml via web-based YAML editor with syntax highlighting
+- [x] **CONF-01**: Admin can enable/disable individual scanners from the dashboard
+- [x] **CONF-02**: Admin can edit per-scanner settings (timeout, extra args) from the dashboard
+- [x] **CONF-03**: Admin can edit config.yml via web-based YAML editor with syntax highlighting
 - [ ] **CONF-04**: Admin can create and save named scan profiles (e.g. "Quick scan", "Full audit")
 - [ ] **CONF-05**: User can select a scan profile when triggering a scan via API or dashboard
 
@@ -79,9 +79,9 @@
 | AUTH-05 | Phase 12 | Complete |
 | AUTH-06 | Phase 12 | Complete |
 | AUTH-07 | Phase 12 | Complete |
-| CONF-01 | Phase 14 | Pending |
-| CONF-02 | Phase 14 | Pending |
-| CONF-03 | Phase 14 | Pending |
+| CONF-01 | Phase 14 | Complete |
+| CONF-02 | Phase 14 | Complete |
+| CONF-03 | Phase 14 | Complete |
 | CONF-04 | Phase 15 | Pending |
 | CONF-05 | Phase 15 | Pending |
 | DAST-01 | Phase 13 | Complete |

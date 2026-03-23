@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-stopped_at: Phase 14 context gathered
-last_updated: "2026-03-23T11:03:54.971Z"
+status: executing
+stopped_at: Completed 14-01-PLAN.md
+last_updated: "2026-03-23T12:03:00.000Z"
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 10
+  completed_plans: 9
 ---
 
 # Project State
@@ -19,18 +19,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Every code change is automatically scanned for security vulnerabilities before deployment
-**Current focus:** Phase 13 — nuclei-dast-adapter
+**Current focus:** Phase 14 — scanner-configuration-ui
 
 ## Current Position
 
-Phase: 13 (nuclei-dast-adapter) — COMPLETE
-Plan: 3 of 3
+Phase: 14 (scanner-configuration-ui) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 30 (v1.0: 21, v2.0: 2, v1.0.1: 8, v1.0.2: 1)
+- Total plans completed: 31 (v1.0: 21, v2.0: 2, v1.0.1: 8, v1.0.2: 2)
 
 ## Accumulated Context
 
@@ -57,6 +57,9 @@ Recent decisions affecting current work:
 - [Phase 13-03]: Three-way ScanRequest validation: target_url exclusive with path/repo_url
 - [Phase 13-03]: DAST mode uses get_scanner_config("nuclei") instead of get_enabled_adapters
 - [Phase 13-03]: target_url passed as target_path param to NucleiAdapter.run() (URL-as-path pattern)
+- [Phase 14-01]: Timeout validation range 30-900 seconds for scanner config API
+- [Phase 14-01]: PUT /api/config/yaml writes raw text to preserve user formatting
+- [Phase 14-01]: Dashboard reads config.yml fresh on every page load (not cached)
 
 ### Pending Todos
 
@@ -68,6 +71,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-23T11:03:54.964Z
-Stopped at: Phase 14 context gathered
-Resume file: .planning/phases/14-scanner-configuration-ui/14-CONTEXT.md
+Last session: 2026-03-23T12:03:00.000Z
+Stopped at: Completed 14-01-PLAN.md
+Resume file: .planning/phases/14-scanner-configuration-ui/14-02-PLAN.md
