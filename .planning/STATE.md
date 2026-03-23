@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 12-01-PLAN.md
-last_updated: "2026-03-23T04:27:53.808Z"
+stopped_at: Completed 12-02-PLAN.md
+last_updated: "2026-03-23T04:32:26.248Z"
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 5
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 ## Current Position
 
 Phase: 12 (rbac-foundation) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 
 ## Performance Metrics
 
@@ -45,6 +45,8 @@ Recent decisions affecting current work:
 - [v1.0.2 research]: CodeMirror 5 via CDN for YAML editor (no build step)
 - [Phase 12-01]: Removed legacy api_key from config with extra=ignore for backward compat
 - [Phase 12-01]: JWT secret key persisted to .secret_key file alongside database
+- [Phase 12-02]: Used explicit BcryptHasher instead of PasswordHash.default() which does not exist in pwdlib 0.3.0
+- [Phase 12-02]: Consolidated password hashing: main.py admin bootstrap imports hash_password from dashboard.auth
 
 ### Pending Todos
 
@@ -56,6 +58,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-23T04:27:53.801Z
-Stopped at: Completed 12-01-PLAN.md
+Last session: 2026-03-23T04:32:26.239Z
+Stopped at: Completed 12-02-PLAN.md
 Resume file: None

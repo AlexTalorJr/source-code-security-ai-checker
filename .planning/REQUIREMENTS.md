@@ -8,12 +8,12 @@
 ### RBAC & Authentication
 
 - [x] **AUTH-01**: Admin can create user accounts with username and password
-- [ ] **AUTH-02**: User can log in to dashboard with username and password
+- [x] **AUTH-02**: User can log in to dashboard with username and password
 - [ ] **AUTH-03**: User can generate and revoke personal API tokens for CI/CD
 - [ ] **AUTH-04**: Admin role has full access to all endpoints and dashboard pages
 - [ ] **AUTH-05**: Viewer role can view scan results and reports but cannot trigger scans or change settings
 - [ ] **AUTH-06**: Scanner role can trigger scans and view results via API only (no dashboard config access)
-- [ ] **AUTH-07**: Unauthenticated requests to API return 401
+- [x] **AUTH-07**: Unauthenticated requests to API return 401
 
 ### Scanner Configuration
 
@@ -73,12 +73,12 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | AUTH-01 | Phase 12 | Complete |
-| AUTH-02 | Phase 12 | Pending |
+| AUTH-02 | Phase 12 | Complete |
 | AUTH-03 | Phase 12 | Pending |
 | AUTH-04 | Phase 12 | Pending |
 | AUTH-05 | Phase 12 | Pending |
 | AUTH-06 | Phase 12 | Pending |
-| AUTH-07 | Phase 12 | Pending |
+| AUTH-07 | Phase 12 | Complete |
 | CONF-01 | Phase 14 | Pending |
 | CONF-02 | Phase 14 | Pending |
 | CONF-03 | Phase 14 | Pending |
