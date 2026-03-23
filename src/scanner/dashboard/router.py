@@ -14,14 +14,22 @@ import matplotlib.pyplot as plt
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from jinja2 import Environment, PackageLoader
-from sqlalchemy import desc, select
+from sqlalchemy import desc, select, func
 
 from scanner.core.suppression import (
     get_suppressed_fingerprints,
     suppress_fingerprint,
     unsuppress_fingerprint,
 )
-from scanner.dashboard.auth import make_session_token, require_dashboard_auth
+from scanner.api.auth import get_current_user, Role
+from scanner.dashboard.auth import (
+    create_session_jwt,
+    verify_password,
+    hash_password,
+    COOKIE_NAME,
+    verify_session_jwt,
+)
+from scanner.models.user import User, APIToken
 from scanner.models.finding import Finding
 from scanner.models.scan import ScanResult
 from scanner.reports.delta import compute_delta
@@ -125,38 +133,77 @@ def _gate_display(gate_passed) -> tuple[str | None, bool]:
     return ("PASSED" if gate_passed else "FAILED"), bool(gate_passed)
 
 
+# ---------- Dashboard Auth Helpers ----------
+
+
+async def _get_dashboard_user(request: Request) -> User | None:
+    """Get authenticated user from JWT cookie, or None if not authenticated.
+
+    Unlike get_current_user (which raises 401), this returns None
+    so dashboard can redirect to login.
+    """
+    cookie_token = request.cookies.get(COOKIE_NAME)
+    if not cookie_token:
+        return None
+    payload = verify_session_jwt(cookie_token, request.app.state.settings.secret_key)
+    if not payload:
+        return None
+    user_id = int(payload["sub"])
+    async with request.app.state.session_factory() as session:
+        result = await session.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        if user and user.is_active:
+            return user
+    return None
+
+
+def _require_dashboard_role(user: User | None, *roles: str):
+    """Check if user has required role. Returns redirect or 403 response, or None if OK."""
+    if user is None:
+        return RedirectResponse(url="/dashboard/login", status_code=302)
+    if user.role not in roles:
+        template = _jinja_env.get_template("403.html.j2")
+        return HTMLResponse(
+            template.render(
+                required_role=roles[0] if len(roles) == 1 else ", ".join(roles),
+                user_role=user.role,
+            ),
+            status_code=403,
+        )
+    return None
+
+
 # ---------- Login / Logout ----------
 
 
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request, error: str | None = None):
-    """Render login page."""
+    """Render login page (no auth required)."""
     template = _jinja_env.get_template("login.html.j2")
     return HTMLResponse(template.render(error=error))
 
 
 @router.post("/login")
-async def login_submit(request: Request, api_key: str = Form(...)):
-    """Validate API key and set session cookie."""
-    expected = request.app.state.settings.api_key
-    if expected and secrets.compare_digest(api_key, expected):
-        token = make_session_token(api_key)
-        response = RedirectResponse(url="/dashboard/history", status_code=302)
-        response.set_cookie(
-            key="scanner_session",
-            value=token,
-            httponly=True,
-            path="/",
-        )
-        return response
-    return RedirectResponse(url="/dashboard/login?error=1", status_code=302)
+async def login_submit(request: Request, username: str = Form(...), password: str = Form(...)):
+    """Validate username+password and set JWT session cookie."""
+    async with request.app.state.session_factory() as session:
+        result = await session.execute(select(User).where(User.username == username))
+        user = result.scalar_one_or_none()
+
+    if not user or not user.is_active or not verify_password(password, user.password_hash):
+        return RedirectResponse(url="/dashboard/login?error=1", status_code=302)
+
+    token = create_session_jwt(user.id, user.role, request.app.state.settings.secret_key)
+    response = RedirectResponse(url="/dashboard/history", status_code=302)
+    response.set_cookie(key=COOKIE_NAME, value=token, httponly=True, path="/", max_age=7*24*3600)
+    return response
 
 
 @router.get("/logout")
 async def logout(request: Request):
     """Clear session cookie and redirect to login."""
     response = RedirectResponse(url="/dashboard/login", status_code=302)
-    response.delete_cookie(key="scanner_session", path="/")
+    response.delete_cookie(key=COOKIE_NAME, path="/")
     return response
 
 
@@ -249,9 +296,10 @@ async def dashboard_html_report(scan_id: int, request: Request):
     from scanner.reports.html_report import generate_html_report
     import tempfile
 
-    redirect = await require_dashboard_auth(request)
-    if redirect:
-        return redirect
+    user = await _get_dashboard_user(request)
+    check = _require_dashboard_role(user, "admin", "viewer")
+    if check:
+        return check
 
     async with request.app.state.session_factory() as session:
         report_data, error = await _build_report_data(
@@ -277,9 +325,10 @@ async def dashboard_pdf_report(scan_id: int, request: Request):
     import tempfile
     import os
 
-    redirect = await require_dashboard_auth(request)
-    if redirect:
-        return redirect
+    user = await _get_dashboard_user(request)
+    check = _require_dashboard_role(user, "admin", "viewer")
+    if check:
+        return check
 
     async with request.app.state.session_factory() as session:
         report_data, error = await _build_report_data(
@@ -311,9 +360,10 @@ async def dashboard_pdf_report(scan_id: int, request: Request):
 @router.get("/history", response_class=HTMLResponse)
 async def history_page(request: Request):
     """Render scan history page."""
-    redirect = await require_dashboard_auth(request)
-    if redirect:
-        return redirect
+    user = await _get_dashboard_user(request)
+    check = _require_dashboard_role(user, "admin", "viewer")
+    if check:
+        return check
 
     async with request.app.state.session_factory() as session:
         result = await session.execute(
@@ -337,7 +387,7 @@ async def history_page(request: Request):
         })
 
     template = _jinja_env.get_template("history.html.j2")
-    return HTMLResponse(template.render(scans=scan_list))
+    return HTMLResponse(template.render(scans=scan_list, user=user, active_page="history"))
 
 
 # ---------- Scan Detail ----------
@@ -346,9 +396,10 @@ async def history_page(request: Request):
 @router.get("/scans/{scan_id}", response_class=HTMLResponse)
 async def detail_page(request: Request, scan_id: int):
     """Render scan detail page with findings, delta, and suppressed tabs."""
-    redirect = await require_dashboard_auth(request)
-    if redirect:
-        return redirect
+    user = await _get_dashboard_user(request)
+    check = _require_dashboard_role(user, "admin", "viewer")
+    if check:
+        return check
 
     async with request.app.state.session_factory() as session:
         result = await session.execute(
@@ -444,6 +495,8 @@ async def detail_page(request: Request, scan_id: int):
             gate_passed=gate_passed_bool,
             is_running=is_running,
             fail_reasons=fail_reasons,
+            user=user,
+            active_page="history",
         )
     )
 
@@ -535,9 +588,10 @@ def _generate_branch_comparison(scans) -> str:
 @router.get("/trends", response_class=HTMLResponse)
 async def trends_page(request: Request):
     """Render trends page with severity-over-time and branch comparison charts."""
-    redirect = await require_dashboard_auth(request)
-    if redirect:
-        return redirect
+    user = await _get_dashboard_user(request)
+    check = _require_dashboard_role(user, "admin", "viewer")
+    if check:
+        return check
 
     async with request.app.state.session_factory() as session:
         result = await session.execute(
@@ -561,6 +615,8 @@ async def trends_page(request: Request):
             enough_data=enough_data,
             severity_chart=severity_chart,
             branch_chart=branch_chart,
+            user=user,
+            active_page="trends",
         )
     )
 
@@ -577,9 +633,10 @@ async def start_scan(
     skip_ai: str = Form(default=""),
 ):
     """Create a new scan from the dashboard form."""
-    redirect = await require_dashboard_auth(request)
-    if redirect:
-        return redirect
+    user = await _get_dashboard_user(request)
+    check = _require_dashboard_role(user, "admin")
+    if check:
+        return check
 
     async with request.app.state.session_factory() as session:
         scan = ScanResult(
@@ -602,11 +659,12 @@ async def start_scan(
 
 
 @router.post("/scans/{scan_id}/suppress/{fingerprint}")
-async def suppress_finding(request: Request, scan_id: int, fingerprint: str):
+async def suppress_finding_handler(request: Request, scan_id: int, fingerprint: str):
     """Suppress a finding fingerprint from the dashboard."""
-    redirect = await require_dashboard_auth(request)
-    if redirect:
-        return redirect
+    user = await _get_dashboard_user(request)
+    check = _require_dashboard_role(user, "admin")
+    if check:
+        return check
 
     async with request.app.state.session_factory() as session:
         await suppress_fingerprint(session, fingerprint, reason="Dashboard suppression")
@@ -618,11 +676,12 @@ async def suppress_finding(request: Request, scan_id: int, fingerprint: str):
 
 
 @router.post("/scans/{scan_id}/unsuppress/{fingerprint}")
-async def unsuppress_finding(request: Request, scan_id: int, fingerprint: str):
+async def unsuppress_finding_handler(request: Request, scan_id: int, fingerprint: str):
     """Restore a suppressed finding from the dashboard."""
-    redirect = await require_dashboard_auth(request)
-    if redirect:
-        return redirect
+    user = await _get_dashboard_user(request)
+    check = _require_dashboard_role(user, "admin")
+    if check:
+        return check
 
     async with request.app.state.session_factory() as session:
         await unsuppress_fingerprint(session, fingerprint)
@@ -631,3 +690,258 @@ async def unsuppress_finding(request: Request, scan_id: int, fingerprint: str):
     return RedirectResponse(
         url=f"/dashboard/scans/{scan_id}", status_code=302
     )
+
+
+# ---------- User Management (admin only) ----------
+
+
+@router.get("/users", response_class=HTMLResponse)
+async def users_page(request: Request):
+    """Render user management page."""
+    user = await _get_dashboard_user(request)
+    check = _require_dashboard_role(user, "admin")
+    if check:
+        return check
+
+    async with request.app.state.session_factory() as session:
+        result = await session.execute(select(User).order_by(User.id))
+        users = result.scalars().all()
+
+    template = _jinja_env.get_template("users.html.j2")
+    return HTMLResponse(template.render(
+        users=users,
+        user=user,
+        active_page="users",
+    ))
+
+
+@router.post("/users")
+async def create_user_dashboard(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    role: str = Form(default="viewer"),
+):
+    """Create user from dashboard form."""
+    user = await _get_dashboard_user(request)
+    check = _require_dashboard_role(user, "admin")
+    if check:
+        return check
+
+    if len(password) < 8:
+        # Re-render with error
+        async with request.app.state.session_factory() as session:
+            result = await session.execute(select(User).order_by(User.id))
+            users = result.scalars().all()
+        template = _jinja_env.get_template("users.html.j2")
+        return HTMLResponse(template.render(
+            users=users, user=user, active_page="users",
+            error="Password must be at least 8 characters.",
+        ))
+
+    async with request.app.state.session_factory() as session:
+        existing = await session.execute(select(User).where(User.username == username))
+        if existing.scalar_one_or_none():
+            result = await session.execute(select(User).order_by(User.id))
+            users = result.scalars().all()
+            template = _jinja_env.get_template("users.html.j2")
+            return HTMLResponse(template.render(
+                users=users, user=user, active_page="users",
+                error=f"Username '{username}' already exists.",
+            ))
+
+        new_user = User(
+            username=username,
+            password_hash=hash_password(password),
+            role=role,
+        )
+        session.add(new_user)
+        await session.commit()
+
+    return RedirectResponse(url="/dashboard/users", status_code=302)
+
+
+@router.get("/users/{user_id}/edit", response_class=HTMLResponse)
+async def edit_user_page(request: Request, user_id: int):
+    """Render edit user form."""
+    user = await _get_dashboard_user(request)
+    check = _require_dashboard_role(user, "admin")
+    if check:
+        return check
+
+    async with request.app.state.session_factory() as session:
+        result = await session.execute(select(User).where(User.id == user_id))
+        edit_user = result.scalar_one_or_none()
+        if not edit_user:
+            return HTMLResponse("<h1>User not found</h1>", status_code=404)
+
+        result = await session.execute(select(User).order_by(User.id))
+        users = result.scalars().all()
+
+    template = _jinja_env.get_template("users.html.j2")
+    return HTMLResponse(template.render(
+        users=users, user=user, active_page="users",
+        edit_user=edit_user,
+    ))
+
+
+@router.post("/users/{user_id}")
+async def update_user_dashboard(
+    request: Request,
+    user_id: int,
+    username: str = Form(...),
+    password: str = Form(default=""),
+    role: str = Form(...),
+):
+    """Update user from dashboard form."""
+    user = await _get_dashboard_user(request)
+    check = _require_dashboard_role(user, "admin")
+    if check:
+        return check
+
+    async with request.app.state.session_factory() as session:
+        result = await session.execute(select(User).where(User.id == user_id))
+        target = result.scalar_one_or_none()
+        if not target:
+            return HTMLResponse("<h1>User not found</h1>", status_code=404)
+
+        target.username = username
+        target.role = role
+        if password:
+            if len(password) < 8:
+                result2 = await session.execute(select(User).order_by(User.id))
+                users = result2.scalars().all()
+                template = _jinja_env.get_template("users.html.j2")
+                return HTMLResponse(template.render(
+                    users=users, user=user, active_page="users",
+                    edit_user=target, error="Password must be at least 8 characters.",
+                ))
+            target.password_hash = hash_password(password)
+
+        await session.commit()
+
+    return RedirectResponse(url="/dashboard/users", status_code=302)
+
+
+@router.post("/users/{user_id}/deactivate")
+async def deactivate_user_dashboard(request: Request, user_id: int):
+    """Deactivate user from dashboard."""
+    user = await _get_dashboard_user(request)
+    check = _require_dashboard_role(user, "admin")
+    if check:
+        return check
+
+    if user_id == user.id:
+        return RedirectResponse(url="/dashboard/users", status_code=302)
+
+    async with request.app.state.session_factory() as session:
+        result = await session.execute(select(User).where(User.id == user_id))
+        target = result.scalar_one_or_none()
+        if target:
+            target.is_active = False
+            await session.commit()
+
+    return RedirectResponse(url="/dashboard/users", status_code=302)
+
+
+# ---------- Token Management ----------
+
+
+@router.get("/tokens", response_class=HTMLResponse)
+async def tokens_page(request: Request):
+    """Render token management page."""
+    user = await _get_dashboard_user(request)
+    if not user:
+        return RedirectResponse(url="/dashboard/login", status_code=302)
+
+    async with request.app.state.session_factory() as session:
+        result = await session.execute(
+            select(APIToken)
+            .where(APIToken.user_id == user.id)
+            .order_by(APIToken.created_at.desc())
+        )
+        tokens = result.scalars().all()
+        active_count = sum(1 for t in tokens if t.revoked_at is None)
+
+    template = _jinja_env.get_template("tokens.html.j2")
+    return HTMLResponse(template.render(
+        tokens=tokens,
+        user=user,
+        active_page="tokens",
+        active_count=active_count,
+        token_limit=10,
+        new_token=request.query_params.get("new_token"),
+        new_token_name=request.query_params.get("new_token_name"),
+    ))
+
+
+@router.post("/tokens")
+async def create_token_dashboard(request: Request, name: str = Form(...), expires: str = Form(default="never")):
+    """Generate token from dashboard form."""
+    import hashlib
+    import secrets as sec
+    from datetime import timedelta, timezone
+
+    user = await _get_dashboard_user(request)
+    if not user:
+        return RedirectResponse(url="/dashboard/login", status_code=302)
+
+    # Check soft limit
+    async with request.app.state.session_factory() as session:
+        active_count = await session.scalar(
+            select(func.count(APIToken.id)).where(
+                APIToken.user_id == user.id,
+                APIToken.revoked_at.is_(None),
+            )
+        )
+        if active_count >= 10:
+            return RedirectResponse(url="/dashboard/tokens", status_code=302)
+
+        random_part = sec.token_hex(32)
+        raw_token = f"nvsec_{random_part}"
+        token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+
+        expires_at = None
+        expires_map = {"30": 30, "90": 90, "365": 365}
+        if expires in expires_map:
+            expires_at = datetime.now(timezone.utc) + timedelta(days=expires_map[expires])
+
+        token = APIToken(
+            user_id=user.id,
+            token_hash=token_hash,
+            name=name,
+            expires_at=expires_at,
+        )
+        session.add(token)
+        await session.commit()
+
+    # Redirect with token in query params (shown once)
+    from urllib.parse import quote
+    return RedirectResponse(
+        url=f"/dashboard/tokens?new_token={quote(raw_token)}&new_token_name={quote(name)}",
+        status_code=302,
+    )
+
+
+@router.post("/tokens/{token_id}/revoke")
+async def revoke_token_dashboard(request: Request, token_id: int):
+    """Revoke token from dashboard."""
+    from datetime import timezone
+
+    user = await _get_dashboard_user(request)
+    if not user:
+        return RedirectResponse(url="/dashboard/login", status_code=302)
+
+    async with request.app.state.session_factory() as session:
+        result = await session.execute(
+            select(APIToken).where(
+                APIToken.id == token_id,
+                APIToken.user_id == user.id,
+            )
+        )
+        token = result.scalar_one_or_none()
+        if token and token.revoked_at is None:
+            token.revoked_at = datetime.now(timezone.utc)
+            await session.commit()
+
+    return RedirectResponse(url="/dashboard/tokens", status_code=302)
