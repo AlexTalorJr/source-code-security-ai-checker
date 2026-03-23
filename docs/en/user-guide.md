@@ -132,7 +132,7 @@ A security scanning tool that analyzes source code for vulnerabilities using twe
 
 ```bash
 curl -X POST http://localhost:8000/api/scans \
-  -H "X-API-Key: $SCANNER_API_KEY" \
+  -H "Authorization: Bearer nvsec_your_token" \
   -H "Content-Type: application/json" \
   -d '{"repo_url": "https://github.com/your-org/repo.git", "branch": "main"}'
 ```
@@ -226,9 +226,81 @@ From the findings view, click the suppress button on any finding. Provide a reas
 
 ```bash
 curl -X POST http://localhost:8000/api/suppressions \
-  -H "X-API-Key: $SCANNER_API_KEY" \
+  -H "Authorization: Bearer nvsec_your_token" \
   -H "Content-Type: application/json" \
   -d '{"fingerprint": "<finding-fingerprint>", "reason": "False positive: test fixture"}'
 ```
 
 Suppressed findings are excluded from quality gate evaluation and flagged in reports.
+
+## Dashboard Login
+
+### Logging In
+
+1. Navigate to `/dashboard/login`
+2. Enter the username and password provided by your administrator
+3. Click "Login"
+
+Your session is persisted via a cookie with a 7-day expiry. You will be automatically logged out after 7 days of inactivity.
+
+### Logging Out
+
+Click "Logout" in the navigation bar at the top of any dashboard page.
+
+## Using Scan Profiles
+
+### What Are Scan Profiles?
+
+Scan profiles are predefined scanner configurations created by admins. Each profile specifies which scanners run and with what settings, allowing quick selection of common scan configurations like "quick scan" or "full audit".
+
+### Selecting a Profile on the Dashboard
+
+When triggering a scan from the dashboard, use the profile dropdown above the "Start Scan" button. Select a profile name or choose "(No profile)" to use the default scanner configuration.
+
+### Selecting a Profile via API
+
+Add the `profile` field to your scan request body:
+
+```bash
+curl -X POST http://localhost:8000/api/scans \
+  -H "Authorization: Bearer nvsec_your_token" \
+  -H "Content-Type: application/json" \
+  -d '{"repo_url": "https://github.com/org/repo.git", "profile": "quick_scan"}'
+```
+
+When no profile is specified, the base scanner configuration from `config.yml` applies.
+
+### Profile Name in Scan History
+
+The profile name used for each scan is shown in the scan history table, making it easy to compare results across different scan configurations.
+
+## DAST Scanning
+
+### What Is DAST?
+
+Dynamic Application Security Testing (DAST) scans running web applications for vulnerabilities by sending HTTP requests and analyzing responses. Unlike SAST (which analyzes source code), DAST tests applications as they run.
+
+### How to Trigger a DAST Scan
+
+Provide a `target_url` instead of `path` or `repo_url` when triggering a scan.
+
+**Via API:**
+
+```bash
+curl -X POST http://localhost:8000/api/scans \
+  -H "Authorization: Bearer nvsec_your_token" \
+  -H "Content-Type: application/json" \
+  -d '{"target_url": "https://example.com"}'
+```
+
+**Via Dashboard:** Enter the target URL in the scan trigger form. The `target_url` field is exclusive with `path` and `repo_url` -- you cannot combine them in a single scan.
+
+### DAST Findings
+
+DAST findings include:
+
+- **Severity levels** -- critical, high, medium, low, info
+- **Template IDs** -- Nuclei template identifiers describing the vulnerability type
+- **URL-based findings** -- each finding references the target URL where the vulnerability was detected
+
+DAST findings appear in reports alongside SAST findings and are subject to the same quality gate evaluation.
