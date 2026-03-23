@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 13-02-PLAN.md
-last_updated: "2026-03-23T10:00:34.705Z"
+stopped_at: Completed 13-01-PLAN.md
+last_updated: "2026-03-23T10:01:20.540Z"
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 8
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -52,6 +52,8 @@ Recent decisions affecting current work:
 - [Phase 12-04]: Findings suppress/unsuppress guarded with get_current_user; scanners list also get_current_user
 - [Phase 12]: Dashboard auth uses _get_dashboard_user (returns None) for redirect-based login flow
 - [Phase 13]: Nuclei enabled=true (not auto) because DAST is not language-dependent
+- [Phase 13]: Nuclei exit code != 0 is error (unlike gosec >= 2) per Nuclei CLI semantics
+- [Phase 13]: DAST adapter stores URL as file_path, line_start/line_end always None
 
 ### Pending Todos
 
@@ -63,6 +65,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-23T10:00:34.698Z
-Stopped at: Completed 13-02-PLAN.md
+Last session: 2026-03-23T10:01:20.533Z
+Stopped at: Completed 13-01-PLAN.md
 Resume file: None

@@ -25,7 +25,7 @@
 
 ### DAST (Nuclei)
 
-- [ ] **DAST-01**: Nuclei adapter scans target URLs using templates and produces FindingSchema-compatible results
+- [x] **DAST-01**: Nuclei adapter scans target URLs using templates and produces FindingSchema-compatible results
 - [ ] **DAST-02**: Scan API accepts optional target_url field for DAST scans
 - [x] **DAST-03**: Nuclei binary installed in Docker image with multi-arch support
 - [ ] **DAST-04**: Nuclei findings appear in HTML/PDF reports alongside SAST findings
@@ -84,7 +84,7 @@
 | CONF-03 | Phase 14 | Pending |
 | CONF-04 | Phase 15 | Pending |
 | CONF-05 | Phase 15 | Pending |
-| DAST-01 | Phase 13 | Pending |
+| DAST-01 | Phase 13 | Complete |
 | DAST-02 | Phase 13 | Pending |
 | DAST-03 | Phase 13 | Complete |
 | DAST-04 | Phase 13 | Pending |
