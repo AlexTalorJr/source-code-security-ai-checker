@@ -39,11 +39,14 @@ Every code change is automatically scanned for security vulnerabilities before d
 - ✓ Infrastructure & documentation — Docker with all 12 scanners, bilingual docs updated — v1.0.1
 - ✓ Cargo-audit runtime fix and documentation corrections — v1.0.1
 
+### Validated (v1.0.2)
+
+- ✓ RBAC — user accounts, API tokens, role-based access (admin, scanner, viewer) — v1.0.2 Phase 12
+
 ### Active
 
 - [ ] Scanner configuration UI — enable/disable scanners, per-scanner settings, config editor, scan profiles
 - [ ] DAST — Nuclei adapter for template-based dynamic scanning
-- [ ] RBAC — token-based API auth + role-based dashboard access (admin, viewer, scanner)
 
 ## Current Milestone: v1.0.2 Scanner UI, DAST & RBAC
 
@@ -116,4 +119,4 @@ Every code change is automatically scanned for security vulnerabilities before d
 | Underscore convention for config keys | tool_name uses underscores to match config.yml keys | ✓ Confirmed v1.0.1 |
 
 ---
-*Last updated: 2026-03-22 — milestone v1.0.2 started*
+*Last updated: 2026-03-23 — Phase 12 RBAC Foundation complete*
