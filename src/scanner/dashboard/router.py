@@ -923,6 +923,54 @@ async def create_token_dashboard(request: Request, name: str = Form(...), expire
     )
 
 
+# ---------- Scanner Configuration (admin only) ----------
+
+
+@router.get("/scanners", response_class=HTMLResponse)
+async def scanners_page(request: Request):
+    """Render scanner configuration page (admin only)."""
+    user = await _get_dashboard_user(request)
+    check = _require_dashboard_role(user, "admin")
+    if check:
+        return check
+
+    # Read config.yml fresh (not app.state.settings) for current state
+    import yaml
+    import os
+    config_path = os.environ.get("SCANNER_CONFIG_PATH", "config.yml")
+    if os.path.exists(config_path):
+        with open(config_path) as f:
+            config = yaml.safe_load(f) or {}
+    else:
+        config = {}
+
+    # Build scanner info from fresh config
+    from scanner.config import ScannerToolConfig
+    from scanner.adapters.registry import ScannerRegistry
+    scanners_config = {}
+    for name, raw in config.get("scanners", {}).items():
+        if isinstance(raw, dict):
+            scanners_config[name] = ScannerToolConfig(**raw)
+        else:
+            scanners_config[name] = raw
+    registry = ScannerRegistry(scanners_config)
+    scanners = registry.all_scanners_info()
+
+    # Enrich with timeout and extra_args (not in all_scanners_info by default)
+    for scanner_info in scanners:
+        name = scanner_info["name"]
+        raw = config.get("scanners", {}).get(name, {})
+        scanner_info["timeout"] = raw.get("timeout", 180)
+        scanner_info["extra_args"] = raw.get("extra_args", [])
+
+    template = _jinja_env.get_template("scanners.html.j2")
+    return HTMLResponse(template.render(
+        scanners=scanners,
+        user=user,
+        active_page="scanners",
+    ))
+
+
 @router.post("/tokens/{token_id}/revoke")
 async def revoke_token_dashboard(request: Request, token_id: int):
     """Revoke token from dashboard."""
