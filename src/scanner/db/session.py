@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import (
 def _set_sqlite_pragmas(dbapi_conn, connection_record):
     """Enable WAL mode and other SQLite optimizations on every connection."""
     cursor = dbapi_conn.cursor()
+    cursor.execute("PRAGMA busy_timeout=5000")
     cursor.execute("PRAGMA journal_mode=WAL")
     cursor.execute("PRAGMA synchronous=NORMAL")
     cursor.execute("PRAGMA foreign_keys=ON")

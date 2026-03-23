@@ -21,6 +21,8 @@ dependencies = [
     "matplotlib>=3.10.0",
     "defusedxml>=0.7.1",
     "cvss>=3.2",
+    "PyJWT>=2.12.1",
+    "pwdlib[bcrypt]>=0.3.0",
 ]
 
 [project.optional-dependencies]
