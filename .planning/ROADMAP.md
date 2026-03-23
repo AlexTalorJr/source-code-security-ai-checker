@@ -105,11 +105,12 @@ Plans:
   1. Admin can create a named scan profile (e.g. "Quick scan") that saves a specific scanner configuration
   2. User can select a scan profile when triggering a scan via API or dashboard, and only that profile's scanners execute
   3. Bilingual documentation (EN, RU, FR, ES, IT) covers RBAC setup, scanner config UI usage, DAST scanning, and scan profiles
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 15-01: TBD
-- [ ] 15-02: TBD
+- [ ] 15-01-PLAN.md — Profile backend: Pydantic models, DB column, CRUD API, orchestrator override, scan integration, tests
+- [ ] 15-02-PLAN.md — Profile UI: Profiles tab on scanners page, profile dropdown on scan form, history table column
+- [ ] 15-03-PLAN.md — Documentation: EN/RU/FR/ES/IT admin-guide, user-guide, api.md updates for all v1.0.2 features
 
 ## Progress
 
@@ -130,6 +131,6 @@ Phases 13 and 14 can execute in parallel after Phase 12 completes.
 | 10. Infrastructure and Documentation | v1.0.1 | 3/3 | Complete | 2026-03-22 |
 | 11. Cargo-Audit Fix and Doc Corrections | v1.0.1 | 1/1 | Complete | 2026-03-22 |
 | 12. RBAC Foundation | v1.0.2 | 5/5 | Complete | 2026-03-23 |
-| 13. Nuclei DAST Adapter | 3/3 | Complete    | 2026-03-23 | - |
-| 14. Scanner Configuration UI | 2/2 | Complete    | 2026-03-23 | - |
-| 15. Scan Profiles and Documentation | v1.0.2 | 0/? | Not started | - |
+| 13. Nuclei DAST Adapter | v1.0.2 | 3/3 | Complete | 2026-03-23 |
+| 14. Scanner Configuration UI | v1.0.2 | 2/2 | Complete | 2026-03-23 |
+| 15. Scan Profiles and Documentation | v1.0.2 | 0/3 | Not started | - |
