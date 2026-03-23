@@ -109,6 +109,7 @@ class ScannerSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="SCANNER_",
         env_nested_delimiter="__",
+        extra="ignore",
     )
 
     # Server
@@ -118,8 +119,10 @@ class ScannerSettings(BaseSettings):
     # Database
     db_path: str = "/data/scanner.db"
 
-    # API
-    api_key: str = Field(default="", description="API key for authentication")
+    # Auth (RBAC)
+    admin_user: str = Field(default="", description="Initial admin username (used on first startup)")
+    admin_password: str = Field(default="", description="Initial admin password (used on first startup)")
+    secret_key: str = Field(default="", description="JWT signing secret (auto-generated if not set)")
 
     # AI (secrets -- MUST come from env vars)
     claude_api_key: str = Field(default="", description="Claude API key")

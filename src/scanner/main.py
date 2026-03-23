@@ -1,9 +1,13 @@
 """FastAPI application factory with lifespan management."""
 
 import asyncio
+import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+
+logger = logging.getLogger(__name__)
 
 from scanner.api.router import api_router
 from scanner.config import ScannerSettings
@@ -59,6 +63,55 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
         # Add columns that may be missing in existing databases
         await conn.run_sync(_apply_schema_updates)
+
+    # Resolve or generate JWT secret key
+    secret_key = settings.secret_key
+    if not secret_key:
+        secret_file = os.path.join(os.path.dirname(settings.db_path), ".secret_key")
+        if os.path.exists(secret_file):
+            with open(secret_file) as f:
+                secret_key = f.read().strip()
+        else:
+            import secrets as secrets_mod
+
+            secret_key = secrets_mod.token_hex(32)
+            os.makedirs(os.path.dirname(secret_file), exist_ok=True)
+            with open(secret_file, "w") as f:
+                f.write(secret_key)
+            logger.info("Generated new JWT secret key: %s", secret_file)
+    settings.secret_key = secret_key
+
+    # Admin bootstrap: create initial admin user if no users exist
+    from scanner.models.user import User
+    from sqlalchemy import select, func as sa_func
+    from sqlalchemy.exc import IntegrityError
+    from pwdlib import PasswordHash
+
+    session_factory = create_session_factory(engine)
+    async with session_factory() as session:
+        user_count = await session.scalar(select(sa_func.count(User.id)))
+        if user_count == 0:
+            if not settings.admin_user or not settings.admin_password:
+                raise RuntimeError(
+                    "No users exist and SCANNER_ADMIN_USER / SCANNER_ADMIN_PASSWORD "
+                    "not set. Cannot start without authentication."
+                )
+            pw_hash = PasswordHash.default()
+            hashed = pw_hash.hash(settings.admin_password)
+            admin = User(
+                username=settings.admin_user,
+                password_hash=hashed,
+                role="admin",
+            )
+            try:
+                session.add(admin)
+                await session.commit()
+                logger.info("Created initial admin user: %s", settings.admin_user)
+            except IntegrityError:
+                await session.rollback()
+                logger.info("Admin user already exists (concurrent creation)")
+        else:
+            logger.debug("Users exist (%d), skipping admin bootstrap", user_count)
 
     app.state.engine = engine
     app.state.session_factory = create_session_factory(engine)
