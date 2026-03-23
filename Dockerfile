@@ -69,9 +69,24 @@ RUN ARCH=$(uname -m | sed 's/x86_64/x86_64-unknown-linux-gnu/;s/aarch64/aarch64-
     curl -sSL "https://github.com/rustsec/rustsec/releases/download/cargo-audit%2Fv0.22.1/cargo-audit-${ARCH}-v0.22.1.tgz" \
     | tar xz --strip-components=1 -C /usr/local/bin "cargo-audit-${ARCH}-v0.22.1/cargo-audit"
 
+# Install nuclei (DAST scanner) -- uses zip format, not tar.gz
+ARG TARGETARCH
+RUN curl -sSL "https://github.com/projectdiscovery/nuclei/releases/download/v3.7.1/nuclei_3.7.1_linux_${TARGETARCH}.zip" \
+    -o /tmp/nuclei.zip && \
+    unzip -o /tmp/nuclei.zip -d /usr/local/bin nuclei && \
+    chmod +x /usr/local/bin/nuclei && \
+    rm /tmp/nuclei.zip
+
+# Bake Nuclei templates into image (runs as root, before USER switch)
+# Templates stored in /root/.local/nuclei-templates/ then copied for scanner user
+RUN nuclei -update-templates && \
+    mkdir -p /home/scanner/.local && \
+    cp -r /root/.local/nuclei-templates /home/scanner/.local/nuclei-templates
+
 # Non-root user for security
 RUN groupadd -r scanner && useradd -r -g scanner -d /app scanner
 RUN mkdir -p /data && chown scanner:scanner /data
+RUN chown -R scanner:scanner /home/scanner/.local
 
 WORKDIR /app
 
