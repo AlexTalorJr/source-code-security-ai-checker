@@ -33,6 +33,7 @@ def _apply_schema_updates(connection) -> None:
         "scanner_version": "ALTER TABLE scans ADD COLUMN scanner_version VARCHAR(20)",
         "tool_versions": "ALTER TABLE scans ADD COLUMN tool_versions TEXT",
         "created_at": "ALTER TABLE scans ADD COLUMN created_at DATETIME DEFAULT (datetime('now'))",
+        "profile_name": "ALTER TABLE scans ADD COLUMN profile_name VARCHAR(200)",
     }
 
     for col, sql in migrations.items():
