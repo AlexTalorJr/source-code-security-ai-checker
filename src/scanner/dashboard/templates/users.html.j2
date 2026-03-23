@@ -1,0 +1,194 @@
+{% extends "base.html.j2" %}
+
+{% set active_page = "users" %}
+
+{% block title %}Users{% endblock %}
+
+{% block extra_styles %}
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.user-form {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.user-form h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.user-form .form-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.user-form .form-group {
+  flex: 1;
+  min-width: 180px;
+}
+
+.user-form label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 4px;
+}
+
+.user-form .form-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 16px;
+}
+
+.user-form .form-actions .discard-link {
+  text-decoration: none;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.user-form .form-actions .discard-link:hover {
+  color: var(--color-text);
+}
+
+.status-active {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.status-inactive {
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Users</h1>
+  {% if not edit_user %}
+  <button class="btn btn--accent" onclick="document.getElementById('create-form').style.display = document.getElementById('create-form').style.display === 'none' ? 'block' : 'none'">Create User</button>
+  {% endif %}
+</div>
+
+{% if error %}
+<div class="error-alert">{{ error }}</div>
+{% endif %}
+
+{% if edit_user %}
+<div class="user-form">
+  <h2>Edit User</h2>
+  <form method="POST" action="/dashboard/users/{{ edit_user.id }}">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="edit-username">Username</label>
+        <input type="text" id="edit-username" name="username" class="form-input" value="{{ edit_user.username }}" required>
+      </div>
+      <div class="form-group">
+        <label for="edit-password">Password</label>
+        <input type="password" id="edit-password" name="password" class="form-input" placeholder="Leave blank to keep current">
+      </div>
+      <div class="form-group">
+        <label for="edit-role">Role</label>
+        <select id="edit-role" name="role" class="form-select" required>
+          <option value="admin"{% if edit_user.role == "admin" %} selected{% endif %}>admin</option>
+          <option value="scanner"{% if edit_user.role == "scanner" %} selected{% endif %}>scanner</option>
+          <option value="viewer"{% if edit_user.role == "viewer" %} selected{% endif %}>viewer</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn--accent">Update User</button>
+      <a href="/dashboard/users" class="discard-link">Discard</a>
+    </div>
+  </form>
+</div>
+{% endif %}
+
+<div id="create-form" class="user-form" style="display: none;">
+  <h2>Create User</h2>
+  <form method="POST" action="/dashboard/users">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="new-username">Username</label>
+        <input type="text" id="new-username" name="username" class="form-input" placeholder="Enter username" required>
+      </div>
+      <div class="form-group">
+        <label for="new-password">Password</label>
+        <input type="password" id="new-password" name="password" class="form-input" placeholder="Enter your password" required minlength="8">
+      </div>
+      <div class="form-group">
+        <label for="new-role">Role</label>
+        <select id="new-role" name="role" class="form-select">
+          <option value="viewer" selected>viewer</option>
+          <option value="scanner">scanner</option>
+          <option value="admin">admin</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn--accent">Create User</button>
+      <a href="#" class="discard-link" onclick="document.getElementById('create-form').style.display='none'; return false;">Discard</a>
+    </div>
+  </form>
+</div>
+
+{% if users %}
+<table>
+  <thead>
+    <tr>
+      <th>Username</th>
+      <th style="width: 100px;">Role</th>
+      <th style="width: 140px;">Created</th>
+      <th style="width: 80px;">Status</th>
+      <th style="width: 120px;">Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for u in users %}
+    <tr>
+      <td>{{ u.username }}</td>
+      <td><span class="badge" style="background-color: {% if u.role == 'admin' %}#0d6efd{% elif u.role == 'scanner' %}#6c757d{% else %}#28a745{% endif %};">{{ u.role|upper }}</span></td>
+      <td>{{ u.created_at.strftime('%Y-%m-%d') if u.created_at else '-' }}</td>
+      <td>
+        {% if u.is_active %}
+        <span class="status-active">Active</span>
+        {% else %}
+        <span class="status-inactive">Inactive</span>
+        {% endif %}
+      </td>
+      <td>
+        <a href="/dashboard/users/{{ u.id }}/edit" class="btn btn--small btn--accent" style="margin-right: 4px;">Edit</a>
+        {% if u.is_active and u.id != user.id %}
+        <form method="POST" action="/dashboard/users/{{ u.id }}/deactivate" style="display: inline;">
+          <button type="submit" class="btn btn--small btn--destructive" onclick="return confirm('Deactivate user {{ u.username }}? They will no longer be able to log in.')">Deactivate</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+  <h2>No users yet</h2>
+  <p>Create your first user to get started.</p>
+</div>
+{% endif %}
+{% endblock %}
