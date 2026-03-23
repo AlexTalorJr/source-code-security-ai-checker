@@ -5,7 +5,8 @@ import math
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import func, select
 
-from scanner.api.auth import require_api_key
+from scanner.api.auth import Role, get_current_user, require_role
+from scanner.models.user import User
 from scanner.api.schemas import (
     FindingResponse,
     PaginatedResponse,
@@ -56,7 +57,7 @@ def _scan_to_detail(scan: ScanResult) -> ScanDetailResponse:
 async def trigger_scan(
     body: ScanRequest,
     request: Request,
-    _api_key: str = Depends(require_api_key),
+    current_user: User = Depends(require_role(Role.ADMIN, Role.SCANNER)),
 ) -> ScanResponse:
     """Trigger a new security scan.
 
@@ -85,7 +86,7 @@ async def list_scans(
     request: Request,
     page: int = 1,
     page_size: int = 20,
-    _api_key: str = Depends(require_api_key),
+    current_user: User = Depends(get_current_user),
 ) -> PaginatedResponse[ScanDetailResponse]:
     """List scan history with pagination, most recent first."""
     async with request.app.state.session_factory() as session:
@@ -121,7 +122,7 @@ async def list_scans(
 async def get_scan(
     scan_id: int,
     request: Request,
-    _api_key: str = Depends(require_api_key),
+    current_user: User = Depends(get_current_user),
 ) -> ScanDetailResponse:
     """Get detailed information about a specific scan."""
     async with request.app.state.session_factory() as session:
@@ -165,7 +166,7 @@ async def get_scan_progress(
 async def get_scan_report(
     scan_id: int,
     request: Request,
-    _api_key: str = Depends(require_api_key),
+    current_user: User = Depends(get_current_user),
 ):
     """Get the HTML report for a completed scan.
 
@@ -209,7 +210,7 @@ async def get_scan_findings(
     request: Request,
     page: int = 1,
     page_size: int = 50,
-    _api_key: str = Depends(require_api_key),
+    current_user: User = Depends(get_current_user),
 ) -> PaginatedResponse[FindingResponse]:
     """Get paginated findings for a specific scan.
 

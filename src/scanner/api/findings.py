@@ -2,7 +2,8 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from scanner.api.auth import require_api_key
+from scanner.api.auth import get_current_user
+from scanner.models.user import User
 from scanner.api.schemas import SuppressionRequest
 from scanner.core.suppression import suppress_fingerprint, unsuppress_fingerprint
 
@@ -14,7 +15,7 @@ async def suppress(
     fingerprint: str,
     request: Request,
     body: SuppressionRequest | None = None,
-    _api_key: str = Depends(require_api_key),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
     """Suppress a finding by fingerprint (mark as false positive).
 
@@ -38,7 +39,7 @@ async def suppress(
 async def unsuppress(
     fingerprint: str,
     request: Request,
-    _api_key: str = Depends(require_api_key),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
     """Remove suppression for a finding by fingerprint.
 
