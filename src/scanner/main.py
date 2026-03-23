@@ -85,7 +85,7 @@ async def lifespan(app: FastAPI):
     from scanner.models.user import User
     from sqlalchemy import select, func as sa_func
     from sqlalchemy.exc import IntegrityError
-    from pwdlib import PasswordHash
+    from scanner.dashboard.auth import hash_password
 
     session_factory = create_session_factory(engine)
     async with session_factory() as session:
@@ -96,8 +96,7 @@ async def lifespan(app: FastAPI):
                     "No users exist and SCANNER_ADMIN_USER / SCANNER_ADMIN_PASSWORD "
                     "not set. Cannot start without authentication."
                 )
-            pw_hash = PasswordHash.default()
-            hashed = pw_hash.hash(settings.admin_password)
+            hashed = hash_password(settings.admin_password)
             admin = User(
                 username=settings.admin_user,
                 password_hash=hashed,
