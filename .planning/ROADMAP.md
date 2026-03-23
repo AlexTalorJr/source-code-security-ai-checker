@@ -44,7 +44,7 @@
 
 - [x] **Phase 12: RBAC Foundation** - User accounts, API tokens, role-based authorization, and SQLite hardening (completed 2026-03-23)
 - [x] **Phase 13: Nuclei DAST Adapter** - Template-based dynamic security scanning via Nuclei CLI (completed 2026-03-23)
-- [ ] **Phase 14: Scanner Configuration UI** - Dashboard pages for scanner enable/disable, settings, and config editing
+- [x] **Phase 14: Scanner Configuration UI** - Dashboard pages for scanner enable/disable, settings, and config editing (completed 2026-03-23)
 - [ ] **Phase 15: Scan Profiles and Documentation** - Named scan presets and bilingual docs for all v1.0.2 features
 
 ## Phase Details
@@ -131,5 +131,5 @@ Phases 13 and 14 can execute in parallel after Phase 12 completes.
 | 11. Cargo-Audit Fix and Doc Corrections | v1.0.1 | 1/1 | Complete | 2026-03-22 |
 | 12. RBAC Foundation | v1.0.2 | 5/5 | Complete | 2026-03-23 |
 | 13. Nuclei DAST Adapter | 3/3 | Complete    | 2026-03-23 | - |
-| 14. Scanner Configuration UI | 1/2 | In Progress|  | - |
+| 14. Scanner Configuration UI | 2/2 | Complete   | 2026-03-23 | - |
 | 15. Scan Profiles and Documentation | v1.0.2 | 0/? | Not started | - |
