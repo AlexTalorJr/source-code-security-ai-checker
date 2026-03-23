@@ -77,5 +77,33 @@ notifications:
     smtp_password: ""  # Set via SCANNER_NOTIFICATIONS__EMAIL__SMTP_PASSWORD env var
     use_tls: true
 
+# Scan profiles: named presets that select specific scanners and overrides
+profiles:
+  quick_scan:
+    description: "Fast scan with essential tools only"
+    scanners:
+      semgrep:
+        timeout: 60
+      gitleaks: {}
+  full_audit:
+    description: "Complete security audit with all tools"
+    scanners:
+      semgrep: {}
+      cppcheck: {}
+      gitleaks: {}
+      trivy: {}
+      checkov: {}
+      psalm: {}
+      bandit: {}
+      gosec: {}
+      brakeman: {}
+      cargo_audit: {}
+      nuclei: {}
+  dast_only:
+    description: "DAST scanning with Nuclei only"
+    scanners:
+      nuclei:
+        timeout: 600
+
 # Dashboard
 dashboard_url: ""  # e.g., http://scanner:8000/dashboard (auto-derived if empty)

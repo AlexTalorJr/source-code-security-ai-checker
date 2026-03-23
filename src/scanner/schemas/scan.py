@@ -29,6 +29,7 @@ class ScanResultSchema(BaseModel):
     tool_versions: dict | None = None
     error_message: str | None = None
     ai_cost_usd: float | None = None
+    profile_name: str | None = None
     ai_skipped: bool = False
     ai_skip_reason: str | None = None
     created_at: datetime | None = None

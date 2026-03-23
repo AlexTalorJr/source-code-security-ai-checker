@@ -16,6 +16,7 @@ class ScanRequest(BaseModel):
     branch: str | None = None
     target_url: str | None = None  # DAST target URL
     skip_ai: bool = False
+    profile: str | None = None
 
     @model_validator(mode="after")
     def validate_target(self) -> "ScanRequest":
@@ -52,6 +53,7 @@ class ScanDetailResponse(BaseModel):
     repo_url: str | None = None
     branch: str | None = None
     target_url: str | None = None
+    profile_name: str | None = None
     commit_hash: str | None = None
     started_at: datetime | None = None
     completed_at: datetime | None = None

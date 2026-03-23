@@ -1,6 +1,7 @@
 """Configuration CRUD API endpoints for scanner management."""
 
 import os
+import re
 
 import yaml
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -163,4 +164,125 @@ async def put_config_yaml(
     with open(path, "w") as f:
         f.write(text)
 
+    return {"status": "ok"}
+
+
+# --- Profile CRUD ---
+
+PROFILE_NAME_PATTERN = re.compile(r'^[a-zA-Z][a-zA-Z0-9_-]{0,63}$')
+YAML_RESERVED = {"true", "false", "null", "yes", "no", "on", "off"}
+
+
+def _validate_profile_name(name: str) -> str | None:
+    """Validate profile name. Returns error message or None."""
+    if name.lower() in YAML_RESERVED:
+        return f"Profile name '{name}' is a YAML reserved word"
+    if not PROFILE_NAME_PATTERN.match(name):
+        return "Profile name must contain only letters, numbers, hyphens, and underscores."
+    return None
+
+
+class ProfileCreateRequest(BaseModel):
+    name: str
+    description: str = ""
+    scanners: dict[str, dict] = {}
+
+
+class ProfileUpdateRequest(BaseModel):
+    description: str | None = None
+    scanners: dict[str, dict] | None = None
+
+
+@router.get("/profiles")
+async def list_profiles(
+    current_user: User = Depends(require_role(Role.ADMIN)),
+):
+    """List all scan profiles."""
+    config = read_config()
+    return {"profiles": config.get("profiles", {})}
+
+
+@router.post("/profiles", status_code=201)
+async def create_profile(
+    body: ProfileCreateRequest,
+    current_user: User = Depends(require_role(Role.ADMIN)),
+):
+    """Create a new scan profile."""
+    error = _validate_profile_name(body.name)
+    if error:
+        raise HTTPException(status_code=422, detail=error)
+    if not body.scanners:
+        raise HTTPException(
+            status_code=422,
+            detail="Profile must have at least one scanner enabled. Select at least one scanner and try again.",
+        )
+    config = read_config()
+    profiles = config.get("profiles", {})
+    if len(profiles) >= 10:
+        raise HTTPException(
+            status_code=400,
+            detail="Maximum 10 profiles allowed. Delete an existing profile before creating a new one.",
+        )
+    if body.name in profiles:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Profile '{body.name}' already exists. Choose a different name.",
+        )
+    profiles[body.name] = {"description": body.description, "scanners": body.scanners}
+    config["profiles"] = profiles
+    write_config(config)
+    return {"status": "ok", "profile": body.name}
+
+
+@router.get("/profiles/{name}")
+async def get_profile(
+    name: str,
+    current_user: User = Depends(require_role(Role.ADMIN)),
+):
+    """Get a single scan profile by name."""
+    config = read_config()
+    profiles = config.get("profiles", {})
+    if name not in profiles:
+        raise HTTPException(status_code=404, detail=f"Profile '{name}' not found")
+    return {"name": name, **profiles[name]}
+
+
+@router.put("/profiles/{name}")
+async def update_profile(
+    name: str,
+    body: ProfileUpdateRequest,
+    current_user: User = Depends(require_role(Role.ADMIN)),
+):
+    """Update an existing scan profile."""
+    config = read_config()
+    profiles = config.get("profiles", {})
+    if name not in profiles:
+        raise HTTPException(status_code=404, detail=f"Profile '{name}' not found")
+    if body.description is not None:
+        profiles[name]["description"] = body.description
+    if body.scanners is not None:
+        if not body.scanners:
+            raise HTTPException(
+                status_code=422,
+                detail="Profile must have at least one scanner enabled. Select at least one scanner and try again.",
+            )
+        profiles[name]["scanners"] = body.scanners
+    config["profiles"] = profiles
+    write_config(config)
+    return {"status": "ok", "profile": name}
+
+
+@router.delete("/profiles/{name}")
+async def delete_profile(
+    name: str,
+    current_user: User = Depends(require_role(Role.ADMIN)),
+):
+    """Delete a scan profile."""
+    config = read_config()
+    profiles = config.get("profiles", {})
+    if name not in profiles:
+        raise HTTPException(status_code=404, detail=f"Profile '{name}' not found")
+    del profiles[name]
+    config["profiles"] = profiles
+    write_config(config)
     return {"status": "ok"}

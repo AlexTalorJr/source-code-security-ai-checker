@@ -31,6 +31,21 @@ class ScannerToolConfig(BaseModel):
     languages: list[str] = []
 
 
+class ScanProfileScannerConfig(BaseModel):
+    """Per-scanner override within a profile."""
+
+    enabled: bool = True
+    timeout: int | None = None
+    extra_args: list[str] | None = None
+
+
+class ScanProfileConfig(BaseModel):
+    """Named scan profile configuration."""
+
+    description: str = ""
+    scanners: dict[str, ScanProfileScannerConfig] = {}
+
+
 class AIConfig(BaseModel):
     """AI analysis configuration."""
 
@@ -146,6 +161,20 @@ class ScannerSettings(BaseSettings):
             return value
         return {
             k: ScannerToolConfig(**v) if isinstance(v, dict) else v
+            for k, v in value.items()
+        }
+
+    # Scan profiles
+    profiles: dict[str, ScanProfileConfig] = {}
+
+    @field_validator("profiles", mode="before")
+    @classmethod
+    def _coerce_profile_dicts(cls, value: dict) -> dict:
+        """Coerce raw YAML dicts into ScanProfileConfig instances."""
+        if not isinstance(value, dict):
+            return value
+        return {
+            k: ScanProfileConfig(**v) if isinstance(v, dict) else v
             for k, v in value.items()
         }
 

@@ -22,6 +22,7 @@ class ScanResult(Base):
 
     # Options
     skip_ai = Column(Boolean, nullable=False, default=False, server_default="0")
+    profile_name = Column(String(200), nullable=True)
 
     # Status
     status = Column(String(20), nullable=False, default="pending")
