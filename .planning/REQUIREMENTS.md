@@ -7,7 +7,7 @@
 
 ### RBAC & Authentication
 
-- [ ] **AUTH-01**: Admin can create user accounts with username and password
+- [x] **AUTH-01**: Admin can create user accounts with username and password
 - [ ] **AUTH-02**: User can log in to dashboard with username and password
 - [ ] **AUTH-03**: User can generate and revoke personal API tokens for CI/CD
 - [ ] **AUTH-04**: Admin role has full access to all endpoints and dashboard pages
@@ -32,7 +32,7 @@
 
 ### Infrastructure
 
-- [ ] **INFRA-03**: SQLite busy_timeout configured to prevent write contention
+- [x] **INFRA-03**: SQLite busy_timeout configured to prevent write contention
 - [ ] **INFRA-04**: Bilingual documentation updated with RBAC, scanner config UI, and DAST features (EN, RU, FR, ES, IT)
 
 ## Future Requirements
@@ -72,7 +72,7 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 12 | Pending |
+| AUTH-01 | Phase 12 | Complete |
 | AUTH-02 | Phase 12 | Pending |
 | AUTH-03 | Phase 12 | Pending |
 | AUTH-04 | Phase 12 | Pending |
@@ -88,7 +88,7 @@
 | DAST-02 | Phase 13 | Pending |
 | DAST-03 | Phase 13 | Pending |
 | DAST-04 | Phase 13 | Pending |
-| INFRA-03 | Phase 12 | Pending |
+| INFRA-03 | Phase 12 | Complete |
 | INFRA-04 | Phase 15 | Pending |
 
 **Coverage:**
