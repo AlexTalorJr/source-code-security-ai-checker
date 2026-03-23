@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 12-04-PLAN.md
-last_updated: "2026-03-23T04:39:00.400Z"
+stopped_at: Completed 12-05-PLAN.md
+last_updated: "2026-03-23T04:40:50.487Z"
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -50,6 +50,7 @@ Recent decisions affecting current work:
 - [Phase 12-03]: Dashboard test files left unchanged until dashboard auth module migrated from make_session_token
 - [Phase 12-03]: Bearer tokens in test fixtures created via direct DB insert to avoid API circular dependency
 - [Phase 12-04]: Findings suppress/unsuppress guarded with get_current_user; scanners list also get_current_user
+- [Phase 12]: Dashboard auth uses _get_dashboard_user (returns None) for redirect-based login flow
 
 ### Pending Todos
 
@@ -61,6 +62,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-23T04:39:00.393Z
-Stopped at: Completed 12-04-PLAN.md
+Last session: 2026-03-23T04:40:50.478Z
+Stopped at: Completed 12-05-PLAN.md
 Resume file: None

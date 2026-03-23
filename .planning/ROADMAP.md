@@ -42,7 +42,7 @@
 
 **Milestone Goal:** Add web-based scanner configuration, Nuclei DAST adapter, and token-based authentication with role-based access control.
 
-- [ ] **Phase 12: RBAC Foundation** - User accounts, API tokens, role-based authorization, and SQLite hardening
+- [x] **Phase 12: RBAC Foundation** - User accounts, API tokens, role-based authorization, and SQLite hardening (completed 2026-03-23)
 - [ ] **Phase 13: Nuclei DAST Adapter** - Template-based dynamic security scanning via Nuclei CLI
 - [ ] **Phase 14: Scanner Configuration UI** - Dashboard pages for scanner enable/disable, settings, and config editing
 - [ ] **Phase 15: Scan Profiles and Documentation** - Named scan presets and bilingual docs for all v1.0.2 features
@@ -128,7 +128,7 @@ Phases 13 and 14 can execute in parallel after Phase 12 completes.
 | 9. Tier-1 Scanner Adapters | v1.0.1 | 2/2 | Complete | 2026-03-21 |
 | 10. Infrastructure and Documentation | v1.0.1 | 3/3 | Complete | 2026-03-22 |
 | 11. Cargo-Audit Fix and Doc Corrections | v1.0.1 | 1/1 | Complete | 2026-03-22 |
-| 12. RBAC Foundation | 4/5 | In Progress|  | - |
+| 12. RBAC Foundation | 5/5 | Complete   | 2026-03-23 | - |
 | 13. Nuclei DAST Adapter | v1.0.2 | 0/? | Not started | - |
 | 14. Scanner Configuration UI | v1.0.2 | 0/? | Not started | - |
 | 15. Scan Profiles and Documentation | v1.0.2 | 0/? | Not started | - |
