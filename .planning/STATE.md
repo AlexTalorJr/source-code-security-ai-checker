@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 13-01-PLAN.md
-last_updated: "2026-03-23T10:01:20.540Z"
+stopped_at: Completed 13-03-PLAN.md
+last_updated: "2026-03-23T10:06:52.216Z"
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -23,8 +23,8 @@ See: .planning/PROJECT.md (updated 2026-03-22)
 
 ## Current Position
 
-Phase: 13 (nuclei-dast-adapter) — EXECUTING
-Plan: 2 of 3
+Phase: 13 (nuclei-dast-adapter) — COMPLETE
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -54,6 +54,9 @@ Recent decisions affecting current work:
 - [Phase 13]: Nuclei enabled=true (not auto) because DAST is not language-dependent
 - [Phase 13]: Nuclei exit code != 0 is error (unlike gosec >= 2) per Nuclei CLI semantics
 - [Phase 13]: DAST adapter stores URL as file_path, line_start/line_end always None
+- [Phase 13-03]: Three-way ScanRequest validation: target_url exclusive with path/repo_url
+- [Phase 13-03]: DAST mode uses get_scanner_config("nuclei") instead of get_enabled_adapters
+- [Phase 13-03]: target_url passed as target_path param to NucleiAdapter.run() (URL-as-path pattern)
 
 ### Pending Todos
 
@@ -65,6 +68,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-23T10:01:20.533Z
-Stopped at: Completed 13-01-PLAN.md
+Last session: 2026-03-23T10:06:51.199Z
+Stopped at: Completed 13-03-PLAN.md
 Resume file: None
