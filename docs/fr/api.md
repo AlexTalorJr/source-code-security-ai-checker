@@ -1,4 +1,4 @@
-# Référence API
+# Reference API
 
 ## URL de base
 
@@ -8,21 +8,21 @@ http://localhost:8000
 
 ## Authentification
 
-Tous les endpoints API sauf `/api/health` requièrent une clé API passée dans le header `X-API-Key`. La clé est définie via la variable d'environnement `SCANNER_API_KEY` et validée en utilisant une comparaison protégée contre les attaques temporelles (`secrets.compare_digest`).
+Tous les endpoints API sauf `/api/health` necessitent un token Bearer dans le header Authorization. Generez des tokens depuis le tableau de bord (`/dashboard/tokens`) ou via l'API de gestion des tokens.
 
 ```bash
-curl -H "X-API-Key: your-key" http://localhost:8000/api/scans
+curl -H "Authorization: Bearer nvsec_your_token_here" http://localhost:8000/api/scans
 ```
 
-Les requêtes sans clé valide reçoivent une réponse `401 Unauthorized`.
+Les requetes sans token valide recoivent une reponse `401 Unauthorized`.
 
 ## Endpoints
 
 ### GET /api/health
 
-Endpoint de vérification de santé. Aucune authentification requise.
+Endpoint de verification de sante. Aucune authentification requise.
 
-**Réponse 200 :**
+**Reponse 200 :**
 
 ```json
 {
@@ -37,40 +37,39 @@ Endpoint de vérification de santé. Aucune authentification requise.
 |-------|------|-------------|
 | `status` | string | `"healthy"` ou `"degraded"` |
 | `version` | string | Version du scanner depuis pyproject.toml |
-| `uptime_seconds` | float | Secondes depuis le démarrage de l'application |
+| `uptime_seconds` | float | Secondes depuis le demarrage de l'application |
 | `database` | string | `"ok"` ou `"error"` |
-
-**Exemple :**
-
-```bash
-curl http://localhost:8000/api/health
-```
 
 ---
 
 ### POST /api/scans
 
-Déclencher un nouveau scan de sécurité. Le scan est mis en file d'attente et s'exécute de manière asynchrone en arrière-plan.
+Declencher un nouveau scan de securite. Le scan est mis en file d'attente et s'execute de maniere asynchrone.
 
-**Corps de la requête :**
+**Corps de la requete :**
 
 ```json
 {
   "path": "/path/to/local/code",
   "repo_url": "https://github.com/org/repo.git",
-  "branch": "main"
+  "branch": "main",
+  "target_url": "https://example.com",
+  "profile": "quick_scan"
 }
 ```
 
 | Champ | Type | Requis | Description |
 |-------|------|--------|-------------|
-| `path` | string | Non | Chemin du système de fichiers local à scanner |
-| `repo_url` | string | Non | URL du dépôt Git à cloner et scanner |
-| `branch` | string | Non | Branche à extraire (défaut : branche par défaut du dépôt) |
+| `path` | string | Non | Chemin local a scanner |
+| `repo_url` | string | Non | URL du depot Git a cloner et scanner |
+| `branch` | string | Non | Branche a extraire (defaut : branche par defaut du depot) |
+| `target_url` | string | Non | URL pour le scan DAST (exclusif avec `path`/`repo_url`) |
+| `profile` | string | Non | Nom du profil de scan a utiliser |
+| `skip_ai` | boolean | Non | Ignorer l'analyse IA (defaut : false) |
 
-Fournissez soit `path` soit `repo_url`. Si `repo_url` est fourni, le scanner clone le dépôt avant de le scanner.
+Fournissez `path`, `repo_url` ou `target_url`. Le champ `target_url` declenche un scan DAST et ne peut pas etre combine avec `path` ou `repo_url`.
 
-**Réponse 202 :**
+**Reponse 202 :**
 
 ```json
 {
@@ -79,159 +78,94 @@ Fournissez soit `path` soit `repo_url`. Si `repo_url` est fourni, le scanner clo
 }
 ```
 
-**Codes de statut :** `202` Créé, `401` Non autorisé, `422` Erreur de validation
+**Codes de statut :** `202` Cree, `400` Profil invalide, `401` Non autorise, `422` Erreur de validation
 
-**Exemple :**
+**Exemples :**
 
 ```bash
+# Scan SAST
 curl -X POST http://localhost:8000/api/scans \
-  -H "X-API-Key: your-key" \
+  -H "Authorization: Bearer nvsec_your_token" \
   -H "Content-Type: application/json" \
   -d '{"repo_url": "https://github.com/org/repo.git", "branch": "main"}'
+
+# Scan SAST avec profil
+curl -X POST http://localhost:8000/api/scans \
+  -H "Authorization: Bearer nvsec_your_token" \
+  -H "Content-Type: application/json" \
+  -d '{"repo_url": "https://github.com/org/repo.git", "profile": "quick_scan"}'
+
+# Scan DAST
+curl -X POST http://localhost:8000/api/scans \
+  -H "Authorization: Bearer nvsec_your_token" \
+  -H "Content-Type: application/json" \
+  -d '{"target_url": "https://example.com"}'
 ```
 
 ---
 
 ### GET /api/scans
 
-Lister tous les scans, ordonnés par date de création (le plus récent en premier).
+Lister les scans avec pagination, ordonnes par date de creation (le plus recent en premier).
 
-**Réponse 200 :**
+**Reponse 200 :**
 
 ```json
-[
-  {
-    "id": 1,
-    "repo_url": "https://github.com/org/repo.git",
-    "branch": "main",
-    "status": "completed",
-    "started_at": "2026-03-20T10:00:00Z",
-    "completed_at": "2026-03-20T10:05:00Z",
-    "gate_passed": true
-  }
-]
-```
-
-**Exemple :**
-
-```bash
-curl -H "X-API-Key: your-key" http://localhost:8000/api/scans
+{
+  "items": [
+    {
+      "id": 1,
+      "status": "completed",
+      "repo_url": "https://github.com/org/repo.git",
+      "branch": "main",
+      "target_url": null,
+      "profile_name": "quick_scan",
+      "started_at": "2026-03-20T10:00:00Z",
+      "completed_at": "2026-03-20T10:05:00Z",
+      "total_findings": 15,
+      "gate_passed": true
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "page_size": 20,
+  "pages": 1
+}
 ```
 
 ---
 
 ### GET /api/scans/{id}
 
-Obtenir les résultats détaillés d'un scan, y compris les résultats.
+Obtenir les informations detaillees d'un scan.
 
-**Paramètres de chemin :**
+**Codes de statut :** `200` OK, `401` Non autorise, `404` Scan introuvable
 
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `id` | integer | ID du scan |
+---
 
-**Réponse 200 :**
+### GET /api/scans/{scan_id}/findings
 
-```json
-{
-  "id": 1,
-  "repo_url": "https://github.com/org/repo.git",
-  "branch": "main",
-  "status": "completed",
-  "started_at": "2026-03-20T10:00:00Z",
-  "completed_at": "2026-03-20T10:05:00Z",
-  "gate_passed": true,
-  "findings": [
-    {
-      "id": 1,
-      "tool": "semgrep",
-      "rule_id": "python.lang.security.audit.exec-detected",
-      "severity": "high",
-      "file_path": "src/app.py",
-      "line": 42,
-      "message": "Use of exec() detected",
-      "fingerprint": "abc123..."
-    }
-  ]
-}
-```
-
-**Codes de statut :** `200` OK, `401` Non autorisé, `404` Scan introuvable
-
-**Exemple :**
-
-```bash
-curl -H "X-API-Key: your-key" http://localhost:8000/api/scans/1
-```
+Resultats pagines pour un scan specifique.
 
 ---
 
 ### POST /api/scans/{scan_id}/findings/{finding_id}/suppress
 
-Supprimer un résultat (marquer comme faux positif).
+Supprimer un resultat (marquer comme faux positif).
 
-**Paramètres de chemin :**
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `scan_id` | integer | ID du scan |
-| `finding_id` | integer | ID du résultat |
-
-**Corps de la requête :**
+**Corps de la requete :**
 
 ```json
 {
   "reason": "False positive: test fixture data"
 }
-```
-
-**Réponse 200 :**
-
-```json
-{
-  "status": "suppressed",
-  "finding_id": 1,
-  "reason": "False positive: test fixture data"
-}
-```
-
-**Exemple :**
-
-```bash
-curl -X POST http://localhost:8000/api/scans/1/findings/5/suppress \
-  -H "X-API-Key: your-key" \
-  -H "Content-Type: application/json" \
-  -d '{"reason": "False positive: test fixture"}'
 ```
 
 ---
 
 ### DELETE /api/scans/{scan_id}/findings/{finding_id}/suppress
 
-Annuler la suppression d'un résultat.
-
-**Paramètres de chemin :**
-
-| Paramètre | Type | Description |
-|-----------|------|-------------|
-| `scan_id` | integer | ID du scan |
-| `finding_id` | integer | ID du résultat |
-
-**Réponse 200 :**
-
-```json
-{
-  "status": "unsuppressed",
-  "finding_id": 1
-}
-```
-
-**Exemple :**
-
-```bash
-curl -X DELETE http://localhost:8000/api/scans/1/findings/5/suppress \
-  -H "X-API-Key: your-key"
-```
+Annuler la suppression d'un resultat.
 
 ---
 
@@ -239,98 +173,198 @@ curl -X DELETE http://localhost:8000/api/scans/1/findings/5/suppress \
 
 Liste de tous les scanners enregistres avec leur configuration. Authentification requise.
 
-**Reponse 200 :**
-
-```json
-[
-  {
-    "name": "semgrep",
-    "enabled": true,
-    "languages": ["python", "php", "javascript", "typescript", "go", "java", "kotlin", "ruby", "csharp", "rust"],
-    "adapter_class": "scanner.adapters.semgrep.SemgrepAdapter"
-  },
-  {
-    "name": "gosec",
-    "enabled": "auto",
-    "languages": ["go"],
-    "adapter_class": "scanner.adapters.gosec.GosecAdapter"
-  },
-  {
-    "name": "bandit",
-    "enabled": "auto",
-    "languages": ["python"],
-    "adapter_class": "scanner.adapters.bandit.BanditAdapter"
-  },
-  {
-    "name": "brakeman",
-    "enabled": "auto",
-    "languages": ["ruby"],
-    "adapter_class": "scanner.adapters.brakeman.BrakemanAdapter"
-  },
-  {
-    "name": "cargo_audit",
-    "enabled": "auto",
-    "languages": ["rust"],
-    "adapter_class": "scanner.adapters.cargo_audit.CargoAuditAdapter"
-  }
-]
-```
-
-La reponse inclut les 12 scanners enregistres. L'exemple ci-dessus montre un sous-ensemble pour plus de brievete.
-
-**Exemple :**
-
-```bash
-curl -H "X-API-Key: your-key" http://localhost:8000/api/scanners
-```
-
 ---
 
 ### GET /api/trends
 
-Obtenir les tendances des résultats dans le temps pour les graphiques de tendances.
+Tendances des resultats dans le temps pour les graphiques.
 
-**Réponse 200 :**
+---
+
+## Endpoints de configuration
+
+### GET /api/config
+
+Configuration complete du scanner en JSON. Admin uniquement.
+
+```bash
+curl -H "Authorization: Bearer nvsec_your_token" http://localhost:8000/api/config
+```
+
+---
+
+### GET /api/config/yaml
+
+Contenu brut de `config.yml` en texte. Admin uniquement.
+
+---
+
+### PATCH /api/config/scanners/{scanner_name}
+
+Mise a jour des parametres d'un scanner individuel. Admin uniquement.
+
+**Corps de la requete :**
 
 ```json
 {
-  "scans": [
-    {
-      "id": 1,
-      "completed_at": "2026-03-20T10:05:00Z",
-      "total_findings": 15,
-      "critical": 1,
-      "high": 3,
-      "medium": 7,
-      "low": 4
-    }
-  ]
+  "enabled": true,
+  "timeout": 300,
+  "extra_args": ["--exclude", ".venv"]
 }
 ```
 
-**Exemple :**
+| Champ | Type | Description |
+|-------|------|-------------|
+| `enabled` | bool/string | `true`, `false` ou `"auto"` |
+| `timeout` | integer | 30-900 secondes |
+| `extra_args` | string[] | Arguments CLI supplementaires |
 
-```bash
-curl -H "X-API-Key: your-key" http://localhost:8000/api/trends
+---
+
+### PUT /api/config/yaml
+
+Remplacer `config.yml` par un nouveau contenu YAML. Admin uniquement. Le YAML est valide avant l'ecriture.
+
+---
+
+## Endpoints de gestion des profils
+
+### GET /api/config/profiles
+
+Liste de tous les profils de scan. Admin uniquement.
+
+**Reponse 200 :**
+
+```json
+{
+  "profiles": {
+    "quick_scan": {
+      "description": "Fast scan with essential tools only",
+      "scanners": {
+        "semgrep": {},
+        "gitleaks": {}
+      }
+    }
+  }
+}
 ```
+
+---
+
+### POST /api/config/profiles
+
+Creer un nouveau profil de scan. Admin uniquement.
+
+**Corps de la requete :**
+
+```json
+{
+  "name": "quick_scan",
+  "description": "Fast scan with essential tools only",
+  "scanners": {
+    "semgrep": {},
+    "gitleaks": {}
+  }
+}
+```
+
+**Codes de statut :** `201` Cree, `400` Limite atteinte, `409` Profil existant, `422` Erreur de validation
+
+---
+
+### GET /api/config/profiles/{name}
+
+Obtenir un profil par nom. Admin uniquement.
+
+---
+
+### PUT /api/config/profiles/{name}
+
+Mettre a jour un profil existant. Admin uniquement.
+
+---
+
+### DELETE /api/config/profiles/{name}
+
+Supprimer un profil de scan. Admin uniquement.
+
+---
+
+## Endpoints de gestion des utilisateurs
+
+### GET /api/users
+
+Liste de tous les utilisateurs. Admin uniquement.
+
+### POST /api/users
+
+Creer un nouvel utilisateur. Admin uniquement.
+
+```json
+{
+  "username": "newuser",
+  "password": "securepassword",
+  "role": "viewer"
+}
+```
+
+### GET /api/users/{id}
+
+Obtenir un utilisateur. Admin uniquement.
+
+### PUT /api/users/{id}
+
+Mettre a jour un utilisateur. Admin uniquement.
+
+### DELETE /api/users/{id}
+
+Desactiver un utilisateur. Admin uniquement.
+
+---
+
+## Endpoints de gestion des tokens
+
+### GET /api/tokens
+
+Liste de vos tokens API.
+
+### POST /api/tokens
+
+Creer un nouveau token API.
+
+```json
+{
+  "name": "CI Pipeline",
+  "expires_days": 90
+}
+```
+
+### DELETE /api/tokens/{id}
+
+Revoquer un token API.
+
+---
 
 ## Tableau de bord
 
-Un tableau de bord web est disponible à l'adresse `/dashboard`, fournissant une interface graphique pour le scanner :
+Un tableau de bord web est disponible a l'adresse `/dashboard` :
 
 | Route | Description |
 |-------|-------------|
 | `GET /dashboard/login` | Page de connexion |
-| `POST /dashboard/login` | Authentification avec la clé API |
+| `POST /dashboard/login` | Authentification par nom d'utilisateur et mot de passe |
 | `GET /dashboard/` | Vue d'ensemble de l'historique des scans |
-| `GET /dashboard/scans/{id}` | Détail d'un scan avec résultats |
-| `GET /dashboard/trends` | Graphiques de tendances dans le temps |
+| `GET /dashboard/scans/{id}` | Detail d'un scan avec resultats |
+| `GET /dashboard/trends` | Graphiques de tendances |
+| `GET /dashboard/users` | Gestion des utilisateurs (admin uniquement) |
+| `GET /dashboard/tokens` | Gestion des tokens |
+| `GET /dashboard/scanners` | Configuration des scanners (admin uniquement) |
 
-Le tableau de bord utilise la même clé API pour l'authentification, stockée dans un cookie de session après la connexion. La suppression et l'annulation de suppression des résultats sont disponibles directement depuis la page de détail du scan.
+Le tableau de bord utilise des cookies de session pour l'authentification (expiration de 7 jours).
 
-## Réponses d'erreur
+## Reponses d'erreur
 
-Toutes les réponses d'erreur suivent un format standard :
+Toutes les reponses d'erreur suivent un format standard :
 
 ```json
 {
@@ -342,13 +376,14 @@ Toutes les réponses d'erreur suivent un format standard :
 
 | Code | Signification |
 |------|---------------|
-| `401` | Clé API manquante ou invalide |
-| `404` | Ressource introuvable (ID de scan, ID de résultat) |
-| `422` | Erreur de validation (corps de requête invalide) |
+| `401` | Token Bearer manquant ou invalide |
+| `403` | Permissions insuffisantes (verification de role echouee) |
+| `404` | Ressource introuvable (ID de scan, ID de resultat, nom de profil) |
+| `422` | Erreur de validation (corps de requete invalide) |
 
 ## Documentation OpenAPI
 
-FastAPI génère automatiquement une documentation API interactive :
+FastAPI genere automatiquement une documentation API interactive :
 
 - **Swagger UI :** http://localhost:8000/docs
 - **ReDoc :** http://localhost:8000/redoc

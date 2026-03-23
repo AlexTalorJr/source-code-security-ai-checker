@@ -163,7 +163,7 @@ Non sono necessarie altre modifiche al codice. Il registro scopre e carica autom
 L'endpoint `/api/scanners` restituisce tutti gli scanner registrati con la loro configurazione:
 
 ```bash
-curl -H "X-API-Key: $SCANNER_API_KEY" http://localhost:8000/api/scanners
+curl -H "Authorization: Bearer nvsec_your_token" http://localhost:8000/api/scanners
 ```
 
 La risposta include il nome, lo stato di abilitazione, i linguaggi configurati e la classe di adattatore di ciascuno scanner.
@@ -373,4 +373,202 @@ docker compose ps
 docker compose logs scanner --tail 50
 ```
 
-Docker Compose esegue controlli di integrità automatici ogni 30 secondi.
+Docker Compose esegue controlli di integrita automatici ogni 30 secondi.
+
+## Gestione Utenti (RBAC)
+
+Security AI Scanner utilizza il controllo degli accessi basato sui ruoli (RBAC) per gestire i permessi degli utenti. Sono disponibili tre ruoli:
+
+### Ruoli
+
+| Azione | Admin | Viewer | Scanner |
+|--------|-------|--------|---------|
+| Avviare scansione | Si | No | Si (solo API) |
+| Visualizzare risultati | Si | Si | Si (solo API) |
+| Gestire utenti | Si | No | No |
+| Configurare scanner | Si | No | No |
+| Gestire profili | Si | No | No |
+
+- **Admin** -- accesso completo a tutte le funzionalita, inclusa la gestione utenti, la configurazione degli scanner e la gestione dei profili
+- **Viewer** -- accesso in sola lettura ai risultati delle scansioni e ai report tramite la dashboard
+- **Scanner** -- ruolo solo API per avviare scansioni e visualizzare risultati programmaticamente
+
+### Creazione utenti
+
+Gli utenti possono essere creati in due modi:
+
+1. **Tramite dashboard** -- navigare a `/dashboard/users` (solo admin) e compilare il modulo di creazione
+2. **Tramite variabili d'ambiente** -- impostare `SCANNER_ADMIN_USER` e `SCANNER_ADMIN_PASSWORD` per creare un account admin al primo avvio
+
+Requisiti password: minimo 8 caratteri.
+
+### Disattivazione utenti
+
+Gli admin possono disattivare gli utenti dalla dashboard o tramite l'API (`DELETE /api/users/{id}`). Gli utenti disattivati non possono accedere ne utilizzare i token API.
+
+## Token API
+
+I token API forniscono accesso programmatico all'API dello scanner utilizzando l'autenticazione Bearer.
+
+### Generazione dei token
+
+Navigare a `/dashboard/tokens` per gestire i propri token. Fare clic su "Crea Token" e fornire un nome.
+
+### Formato del token
+
+Tutti i token utilizzano il prefisso `nvsec_`:
+
+```
+nvsec_a1b2c3d4e5f6...
+```
+
+### Utilizzo
+
+Includere il token nell'header `Authorization`:
+
+```bash
+curl -H "Authorization: Bearer nvsec_your_token_here" http://localhost:8000/api/scans
+```
+
+### Opzioni di scadenza
+
+Quando si crea un token, selezionare un periodo di scadenza:
+
+- 30 giorni
+- 90 giorni
+- 365 giorni
+- Mai (nessuna scadenza)
+
+### Limiti dei token
+
+Ogni utente puo avere fino a 10 token attivi (limite flessibile).
+
+### Revoca dei token
+
+I token possono essere revocati dalla dashboard (`/dashboard/tokens`) o tramite l'API (`DELETE /api/tokens/{id}`).
+
+## Interfaccia di Configurazione degli Scanner
+
+L'interfaccia web di configurazione degli scanner consente agli admin di gestire i parametri degli scanner, modificare la configurazione YAML e gestire i profili di scansione -- tutto dalla dashboard.
+
+### Accesso all'interfaccia di configurazione
+
+Navigare a `/dashboard/scanners` (solo admin). La pagina ha tre schede:
+
+### Scheda Scanner
+
+Mostra tutti gli scanner registrati come schede con:
+
+- **Interruttore ON/AUTO/OFF** -- alternare tra stati attivo, automatico e disattivo
+- **Timeout** -- tempo massimo di esecuzione in secondi (30-900)
+- **Argomenti aggiuntivi** -- flag CLI aggiuntivi passati allo strumento
+
+### Scheda Editor YAML
+
+Un editor CodeMirror per la modifica diretta di `config.yml` con evidenziazione della sintassi YAML e validazione completa prima del salvataggio.
+
+### Scheda Profili
+
+Gestione dei profili di scansione (vedere sezione Profili di Scansione di seguito).
+
+## Profili di Scansione
+
+I profili di scansione sono preset di scanner con nome, memorizzati in `config.yml`. Ogni profilo definisce quali scanner eseguire e puo opzionalmente sovrascrivere i parametri per scanner.
+
+### Panoramica
+
+Un profilo e una lista di autorizzazione esplicita -- solo gli scanner elencati nel profilo vengono eseguiti quando quel profilo viene selezionato.
+
+### Creazione dei profili
+
+Navigare a `/dashboard/scanners` e selezionare la scheda Profili. Fare clic su "Nuovo Profilo" e fornire:
+
+- **Nome** -- solo lettere, numeri, trattini e underscore (es. `quick_scan`, `full-audit`)
+- **Descrizione** -- descrizione opzionale
+- **Scanner** -- selezionare gli scanner da includere con override di timeout opzionali
+
+### Esempio di profili in config.yml
+
+```yaml
+profiles:
+  quick_scan:
+    description: "Fast scan with essential tools only"
+    scanners:
+      semgrep: {}
+      gitleaks: {}
+  full_audit:
+    description: "Comprehensive scan with all available tools"
+    scanners:
+      semgrep: {}
+      gitleaks: {}
+      trivy: {}
+      checkov: {}
+      cppcheck: {}
+      bandit: {}
+      gosec: {}
+      brakeman: {}
+      cargo_audit: {}
+      psalm: {}
+      enlightn: {}
+      php_security_checker: {}
+  dast_only:
+    description: "DAST scan using Nuclei only"
+    scanners:
+      nuclei:
+        timeout: 300
+```
+
+### Modifica e eliminazione dei profili
+
+Dalla scheda Profili, fare clic su una scheda profilo per espandere il modulo di modifica. Modificare i parametri e fare clic su Salva, oppure fare clic su Elimina.
+
+### Limiti
+
+- Massimo 10 profili (limite flessibile)
+- I nomi dei profili possono contenere solo lettere, numeri, trattini e underscore
+- Le parole riservate YAML (`true`, `false`, `null`, `yes`, `no`, `on`, `off`) non possono essere usate come nomi di profilo
+
+## Scansione DAST
+
+Il Test Dinamico della Sicurezza delle Applicazioni (DAST) scansiona le applicazioni web in esecuzione alla ricerca di vulnerabilita inviando richieste HTTP e analizzando le risposte.
+
+### Panoramica
+
+La scansione DAST e alimentata da Nuclei, uno scanner di vulnerabilita rapido e configurabile. A differenza degli strumenti SAST che analizzano il codice sorgente, DAST testa l'applicazione come scatola nera.
+
+### Configurazione di Nuclei
+
+Assicurarsi che lo scanner Nuclei sia abilitato in `config.yml`:
+
+```yaml
+scanners:
+  nuclei:
+    adapter_class: "scanner.adapters.nuclei.NucleiAdapter"
+    enabled: true
+    timeout: 300
+    extra_args: []
+    languages: []
+```
+
+### Avvio di una scansione DAST
+
+Le scansioni DAST richiedono il parametro `target_url` al posto di `path` o `repo_url`:
+
+**Tramite API:**
+
+```bash
+curl -X POST http://localhost:8000/api/scans \
+  -H "Authorization: Bearer nvsec_your_token" \
+  -H "Content-Type: application/json" \
+  -d '{"target_url": "https://example.com"}'
+```
+
+**Tramite dashboard:** Inserire l'URL di destinazione nel campo URL del modulo di avvio scansione.
+
+### DAST vs SAST
+
+Il parametro `target_url` e esclusivo con `path` e `repo_url`. Non e possibile combinare target DAST e SAST in una singola richiesta.
+
+### Risultati DAST
+
+I risultati DAST appaiono nei report accanto ai risultati SAST. Ogni risultato DAST include il livello di gravita, l'identificatore del template Nuclei e l'URL di destinazione dove la vulnerabilita e stata trovata.

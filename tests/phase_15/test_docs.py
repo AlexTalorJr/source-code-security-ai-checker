@@ -15,23 +15,53 @@ def test_all_doc_files_exist():
 
 
 def test_admin_guide_sections():
+    """Verify admin guides contain RBAC, tokens, scanner config, scan profiles, DAST content.
+
+    For non-English docs, we check for universal markers (URLs, code terms)
+    rather than English prose headings.
+    """
     for lang in LANGUAGES:
         path = os.path.join(DOCS_DIR, lang, "admin-guide.md")
         content = open(path).read()
-        for section in ["RBAC", "Token", "Scanner Configuration", "Scan Profile", "DAST"]:
-            assert section.lower() in content.lower(), (
-                f"docs/{lang}/admin-guide.md missing section about '{section}'"
-            )
+        # RBAC - universal term used in all languages
+        assert "rbac" in content.lower(), (
+            f"docs/{lang}/admin-guide.md missing RBAC content"
+        )
+        # Tokens - check for nvsec_ prefix (universal) or "token" (universal term)
+        assert "token" in content.lower(), (
+            f"docs/{lang}/admin-guide.md missing token content"
+        )
+        # Scanner Configuration UI - check for dashboard URL
+        assert "/dashboard/scanners" in content, (
+            f"docs/{lang}/admin-guide.md missing scanner configuration UI content"
+        )
+        # Scan Profiles - check for profiles YAML example (present in all languages)
+        assert "profiles:" in content or "quick_scan" in content, (
+            f"docs/{lang}/admin-guide.md missing scan profiles content"
+        )
+        # DAST - universal term
+        assert "dast" in content.lower(), (
+            f"docs/{lang}/admin-guide.md missing DAST content"
+        )
 
 
 def test_user_guide_sections():
+    """Verify user guides contain login, profiles, and DAST content."""
     for lang in LANGUAGES:
         path = os.path.join(DOCS_DIR, lang, "user-guide.md")
         content = open(path).read()
-        for keyword in ["login", "profile", "DAST"]:
-            assert keyword.lower() in content.lower(), (
-                f"docs/{lang}/user-guide.md missing content about '{keyword}'"
-            )
+        # Login - check for dashboard URL
+        assert "/dashboard/login" in content or "login" in content.lower(), (
+            f"docs/{lang}/user-guide.md missing login content"
+        )
+        # Profiles - check for profile API example
+        assert "profile" in content.lower(), (
+            f"docs/{lang}/user-guide.md missing profile content"
+        )
+        # DAST - universal term
+        assert "dast" in content.lower(), (
+            f"docs/{lang}/user-guide.md missing DAST content"
+        )
 
 
 def test_api_uses_bearer_auth():

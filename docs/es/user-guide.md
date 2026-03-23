@@ -132,7 +132,7 @@ Una herramienta de escaneo de seguridad que analiza el codigo fuente en busca de
 
 ```bash
 curl -X POST http://localhost:8000/api/scans \
-  -H "X-API-Key: $SCANNER_API_KEY" \
+  -H "Authorization: Bearer nvsec_your_token" \
   -H "Content-Type: application/json" \
   -d '{"repo_url": "https://github.com/your-org/repo.git", "branch": "main"}'
 ```
@@ -226,9 +226,81 @@ Desde la vista de hallazgos, haga clic en el boton de supresion de cualquier hal
 
 ```bash
 curl -X POST http://localhost:8000/api/suppressions \
-  -H "X-API-Key: $SCANNER_API_KEY" \
+  -H "Authorization: Bearer nvsec_your_token" \
   -H "Content-Type: application/json" \
   -d '{"fingerprint": "<finding-fingerprint>", "reason": "False positive: test fixture"}'
 ```
 
 Los hallazgos suprimidos quedan excluidos de la evaluacion del quality gate y se marcan en los informes.
+
+## Inicio de Sesion en el Panel de Control
+
+### Iniciar sesion
+
+1. Navegue a `/dashboard/login`
+2. Ingrese el nombre de usuario y contrasena proporcionados por su administrador
+3. Haga clic en "Iniciar sesion"
+
+Su sesion se mantiene mediante una cookie con expiracion de 7 dias.
+
+### Cerrar sesion
+
+Haga clic en "Cerrar sesion" en la barra de navegacion en la parte superior de cualquier pagina del panel de control.
+
+## Uso de Perfiles de Escaneo
+
+### Que son los perfiles de escaneo?
+
+Los perfiles de escaneo son configuraciones de escaneres predefinidas creadas por los administradores. Cada perfil especifica que escaneres ejecutar y con que parametros.
+
+### Seleccion de un perfil en el panel de control
+
+Al iniciar un escaneo desde el panel de control, use la lista desplegable de perfiles sobre el boton "Iniciar Escaneo". Seleccione un nombre de perfil o elija "(Sin perfil)" para usar la configuracion predeterminada.
+
+### Seleccion de un perfil via API
+
+Agregue el campo `profile` al cuerpo de su solicitud de escaneo:
+
+```bash
+curl -X POST http://localhost:8000/api/scans \
+  -H "Authorization: Bearer nvsec_your_token" \
+  -H "Content-Type: application/json" \
+  -d '{"repo_url": "https://github.com/org/repo.git", "profile": "quick_scan"}'
+```
+
+Sin perfil especificado, se aplica la configuracion base de escaneres de `config.yml`.
+
+### Nombre del perfil en el historial de escaneos
+
+El nombre del perfil utilizado para cada escaneo se muestra en la tabla del historial de escaneos.
+
+## Escaneo DAST
+
+### Que es DAST?
+
+El Testeo Dinamico de Seguridad de Aplicaciones (DAST) escanea aplicaciones web en ejecucion en busca de vulnerabilidades enviando solicitudes HTTP y analizando las respuestas. A diferencia del SAST (que analiza el codigo fuente), DAST prueba las aplicaciones mientras se ejecutan.
+
+### Como iniciar un escaneo DAST
+
+Proporcione un `target_url` en lugar de `path` o `repo_url` al iniciar un escaneo.
+
+**Via API:**
+
+```bash
+curl -X POST http://localhost:8000/api/scans \
+  -H "Authorization: Bearer nvsec_your_token" \
+  -H "Content-Type: application/json" \
+  -d '{"target_url": "https://example.com"}'
+```
+
+**Via panel de control:** Ingrese la URL objetivo en el formulario de inicio de escaneo. El campo `target_url` es exclusivo con `path` y `repo_url`.
+
+### Resultados DAST
+
+Los resultados DAST incluyen:
+
+- **Niveles de severidad** -- critical, high, medium, low, info
+- **Identificadores de plantilla** -- identificadores de plantillas Nuclei que describen el tipo de vulnerabilidad
+- **Hallazgos basados en URL** -- cada hallazgo referencia la URL objetivo donde se detecto la vulnerabilidad
+
+Los resultados DAST aparecen en los informes junto con los resultados SAST y estan sujetos a la misma evaluacion del quality gate.

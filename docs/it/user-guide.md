@@ -132,7 +132,7 @@ Uno strumento di scansione della sicurezza che analizza il codice sorgente alla 
 
 ```bash
 curl -X POST http://localhost:8000/api/scans \
-  -H "X-API-Key: $SCANNER_API_KEY" \
+  -H "Authorization: Bearer nvsec_your_token" \
   -H "Content-Type: application/json" \
   -d '{"repo_url": "https://github.com/your-org/repo.git", "branch": "main"}'
 ```
@@ -226,9 +226,81 @@ Dalla vista dei risultati, fare clic sul pulsante di soppressione su qualsiasi r
 
 ```bash
 curl -X POST http://localhost:8000/api/suppressions \
-  -H "X-API-Key: $SCANNER_API_KEY" \
+  -H "Authorization: Bearer nvsec_your_token" \
   -H "Content-Type: application/json" \
   -d '{"fingerprint": "<finding-fingerprint>", "reason": "False positive: test fixture"}'
 ```
 
 I risultati soppressi vengono esclusi dalla valutazione del quality gate e contrassegnati nei report.
+
+## Accesso alla Dashboard
+
+### Effettuare l'accesso
+
+1. Navigare a `/dashboard/login`
+2. Inserire il nome utente e la password forniti dall'amministratore
+3. Fare clic su "Accedi"
+
+La sessione viene mantenuta tramite un cookie con scadenza di 7 giorni.
+
+### Disconnessione
+
+Fare clic su "Disconnetti" nella barra di navigazione in alto in qualsiasi pagina della dashboard.
+
+## Utilizzo dei Profili di Scansione
+
+### Cosa sono i profili di scansione?
+
+I profili di scansione sono configurazioni di scanner predefinite create dagli amministratori. Ogni profilo specifica quali scanner eseguire e con quali parametri.
+
+### Selezione di un profilo nella dashboard
+
+Quando si avvia una scansione dalla dashboard, utilizzare il menu a discesa dei profili sopra il pulsante "Avvia Scansione". Selezionare un nome di profilo o scegliere "(Nessun profilo)" per la configurazione predefinita.
+
+### Selezione di un profilo tramite API
+
+Aggiungere il campo `profile` al corpo della richiesta di scansione:
+
+```bash
+curl -X POST http://localhost:8000/api/scans \
+  -H "Authorization: Bearer nvsec_your_token" \
+  -H "Content-Type: application/json" \
+  -d '{"repo_url": "https://github.com/org/repo.git", "profile": "quick_scan"}'
+```
+
+Senza un profilo specificato, si applica la configurazione base degli scanner da `config.yml`.
+
+### Nome del profilo nella cronologia delle scansioni
+
+Il nome del profilo utilizzato per ogni scansione viene mostrato nella tabella della cronologia delle scansioni.
+
+## Scansione DAST
+
+### Cos'e il DAST?
+
+Il Test Dinamico della Sicurezza delle Applicazioni (DAST) scansiona le applicazioni web in esecuzione alla ricerca di vulnerabilita inviando richieste HTTP e analizzando le risposte. A differenza del SAST (che analizza il codice sorgente), il DAST testa le applicazioni durante la loro esecuzione.
+
+### Come avviare una scansione DAST
+
+Fornire un `target_url` al posto di `path` o `repo_url` quando si avvia una scansione.
+
+**Tramite API:**
+
+```bash
+curl -X POST http://localhost:8000/api/scans \
+  -H "Authorization: Bearer nvsec_your_token" \
+  -H "Content-Type: application/json" \
+  -d '{"target_url": "https://example.com"}'
+```
+
+**Tramite dashboard:** Inserire l'URL di destinazione nel modulo di avvio scansione. Il campo `target_url` e esclusivo con `path` e `repo_url`.
+
+### Risultati DAST
+
+I risultati DAST includono:
+
+- **Livelli di gravita** -- critical, high, medium, low, info
+- **Identificatori di template** -- identificatori di template Nuclei che descrivono il tipo di vulnerabilita
+- **Risultati basati su URL** -- ogni risultato fa riferimento all'URL di destinazione dove la vulnerabilita e stata rilevata
+
+I risultati DAST appaiono nei report accanto ai risultati SAST e sono soggetti alla stessa valutazione del quality gate.

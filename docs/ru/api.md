@@ -8,13 +8,13 @@ http://localhost:8000
 
 ## Аутентификация
 
-Все эндпоинты API, кроме `/api/health`, требуют API-ключ, передаваемый в заголовке `X-API-Key`. Ключ задаётся через переменную окружения `SCANNER_API_KEY` и проверяется с использованием timing-safe сравнения (`secrets.compare_digest`).
+Все эндпоинты API, кроме `/api/health`, требуют Bearer-токен в заголовке Authorization. Сгенерируйте токены в панели управления (`/dashboard/tokens`) или через API управления токенами.
 
 ```bash
-curl -H "X-API-Key: your-key" http://localhost:8000/api/scans
+curl -H "Authorization: Bearer nvsec_your_token_here" http://localhost:8000/api/scans
 ```
 
-Запросы без валидного ключа получают ответ `401 Unauthorized`.
+Запросы без валидного токена получают ответ `401 Unauthorized`.
 
 ## Эндпоинты
 
@@ -50,7 +50,7 @@ curl http://localhost:8000/api/health
 
 ### POST /api/scans
 
-Запуск нового сканирования безопасности. Сканирование ставится в очередь и выполняется асинхронно в фоновом режиме.
+Запуск нового сканирования безопасности. Сканирование ставится в очередь и выполняется асинхронно.
 
 **Тело запроса:**
 
@@ -58,17 +58,22 @@ curl http://localhost:8000/api/health
 {
   "path": "/path/to/local/code",
   "repo_url": "https://github.com/org/repo.git",
-  "branch": "main"
+  "branch": "main",
+  "target_url": "https://example.com",
+  "profile": "quick_scan"
 }
 ```
 
 | Поле | Тип | Обязательное | Описание |
 |------|-----|-------------|----------|
-| `path` | string | Нет | Локальный путь в файловой системе для сканирования |
+| `path` | string | Нет | Локальный путь для сканирования |
 | `repo_url` | string | Нет | URL Git-репозитория для клонирования и сканирования |
-| `branch` | string | Нет | Ветка для checkout (по умолчанию: основная ветка репозитория) |
+| `branch` | string | Нет | Ветка для checkout (по умолчанию: основная ветка) |
+| `target_url` | string | Нет | URL для DAST-сканирования (взаимоисключающий с `path`/`repo_url`) |
+| `profile` | string | Нет | Имя профиля сканирования (должен существовать в конфигурации) |
+| `skip_ai` | boolean | Нет | Пропустить ИИ-анализ (по умолчанию: false) |
 
-Укажите `path` или `repo_url`. Если указан `repo_url`, сканер клонирует репозиторий перед сканированием.
+Укажите `path`, `repo_url` или `target_url`. Параметр `target_url` запускает DAST-сканирование и не может комбинироваться с `path` или `repo_url`.
 
 **Ответ 202:**
 
@@ -79,89 +84,136 @@ curl http://localhost:8000/api/health
 }
 ```
 
-**Коды статуса:** `202` Created, `401` Unauthorized, `422` Validation error
+**Коды статуса:** `202` Создано, `400` Невалидный профиль, `401` Не авторизован, `422` Ошибка валидации
 
-**Пример:**
+**Примеры:**
 
 ```bash
+# SAST-сканирование
 curl -X POST http://localhost:8000/api/scans \
-  -H "X-API-Key: your-key" \
+  -H "Authorization: Bearer nvsec_your_token" \
   -H "Content-Type: application/json" \
   -d '{"repo_url": "https://github.com/org/repo.git", "branch": "main"}'
+
+# SAST-сканирование с профилем
+curl -X POST http://localhost:8000/api/scans \
+  -H "Authorization: Bearer nvsec_your_token" \
+  -H "Content-Type: application/json" \
+  -d '{"repo_url": "https://github.com/org/repo.git", "profile": "quick_scan"}'
+
+# DAST-сканирование
+curl -X POST http://localhost:8000/api/scans \
+  -H "Authorization: Bearer nvsec_your_token" \
+  -H "Content-Type: application/json" \
+  -d '{"target_url": "https://example.com"}'
 ```
 
 ---
 
 ### GET /api/scans
 
-Список всех сканирований, упорядоченных по дате создания (сначала новые).
+Список сканирований с пагинацией, упорядоченных по дате создания (сначала новые).
+
+**Параметры запроса:**
+
+| Параметр | Тип | По умолчанию | Описание |
+|---------|-----|-------------|----------|
+| `page` | integer | 1 | Номер страницы |
+| `page_size` | integer | 20 | Результатов на страницу |
 
 **Ответ 200:**
 
 ```json
-[
-  {
-    "id": 1,
-    "repo_url": "https://github.com/org/repo.git",
-    "branch": "main",
-    "status": "completed",
-    "started_at": "2026-03-20T10:00:00Z",
-    "completed_at": "2026-03-20T10:05:00Z",
-    "gate_passed": true
-  }
-]
+{
+  "items": [
+    {
+      "id": 1,
+      "status": "completed",
+      "repo_url": "https://github.com/org/repo.git",
+      "branch": "main",
+      "target_url": null,
+      "profile_name": "quick_scan",
+      "started_at": "2026-03-20T10:00:00Z",
+      "completed_at": "2026-03-20T10:05:00Z",
+      "total_findings": 15,
+      "gate_passed": true
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "page_size": 20,
+  "pages": 1
+}
 ```
 
 **Пример:**
 
 ```bash
-curl -H "X-API-Key: your-key" http://localhost:8000/api/scans
+curl -H "Authorization: Bearer nvsec_your_token" http://localhost:8000/api/scans
 ```
 
 ---
 
 ### GET /api/scans/{id}
 
-Получение детальных результатов сканирования, включая находки.
-
-**Параметры пути:**
-
-| Параметр | Тип | Описание |
-|---------|-----|----------|
-| `id` | integer | Идентификатор сканирования |
+Получение детальной информации о сканировании.
 
 **Ответ 200:**
 
 ```json
 {
   "id": 1,
+  "status": "completed",
+  "target_path": null,
   "repo_url": "https://github.com/org/repo.git",
   "branch": "main",
-  "status": "completed",
+  "target_url": null,
+  "profile_name": "quick_scan",
+  "commit_hash": "abc123",
   "started_at": "2026-03-20T10:00:00Z",
   "completed_at": "2026-03-20T10:05:00Z",
+  "duration_seconds": 300.5,
+  "total_findings": 15,
+  "critical_count": 1,
+  "high_count": 3,
+  "medium_count": 7,
+  "low_count": 4,
+  "info_count": 0,
   "gate_passed": true,
-  "findings": [
-    {
-      "id": 1,
-      "tool": "semgrep",
-      "rule_id": "python.lang.security.audit.exec-detected",
-      "severity": "high",
-      "file_path": "src/app.py",
-      "line": 42,
-      "message": "Use of exec() detected",
-      "fingerprint": "abc123..."
-    }
-  ]
+  "error_message": null,
+  "ai_cost_usd": 0.12
 }
 ```
 
-**Коды статуса:** `200` OK, `401` Unauthorized, `404` Scan not found
+**Коды статуса:** `200` OK, `401` Не авторизован, `404` Сканирование не найдено
 
-**Пример:**
+---
 
-```bash
-curl -H "X-API-Key: your-key" http://localhost:8000/api/scans/1
+### GET /api/scans/{scan_id}/findings
+
+Постраничные находки для конкретного сканирования.
+
+**Ответ 200:**
+
+```json
+{
+  "items": [
+    {
+      "fingerprint": "abc123...",
+      "tool": "semgrep",
+      "rule_id": "python.lang.security.audit.exec-detected",
+      "file_path": "src/app.py",
+      "line_start": 42,
+      "severity": "HIGH",
+      "title": "Use of exec() detected",
+      "suppressed": false
+    }
+  ],
+  "total": 15,
+  "page": 1,
+  "page_size": 50,
+  "pages": 1
+}
 ```
 
 ---
@@ -169,13 +221,6 @@ curl -H "X-API-Key: your-key" http://localhost:8000/api/scans/1
 ### POST /api/scans/{scan_id}/findings/{finding_id}/suppress
 
 Подавление находки (пометка как ложное срабатывание).
-
-**Параметры пути:**
-
-| Параметр | Тип | Описание |
-|---------|-----|----------|
-| `scan_id` | integer | Идентификатор сканирования |
-| `finding_id` | integer | Идентификатор находки |
 
 **Тело запроса:**
 
@@ -195,27 +240,11 @@ curl -H "X-API-Key: your-key" http://localhost:8000/api/scans/1
 }
 ```
 
-**Пример:**
-
-```bash
-curl -X POST http://localhost:8000/api/scans/1/findings/5/suppress \
-  -H "X-API-Key: your-key" \
-  -H "Content-Type: application/json" \
-  -d '{"reason": "False positive: test fixture"}'
-```
-
 ---
 
 ### DELETE /api/scans/{scan_id}/findings/{finding_id}/suppress
 
 Снятие подавления с находки.
-
-**Параметры пути:**
-
-| Параметр | Тип | Описание |
-|---------|-----|----------|
-| `scan_id` | integer | Идентификатор сканирования |
-| `finding_id` | integer | Идентификатор находки |
 
 **Ответ 200:**
 
@@ -226,18 +255,11 @@ curl -X POST http://localhost:8000/api/scans/1/findings/5/suppress \
 }
 ```
 
-**Пример:**
-
-```bash
-curl -X DELETE http://localhost:8000/api/scans/1/findings/5/suppress \
-  -H "X-API-Key: your-key"
-```
-
 ---
 
 ### GET /api/scanners
 
-Список всех зарегистрированных сканеров с их конфигурацией. Требуется аутентификация.
+Список всех зарегистрированных сканеров с конфигурацией. Требуется аутентификация.
 
 **Ответ 200:**
 
@@ -248,47 +270,17 @@ curl -X DELETE http://localhost:8000/api/scans/1/findings/5/suppress \
     "enabled": true,
     "languages": ["python", "php", "javascript", "typescript", "go", "java", "kotlin", "ruby", "csharp", "rust"],
     "adapter_class": "scanner.adapters.semgrep.SemgrepAdapter"
-  },
-  {
-    "name": "gosec",
-    "enabled": "auto",
-    "languages": ["go"],
-    "adapter_class": "scanner.adapters.gosec.GosecAdapter"
-  },
-  {
-    "name": "bandit",
-    "enabled": "auto",
-    "languages": ["python"],
-    "adapter_class": "scanner.adapters.bandit.BanditAdapter"
-  },
-  {
-    "name": "brakeman",
-    "enabled": "auto",
-    "languages": ["ruby"],
-    "adapter_class": "scanner.adapters.brakeman.BrakemanAdapter"
-  },
-  {
-    "name": "cargo_audit",
-    "enabled": "auto",
-    "languages": ["rust"],
-    "adapter_class": "scanner.adapters.cargo_audit.CargoAuditAdapter"
   }
 ]
 ```
 
-Ответ включает все 12 зарегистрированных сканеров. Пример выше показывает подмножество для краткости.
-
-**Пример:**
-
-```bash
-curl -H "X-API-Key: your-key" http://localhost:8000/api/scanners
-```
+Ответ включает все 13 зарегистрированных сканеров.
 
 ---
 
 ### GET /api/trends
 
-Получение трендов находок во времени для диаграмм трендов.
+Тренды находок во времени для диаграмм.
 
 **Ответ 200:**
 
@@ -308,25 +300,223 @@ curl -H "X-API-Key: your-key" http://localhost:8000/api/scanners
 }
 ```
 
+---
+
+## Эндпоинты конфигурации
+
+### GET /api/config
+
+Получение полной конфигурации сканера в формате JSON. Только для админов.
+
 **Пример:**
 
 ```bash
-curl -H "X-API-Key: your-key" http://localhost:8000/api/trends
+curl -H "Authorization: Bearer nvsec_your_token" http://localhost:8000/api/config
 ```
+
+---
+
+### GET /api/config/yaml
+
+Получение содержимого `config.yml` как текст. Только для админов.
+
+**Пример:**
+
+```bash
+curl -H "Authorization: Bearer nvsec_your_token" http://localhost:8000/api/config/yaml
+```
+
+---
+
+### PATCH /api/config/scanners/{scanner_name}
+
+Обновление настроек одного сканера. Только для админов.
+
+**Тело запроса:**
+
+```json
+{
+  "enabled": true,
+  "timeout": 300,
+  "extra_args": ["--exclude", ".venv"]
+}
+```
+
+Все поля опциональны. Обновляются только указанные поля.
+
+| Поле | Тип | Описание |
+|------|-----|----------|
+| `enabled` | bool/string | `true`, `false` или `"auto"` |
+| `timeout` | integer | 30-900 секунд |
+| `extra_args` | string[] | Дополнительные аргументы CLI |
+
+---
+
+### PUT /api/config/yaml
+
+Замена `config.yml` новым YAML-содержимым. Только для админов. YAML валидируется перед записью.
+
+**Тело запроса:** Текст в формате YAML.
+
+---
+
+## Эндпоинты управления профилями
+
+### GET /api/config/profiles
+
+Список всех профилей сканирования. Только для админов.
+
+**Ответ 200:**
+
+```json
+{
+  "profiles": {
+    "quick_scan": {
+      "description": "Fast scan with essential tools only",
+      "scanners": {
+        "semgrep": {},
+        "gitleaks": {}
+      }
+    }
+  }
+}
+```
+
+---
+
+### POST /api/config/profiles
+
+Создание нового профиля сканирования. Только для админов.
+
+**Тело запроса:**
+
+```json
+{
+  "name": "quick_scan",
+  "description": "Fast scan with essential tools only",
+  "scanners": {
+    "semgrep": {},
+    "gitleaks": {}
+  }
+}
+```
+
+| Поле | Тип | Обязательное | Описание |
+|------|-----|-------------|----------|
+| `name` | string | Да | Имя профиля (буквы, цифры, дефисы, подчёркивания) |
+| `description` | string | Нет | Описание |
+| `scanners` | object | Да | Словарь сканеров с параметрами |
+
+**Коды статуса:** `201` Создано, `400` Достигнут лимит, `409` Профиль уже существует, `422` Ошибка валидации
+
+---
+
+### GET /api/config/profiles/{name}
+
+Получение профиля по имени. Только для админов.
+
+---
+
+### PUT /api/config/profiles/{name}
+
+Обновление существующего профиля. Только для админов.
+
+**Тело запроса:**
+
+```json
+{
+  "description": "Updated description",
+  "scanners": {
+    "semgrep": {},
+    "gitleaks": {},
+    "trivy": {}
+  }
+}
+```
+
+---
+
+### DELETE /api/config/profiles/{name}
+
+Удаление профиля сканирования. Только для админов.
+
+---
+
+## Эндпоинты управления пользователями
+
+### GET /api/users
+
+Список всех пользователей. Только для админов.
+
+### POST /api/users
+
+Создание нового пользователя. Только для админов.
+
+**Тело запроса:**
+
+```json
+{
+  "username": "newuser",
+  "password": "securepassword",
+  "role": "viewer"
+}
+```
+
+### GET /api/users/{id}
+
+Получение информации о пользователе. Только для админов.
+
+### PUT /api/users/{id}
+
+Обновление пользователя. Только для админов.
+
+### DELETE /api/users/{id}
+
+Деактивация пользователя. Только для админов.
+
+---
+
+## Эндпоинты управления токенами
+
+### GET /api/tokens
+
+Список ваших API-токенов. Возвращает метаданные токенов (не значение токена).
+
+### POST /api/tokens
+
+Создание нового API-токена. Значение токена возвращается только один раз.
+
+**Тело запроса:**
+
+```json
+{
+  "name": "CI Pipeline",
+  "expires_days": 90
+}
+```
+
+### DELETE /api/tokens/{id}
+
+Отзыв API-токена. Токен немедленно аннулируется.
+
+---
 
 ## Панель управления
 
-Веб-панель управления доступна по адресу `/dashboard` и предоставляет графический интерфейс для сканера:
+Веб-панель управления доступна по адресу `/dashboard`:
 
 | Маршрут | Описание |
 |---------|----------|
 | `GET /dashboard/login` | Страница входа |
-| `POST /dashboard/login` | Аутентификация по API-ключу |
+| `POST /dashboard/login` | Аутентификация по имени пользователя и паролю |
 | `GET /dashboard/` | Обзор истории сканирований |
 | `GET /dashboard/scans/{id}` | Детали сканирования с находками |
-| `GET /dashboard/trends` | Диаграммы трендов во времени |
+| `GET /dashboard/trends` | Диаграммы трендов |
+| `GET /dashboard/users` | Управление пользователями (только для админов) |
+| `GET /dashboard/tokens` | Управление токенами |
+| `GET /dashboard/scanners` | Настройка сканеров (только для админов) |
 
-Панель управления использует тот же API-ключ для аутентификации, хранящийся в сессионном cookie после входа. Подавление и снятие подавления находок доступны непосредственно на странице деталей сканирования.
+Панель управления использует сессионные cookie для аутентификации (срок действия 7 дней).
 
 ## Ответы об ошибках
 
@@ -342,8 +532,9 @@ curl -H "X-API-Key: your-key" http://localhost:8000/api/trends
 
 | Код | Значение |
 |-----|----------|
-| `401` | Отсутствует или недействительный API-ключ |
-| `404` | Ресурс не найден (идентификатор сканирования, идентификатор находки) |
+| `401` | Отсутствует или недействительный Bearer-токен |
+| `403` | Недостаточно прав (проверка роли не пройдена) |
+| `404` | Ресурс не найден (ID сканирования, ID находки, имя профиля) |
 | `422` | Ошибка валидации (невалидное тело запроса) |
 
 ## Документация OpenAPI
