@@ -2,9 +2,11 @@
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 
-from scanner.dashboard.auth import make_session_token
+from scanner.dashboard.auth import create_session_jwt, COOKIE_NAME
 from scanner.main import create_app
+from scanner.models.user import User
 from tests.phase_05.conftest import _lifespan_client
 
 
@@ -31,26 +33,26 @@ class TestDashboardAuth:
 
     @pytest.mark.asyncio
     async def test_login_success_sets_cookie(self, test_env):
-        """POST /dashboard/login with correct key sets session cookie."""
+        """POST /dashboard/login with correct credentials sets session cookie."""
         app = create_app()
         async with _lifespan_client(app) as client:
             resp = await client.post(
                 "/dashboard/login",
-                data={"api_key": "test-api-key-12345"},
+                data={"username": "testadmin", "password": "testpass123"},
                 follow_redirects=False,
             )
             assert resp.status_code == 302
             assert "/dashboard/history" in resp.headers["location"]
-            assert "scanner_session" in resp.headers.get("set-cookie", "")
+            assert COOKIE_NAME in resp.headers.get("set-cookie", "")
 
     @pytest.mark.asyncio
     async def test_login_failure_shows_error(self, test_env):
-        """POST /dashboard/login with wrong key redirects with error."""
+        """POST /dashboard/login with wrong credentials redirects with error."""
         app = create_app()
         async with _lifespan_client(app) as client:
             resp = await client.post(
                 "/dashboard/login",
-                data={"api_key": "wrong-key"},
+                data={"username": "testadmin", "password": "wrongpass"},
                 follow_redirects=False,
             )
             assert resp.status_code == 302
@@ -61,8 +63,13 @@ class TestDashboardAuth:
         """GET /dashboard/history with valid session cookie returns 200."""
         app = create_app()
         async with _lifespan_client(app) as client:
-            token = make_session_token("test-api-key-12345")
-            client.cookies.set("scanner_session", token)
+            async with app.state.session_factory() as session:
+                result = await session.execute(
+                    select(User).where(User.username == "testadmin")
+                )
+                user = result.scalar_one()
+                token = create_session_jwt(user.id, user.role, "test-secret-key-for-phase05")
+            client.cookies.set(COOKIE_NAME, token)
             resp = await client.get("/dashboard/history")
             assert resp.status_code == 200
             assert "Scan History" in resp.text
@@ -72,8 +79,13 @@ class TestDashboardAuth:
         """GET /dashboard/logout returns 302 and clears cookie."""
         app = create_app()
         async with _lifespan_client(app) as client:
-            token = make_session_token("test-api-key-12345")
-            client.cookies.set("scanner_session", token)
+            async with app.state.session_factory() as session:
+                result = await session.execute(
+                    select(User).where(User.username == "testadmin")
+                )
+                user = result.scalar_one()
+                token = create_session_jwt(user.id, user.role, "test-secret-key-for-phase05")
+            client.cookies.set(COOKIE_NAME, token)
             resp = await client.get(
                 "/dashboard/logout", follow_redirects=False
             )
@@ -81,4 +93,4 @@ class TestDashboardAuth:
             assert "/dashboard/login" in resp.headers["location"]
             # Cookie should be cleared (max-age=0 or deleted)
             set_cookie = resp.headers.get("set-cookie", "")
-            assert "scanner_session" in set_cookie
+            assert COOKIE_NAME in set_cookie

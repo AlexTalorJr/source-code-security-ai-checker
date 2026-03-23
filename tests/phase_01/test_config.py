@@ -70,7 +70,6 @@ class TestScannerSettings:
         from scanner.config import ScannerSettings
 
         settings = ScannerSettings()
-        assert settings.api_key == ""
         assert settings.claude_api_key == ""
 
     def test_config_path_env(self, tmp_path, monkeypatch):

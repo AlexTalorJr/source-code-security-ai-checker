@@ -15,6 +15,9 @@ def test_env(tmp_path, monkeypatch):
     db_path = str(tmp_path / "test.db")
     monkeypatch.setenv("SCANNER_DB_PATH", db_path)
     monkeypatch.setenv("SCANNER_CONFIG_PATH", str(tmp_path / "nonexistent.yml"))
+    monkeypatch.setenv("SCANNER_ADMIN_USER", "testadmin")
+    monkeypatch.setenv("SCANNER_ADMIN_PASSWORD", "testpass123")
+    monkeypatch.setenv("SCANNER_SECRET_KEY", "test-secret-key-for-phase01")
     return db_path
 
 

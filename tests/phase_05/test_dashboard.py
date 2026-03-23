@@ -5,11 +5,13 @@ from datetime import datetime, timedelta
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from scanner.dashboard.auth import make_session_token
+from scanner.dashboard.auth import create_session_jwt, COOKIE_NAME
 from scanner.main import create_app
 from scanner.models.finding import Finding
 from scanner.models.scan import ScanResult
 from scanner.models.suppression import Suppression
+from scanner.models.user import User
+from sqlalchemy import select
 from tests.phase_05.conftest import _lifespan_client, seed_findings, seed_scan
 
 
@@ -17,8 +19,14 @@ async def _dashboard_client(test_env):
     """Create a lifespan client with dashboard session cookie set."""
     app = create_app()
     async with _lifespan_client(app) as client:
-        token = make_session_token("test-api-key-12345")
-        client.cookies.set("scanner_session", token)
+        # Get the bootstrapped admin user's ID for JWT creation
+        async with app.state.session_factory() as session:
+            result = await session.execute(
+                select(User).where(User.username == "testadmin")
+            )
+            user = result.scalar_one()
+            token = create_session_jwt(user.id, user.role, "test-secret-key-for-phase05")
+        client.cookies.set(COOKIE_NAME, token)
         yield client, app
 
 

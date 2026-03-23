@@ -6,8 +6,20 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
+from scanner.api.auth import get_current_user
 from scanner.api.scanners import router
 from scanner.config import ScannerToolConfig
+from scanner.models.user import User
+
+
+def _mock_user():
+    """Create a mock admin user for dependency override."""
+    user = MagicMock(spec=User)
+    user.id = 1
+    user.username = "testadmin"
+    user.role = "admin"
+    user.is_active = True
+    return user
 
 
 def _create_test_app(scanners: dict[str, ScannerToolConfig]) -> FastAPI:
@@ -18,6 +30,8 @@ def _create_test_app(scanners: dict[str, ScannerToolConfig]) -> FastAPI:
     mock_settings = MagicMock()
     mock_settings.scanners = scanners
     app.state.settings = mock_settings
+
+    app.dependency_overrides[get_current_user] = lambda: _mock_user()
 
     return app
 
