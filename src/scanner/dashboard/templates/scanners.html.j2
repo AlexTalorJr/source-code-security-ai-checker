@@ -59,6 +59,23 @@
 .validation-bar--invalid { color: var(--color-destructive); }
 .yaml-actions { display: flex; justify-content: flex-end; align-items: center; gap: 16px; margin-top: 12px; }
 .btn--disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Profile cards */
+.profile-scanners { margin-top: 8px; }
+.profile-scanners .badge { font-size: 12px; margin: 2px; }
+.profile-actions { display: flex; gap: 8px; margin-top: 12px; }
+.btn--small { font-size: 12px; padding: 4px 8px; }
+.btn--destructive { background-color: var(--color-destructive); color: #fff; border-color: var(--color-destructive); }
+.btn--destructive:hover { opacity: 0.9; }
+.new-profile-bar { margin-bottom: 16px; }
+
+/* Profile edit form */
+.scanner-checklist { max-height: 400px; overflow-y: auto; }
+.scanner-checklist-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.scanner-checklist-row input[type="checkbox"] { width: auto; }
+.scanner-checklist-row input[type="number"] { width: 80px; }
+.scanner-checklist-row label { font-size: 14px; font-weight: 400; flex: 1; }
+.timeout-label { font-size: 12px; color: var(--color-text-secondary); }
 {% endblock %}
 
 {% block content %}
@@ -68,6 +85,7 @@
 <div class="tab-bar">
   <button class="tab-btn tab-btn--active" data-tab="cards" onclick="switchTab('cards')">Scanners</button>
   <button class="tab-btn" data-tab="yaml" onclick="switchTab('yaml')">YAML Editor</button>
+  <button class="tab-btn" data-tab="profiles" onclick="switchTab('profiles')">Profiles</button>
 </div>
 
 <!-- Cards tab panel -->
@@ -143,6 +161,103 @@
   </div>
 </div>
 
+<!-- Profiles tab panel -->
+<div id="tab-profiles" style="display:none;">
+  <div id="profiles-alert" style="display:none;"></div>
+  <div class="new-profile-bar">
+    <button class="btn btn--accent" onclick="showNewProfileForm()">New Profile</button>
+  </div>
+
+  <!-- New profile card (hidden by default) -->
+  <div id="new-profile-card" class="scanner-card" style="display:none; margin-bottom:24px;">
+    <div class="card-settings card-settings--open">
+      <div class="form-group">
+        <label>Profile Name</label>
+        <input type="text" id="new-profile-name" class="form-input" placeholder="my_profile" onclick="event.stopPropagation()">
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <input type="text" id="new-profile-desc" class="form-input" placeholder="Brief description of this profile" onclick="event.stopPropagation()">
+      </div>
+      <div class="form-group">
+        <label>Scanners</label>
+        <div class="scanner-checklist" id="new-profile-scanners">
+          {% for sname in all_scanner_names %}
+          <div class="scanner-checklist-row">
+            <input type="checkbox" id="new-chk-{{ sname }}" value="{{ sname }}">
+            <label for="new-chk-{{ sname }}">{{ sname }}</label>
+            <span class="timeout-label">Timeout:</span>
+            <input type="number" id="new-timeout-{{ sname }}" min="30" max="900" placeholder="default" onclick="event.stopPropagation()">
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn" onclick="hideNewProfileForm()" style="margin-right:8px;">Discard Changes</button>
+        <button class="btn btn--accent" onclick="saveNewProfile()">Save Profile</button>
+      </div>
+    </div>
+  </div>
+
+  {% if profiles %}
+  <div class="scanner-grid" id="profiles-grid">
+    {% for pname, profile in profiles.items() %}
+    <div class="scanner-card" data-profile="{{ pname }}" onclick="toggleProfileCard(event, '{{ pname }}')">
+      <div class="card-title-row">
+        <span class="card-title">{{ pname }}</span>
+      </div>
+      {% if profile.description %}
+      <div class="card-languages">{{ profile.description }}</div>
+      {% endif %}
+      <div class="profile-scanners">
+        {% for sname in profile.scanners %}
+        <span class="badge badge--success">{{ sname }}</span>
+        {% endfor %}
+      </div>
+      <div class="card-settings" id="profile-settings-{{ pname }}">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" class="form-input" value="{{ pname }}" disabled onclick="event.stopPropagation()">
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" id="edit-desc-{{ pname }}" class="form-input" value="{{ profile.description or '' }}" placeholder="Brief description of this profile" onclick="event.stopPropagation()">
+        </div>
+        <div class="form-group">
+          <label>Scanners</label>
+          <div class="scanner-checklist">
+            {% for sname in all_scanner_names %}
+            <div class="scanner-checklist-row">
+              <input type="checkbox" id="edit-chk-{{ pname }}-{{ sname }}" value="{{ sname }}"
+                {% if sname in profile.scanners %}checked{% endif %} onclick="event.stopPropagation()">
+              <label for="edit-chk-{{ pname }}-{{ sname }}">{{ sname }}</label>
+              <span class="timeout-label">Timeout:</span>
+              <input type="number" id="edit-timeout-{{ pname }}-{{ sname }}" min="30" max="900"
+                placeholder="default"
+                value="{% if sname in profile.scanners and profile.scanners[sname].timeout %}{{ profile.scanners[sname].timeout }}{% endif %}"
+                onclick="event.stopPropagation()">
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        <div id="profile-alert-{{ pname }}" style="display:none;"></div>
+        <div class="btn-row">
+          <button class="btn btn--destructive btn--small" onclick="event.stopPropagation(); deleteProfile('{{ pname }}')" style="margin-right:auto;">Delete</button>
+          <button class="btn" onclick="event.stopPropagation(); collapseProfileCard('{{ pname }}')" style="margin-right:8px;">Discard Changes</button>
+          <button class="btn btn--accent" onclick="event.stopPropagation(); updateProfile('{{ pname }}')">Save Profile</button>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state" id="profiles-empty">
+    <h2>No scan profiles</h2>
+    <p>Create a scan profile to save a specific scanner configuration. Use the button above to get started.</p>
+  </div>
+  {% endif %}
+</div>
+
 <script>
 var editor;
 
@@ -178,6 +293,7 @@ function switchTab(tab) {
 
     if (tab === 'yaml') {
         document.getElementById('tab-cards').style.display = 'none';
+        document.getElementById('tab-profiles').style.display = 'none';
         var yamlPanel = document.getElementById('tab-yaml');
         yamlPanel.style.display = 'block';
         yamlPanel.classList.add('yaml-container--active');
@@ -193,6 +309,10 @@ function switchTab(tab) {
             .catch(function(err) {
                 showAlert('yaml-alert', 'Failed to load configuration: ' + err.message, 'error');
             });
+    } else if (tab === 'profiles') {
+        document.getElementById('tab-cards').style.display = 'none';
+        document.getElementById('tab-yaml').style.display = 'none';
+        document.getElementById('tab-profiles').style.display = 'block';
     } else {
         location.reload();
     }
@@ -327,6 +447,148 @@ function saveYaml() {
         }
     }).catch(function(err) {
         showAlert('yaml-alert', 'Failed to save configuration: ' + err.message + '. Check file permissions on config.yml.', 'error');
+    });
+}
+
+function showNewProfileForm() {
+    document.getElementById('new-profile-card').style.display = 'block';
+    document.getElementById('new-profile-name').focus();
+}
+
+function hideNewProfileForm() {
+    document.getElementById('new-profile-card').style.display = 'none';
+    document.getElementById('new-profile-name').value = '';
+    document.getElementById('new-profile-desc').value = '';
+    var checkboxes = document.querySelectorAll('#new-profile-scanners input[type="checkbox"]');
+    checkboxes.forEach(function(cb) { cb.checked = false; });
+    var timeouts = document.querySelectorAll('#new-profile-scanners input[type="number"]');
+    timeouts.forEach(function(t) { t.value = ''; });
+}
+
+function _collectScanners(prefix) {
+    var scanners = {};
+    var checkboxes = document.querySelectorAll('[id^="' + prefix + 'chk-"]');
+    checkboxes.forEach(function(cb) {
+        if (cb.checked) {
+            var name = cb.value;
+            var timeoutInput = document.getElementById(prefix.replace('chk-', 'timeout-') + name);
+            var entry = {};
+            if (timeoutInput && timeoutInput.value) {
+                entry.timeout = parseInt(timeoutInput.value, 10);
+            }
+            scanners[name] = entry;
+        }
+    });
+    return scanners;
+}
+
+function saveNewProfile() {
+    var name = document.getElementById('new-profile-name').value.trim();
+    var desc = document.getElementById('new-profile-desc').value.trim();
+    if (!name) {
+        showAlert('profiles-alert', 'Profile name is required.', 'error');
+        return;
+    }
+    var scanners = _collectScanners('new-');
+    if (Object.keys(scanners).length === 0) {
+        showAlert('profiles-alert', 'Profile must have at least one scanner enabled. Select at least one scanner and try again.', 'error');
+        return;
+    }
+
+    fetch('/api/config/profiles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ name: name, description: desc, scanners: scanners })
+    }).then(function(res) {
+        if (res.ok) {
+            showAlert('profiles-alert', 'Profile saved successfully.', 'success');
+            setTimeout(function() { switchTab('profiles'); location.reload(); }, 1000);
+        } else {
+            return res.json().then(function(data) {
+                showAlert('profiles-alert', data.detail || 'Failed to save profile.', 'error');
+            });
+        }
+    }).catch(function(err) {
+        showAlert('profiles-alert', 'Failed to save profile: ' + err.message + '. Check file permissions on config.yml.', 'error');
+    });
+}
+
+function toggleProfileCard(event, profileName) {
+    if (event.target.closest('input') || event.target.closest('.btn')) return;
+    var allSettings = document.querySelectorAll('[id^="profile-settings-"]');
+    allSettings.forEach(function(el) {
+        if (el.id !== 'profile-settings-' + profileName) {
+            el.classList.remove('card-settings--open');
+        }
+    });
+    var settings = document.getElementById('profile-settings-' + profileName);
+    if (settings) { settings.classList.toggle('card-settings--open'); }
+}
+
+function collapseProfileCard(profileName) {
+    var settings = document.getElementById('profile-settings-' + profileName);
+    if (settings) { settings.classList.remove('card-settings--open'); }
+}
+
+function updateProfile(profileName) {
+    var desc = document.getElementById('edit-desc-' + profileName).value.trim();
+    var scanners = {};
+    var checkboxes = document.querySelectorAll('[id^="edit-chk-' + profileName + '-"]');
+    checkboxes.forEach(function(cb) {
+        if (cb.checked) {
+            var name = cb.value;
+            var timeoutInput = document.getElementById('edit-timeout-' + profileName + '-' + name);
+            var entry = {};
+            if (timeoutInput && timeoutInput.value) {
+                entry.timeout = parseInt(timeoutInput.value, 10);
+            }
+            scanners[name] = entry;
+        }
+    });
+
+    if (Object.keys(scanners).length === 0) {
+        showAlert('profile-alert-' + profileName, 'Profile must have at least one scanner enabled. Select at least one scanner and try again.', 'error');
+        return;
+    }
+
+    fetch('/api/config/profiles/' + profileName, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ description: desc, scanners: scanners })
+    }).then(function(res) {
+        if (res.ok) {
+            showAlert('profile-alert-' + profileName, 'Profile saved successfully.', 'success');
+            setTimeout(function() { collapseProfileCard(profileName); }, 1500);
+        } else {
+            return res.json().then(function(data) {
+                showAlert('profile-alert-' + profileName, data.detail || 'Failed to save profile.', 'error');
+            });
+        }
+    }).catch(function(err) {
+        showAlert('profile-alert-' + profileName, 'Failed to save profile: ' + err.message + '. Check file permissions on config.yml.', 'error');
+    });
+}
+
+function deleteProfile(profileName) {
+    if (!confirm("Are you sure you want to delete the profile '" + profileName + "'? This cannot be undone.")) return;
+
+    fetch('/api/config/profiles/' + profileName, {
+        method: 'DELETE',
+        credentials: 'same-origin',
+    }).then(function(res) {
+        if (res.ok) {
+            showAlert('profiles-alert', 'Profile deleted successfully.', 'success');
+            var card = document.querySelector('[data-profile="' + profileName + '"]');
+            if (card) card.remove();
+        } else {
+            return res.json().then(function(data) {
+                showAlert('profiles-alert', data.detail || 'Failed to delete profile.', 'error');
+            });
+        }
+    }).catch(function(err) {
+        showAlert('profiles-alert', 'Failed to delete profile: ' + err.message + '. Check file permissions on config.yml.', 'error');
     });
 }
 

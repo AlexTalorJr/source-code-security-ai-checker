@@ -95,6 +95,17 @@ a.scan-link:hover {
         </label>
       </div>
     </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="profile">Scan Profile</label>
+        <select name="profile" id="profile" class="form-select" style="width:100%; padding:8px; border:1px solid var(--color-border); border-radius:4px; font-size:14px;">
+          <option value="">(No profile)</option>
+          {% for pname in profile_names %}
+          <option value="{{ pname }}">{{ pname }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
     <button type="submit" class="btn btn--accent">Start Scan</button>
   </form>
 </div>
@@ -105,6 +116,7 @@ a.scan-link:hover {
     <tr>
       <th>ID</th>
       <th>Branch</th>
+      <th>Profile</th>
       <th>Status</th>
       <th>Findings</th>
       <th>Gate</th>
@@ -117,6 +129,7 @@ a.scan-link:hover {
     <tr>
       <td><a href="/dashboard/scans/{{ scan.id }}" class="scan-link">#{{ scan.id }}</a></td>
       <td>{{ scan.branch }}</td>
+      <td>{{ scan.profile_name }}</td>
       <td><span class="badge" style="background-color: {{ scan.status_color }};">{{ scan.status | capitalize }}</span></td>
       <td>{{ scan.total_findings }}</td>
       <td>

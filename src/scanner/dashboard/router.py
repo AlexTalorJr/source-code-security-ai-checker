@@ -371,6 +371,17 @@ async def history_page(request: Request):
         )
         scans = result.scalars().all()
 
+    # Read profile names for scan form dropdown
+    import yaml
+    import os
+    config_path = os.environ.get("SCANNER_CONFIG_PATH", "config.yml")
+    if os.path.exists(config_path):
+        with open(config_path) as f:
+            config_data = yaml.safe_load(f) or {}
+    else:
+        config_data = {}
+    profile_names = list(config_data.get("profiles", {}).keys())
+
     scan_list = []
     for s in scans:
         gate_label, gate_passed = _gate_display(s.gate_passed)
@@ -384,10 +395,11 @@ async def history_page(request: Request):
             "gate_passed": gate_passed,
             "duration": f"{s.duration_seconds:.0f}s" if s.duration_seconds else "-",
             "date": s.created_at.strftime("%Y-%m-%d %H:%M") if s.created_at else "-",
+            "profile_name": s.profile_name or "-",
         })
 
     template = _jinja_env.get_template("history.html.j2")
-    return HTMLResponse(template.render(scans=scan_list, user=user, active_page="history"))
+    return HTMLResponse(template.render(scans=scan_list, user=user, active_page="history", profile_names=profile_names))
 
 
 # ---------- Scan Detail ----------
@@ -631,6 +643,7 @@ async def start_scan(
     repo_url: str = Form(default=""),
     branch: str = Form(default=""),
     skip_ai: str = Form(default=""),
+    profile: str = Form(default=""),
 ):
     """Create a new scan from the dashboard form."""
     user = await _get_dashboard_user(request)
@@ -644,6 +657,7 @@ async def start_scan(
             repo_url=repo_url or None,
             branch=branch or None,
             skip_ai=bool(skip_ai),
+            profile_name=profile or None,
             status="queued",
             created_at=datetime.utcnow(),
         )
@@ -963,9 +977,15 @@ async def scanners_page(request: Request):
         scanner_info["timeout"] = raw.get("timeout", 180)
         scanner_info["extra_args"] = raw.get("extra_args", [])
 
+    profiles = config.get("profiles", {})
+    # Also pass all scanner names for the profile edit form checklist
+    all_scanner_names = list(config.get("scanners", {}).keys())
+
     template = _jinja_env.get_template("scanners.html.j2")
     return HTMLResponse(template.render(
         scanners=scanners,
+        profiles=profiles,
+        all_scanner_names=all_scanner_names,
         user=user,
         active_page="scanners",
     ))
