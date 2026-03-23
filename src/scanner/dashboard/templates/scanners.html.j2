@@ -1,0 +1,345 @@
+{% extends "base.html.j2" %}
+
+{% set active_page = "scanners" %}
+
+{% block title %}Scanner Configuration{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/theme/material-darker.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/yaml/yaml.min.js"></script>
+{% endblock %}
+
+{% block extra_styles %}
+/* Tab bar */
+.tab-bar { display: flex; border-bottom: 1px solid var(--color-border); margin-bottom: 24px; }
+.tab-btn { background: none; border: none; padding: 8px 16px; font-size: 14px; font-weight: 400; color: var(--color-text-secondary); cursor: pointer; border-bottom: 2px solid transparent; font-family: var(--font-system); }
+.tab-btn--active { color: var(--color-text); border-bottom-color: var(--color-accent); }
+
+/* Scanner card grid */
+.scanner-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px; }
+.scanner-card { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 8px; padding: 16px; min-height: 120px; cursor: pointer; transition: box-shadow 0.15s ease; }
+.scanner-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+/* Card title row */
+.card-title-row { display: flex; align-items: center; justify-content: space-between; }
+.card-title { font-size: 14px; font-weight: 600; }
+.badge--success { background-color: var(--color-success); }
+.badge--error { background-color: var(--color-destructive); }
+.badge--dast { background-color: #6610f2; }
+
+/* Language tags */
+.card-languages { font-size: 12px; color: var(--color-text-secondary); margin-top: 4px; }
+
+/* Three-state toggle */
+.toggle-group { display: inline-flex; border: 1px solid var(--color-border); border-radius: 4px; overflow: hidden; margin-top: 12px; }
+.toggle-btn { width: 56px; height: 36px; border: none; cursor: pointer; font-size: 12px; font-weight: 600; text-transform: uppercase; font-family: var(--font-system); background: var(--color-bg); color: var(--color-text-secondary); border-right: 1px solid var(--color-border); }
+.toggle-btn:last-child { border-right: none; }
+.toggle-btn--on { background: var(--color-success); color: #ffffff; }
+.toggle-btn--auto { background: var(--color-text-secondary); color: #ffffff; }
+.toggle-btn--off { background: var(--color-destructive); color: #ffffff; }
+
+/* Card expanded settings */
+.card-settings { display: none; background: var(--color-surface); padding: 16px; border-top: 1px solid var(--color-border); margin: 16px -16px -16px -16px; border-radius: 0 0 8px 8px; }
+.card-settings--open { display: block; }
+.card-settings .form-group label { font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px; }
+.card-settings .form-input--mono { font-family: var(--font-mono); }
+.card-settings .btn-row { display: flex; justify-content: flex-end; margin-top: 12px; }
+
+/* Load error */
+.card-error { font-size: 12px; color: var(--color-destructive); margin-top: 8px; }
+
+/* YAML editor tab */
+.yaml-container { display: none; }
+.yaml-container--active { display: block; }
+.editor-wrapper { border: 1px solid var(--color-border); border-radius: 4px; overflow: hidden; }
+.validation-bar { padding: 8px 16px; font-size: 12px; }
+.validation-bar--valid { color: var(--color-success); }
+.validation-bar--invalid { color: var(--color-destructive); }
+.yaml-actions { display: flex; justify-content: flex-end; align-items: center; gap: 16px; margin-top: 12px; }
+.btn--disabled { opacity: 0.5; cursor: not-allowed; }
+{% endblock %}
+
+{% block content %}
+<h1 class="page-heading">Scanner Configuration</h1>
+
+<!-- Tab bar -->
+<div class="tab-bar">
+  <button class="tab-btn tab-btn--active" data-tab="cards" onclick="switchTab('cards')">Scanners</button>
+  <button class="tab-btn" data-tab="yaml" onclick="switchTab('yaml')">YAML Editor</button>
+</div>
+
+<!-- Cards tab panel -->
+<div id="tab-cards">
+  {% if scanners %}
+  <div class="scanner-grid">
+    {% for s in scanners %}
+    <div class="scanner-card" data-scanner="{{ s.name }}" onclick="toggleCard(event, '{{ s.name }}')">
+      <div class="card-title-row">
+        <span class="card-title">{{ s.name }}</span>
+        <span>
+          {% if s.name == 'nuclei' %}<span class="badge badge--dast">DAST</span> {% endif %}
+          {% if s.load_error %}
+          <span class="badge badge--error">ERROR</span>
+          {% else %}
+          <span class="badge badge--success">LOADED</span>
+          {% endif %}
+        </span>
+      </div>
+      {% if s.languages %}
+      <div class="card-languages">{{ s.languages | join(', ') }}</div>
+      {% endif %}
+      <div class="toggle-group" onclick="event.stopPropagation()">
+        <button class="toggle-btn {% if s.enabled is sameas true %}toggle-btn--on{% endif %}"
+                onclick="setEnabled('{{ s.name }}', true, this)">ON</button>
+        <button class="toggle-btn {% if s.enabled == 'auto' %}toggle-btn--auto{% endif %}"
+                onclick="setEnabled('{{ s.name }}', 'auto', this)">AUTO</button>
+        <button class="toggle-btn {% if s.enabled is sameas false %}toggle-btn--off{% endif %}"
+                onclick="setEnabled('{{ s.name }}', false, this)">OFF</button>
+      </div>
+      {% if s.load_error %}
+      <div class="card-error">{{ s.load_error }}</div>
+      {% endif %}
+      <div class="card-settings" id="settings-{{ s.name }}">
+        <div class="form-group">
+          <label for="timeout-{{ s.name }}">Timeout (seconds)</label>
+          <input type="number" id="timeout-{{ s.name }}" class="form-input"
+                 min="30" max="900" step="1" value="{{ s.timeout }}"
+                 onclick="event.stopPropagation()">
+        </div>
+        <div class="form-group">
+          <label for="args-{{ s.name }}">Extra Arguments</label>
+          <input type="text" id="args-{{ s.name }}" class="form-input form-input--mono"
+                 placeholder="--flag1 --flag2 value"
+                 value="{{ s.extra_args | join(' ') }}"
+                 onclick="event.stopPropagation()">
+        </div>
+        <div class="card-alert" id="card-alert-{{ s.name }}" style="display:none;"></div>
+        <div class="btn-row">
+          <button class="btn btn--accent" onclick="event.stopPropagation(); saveSettings('{{ s.name }}')">Save Settings</button>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <h2>No scanners registered</h2>
+    <p>No scanner adapters are installed. Check the installation guide for adding scanner plugins.</p>
+  </div>
+  {% endif %}
+</div>
+
+<!-- YAML Editor tab panel -->
+<div id="tab-yaml" class="yaml-container">
+  <div id="yaml-alert" style="display:none;"></div>
+  <div class="editor-wrapper">
+    <textarea id="yaml-editor"></textarea>
+  </div>
+  <div class="validation-bar" id="yaml-status">Edit YAML configuration below</div>
+  <div class="yaml-actions">
+    <button class="btn btn--accent" id="yaml-save-btn" onclick="saveYaml()">Save Config</button>
+  </div>
+</div>
+
+<script>
+var editor;
+
+document.addEventListener('DOMContentLoaded', function() {
+    var textarea = document.getElementById('yaml-editor');
+    if (textarea && typeof CodeMirror !== 'undefined') {
+        editor = CodeMirror.fromTextArea(textarea, {
+            mode: 'yaml',
+            theme: 'material-darker',
+            lineNumbers: true,
+            tabSize: 2,
+            indentWithTabs: false,
+        });
+        editor.setSize(null, '60vh');
+
+        editor.on('change', function() {
+            var statusEl = document.getElementById('yaml-status');
+            statusEl.textContent = 'Edit YAML configuration below';
+            statusEl.className = 'validation-bar';
+        });
+    }
+});
+
+function switchTab(tab) {
+    var buttons = document.querySelectorAll('.tab-btn');
+    buttons.forEach(function(btn) {
+        if (btn.getAttribute('data-tab') === tab) {
+            btn.classList.add('tab-btn--active');
+        } else {
+            btn.classList.remove('tab-btn--active');
+        }
+    });
+
+    if (tab === 'yaml') {
+        document.getElementById('tab-cards').style.display = 'none';
+        var yamlPanel = document.getElementById('tab-yaml');
+        yamlPanel.style.display = 'block';
+        yamlPanel.classList.add('yaml-container--active');
+
+        fetch('/api/config/yaml', { credentials: 'same-origin' })
+            .then(function(res) { return res.text(); })
+            .then(function(text) {
+                if (editor) {
+                    editor.setValue(text);
+                    editor.refresh();
+                }
+            })
+            .catch(function(err) {
+                showAlert('yaml-alert', 'Failed to load configuration: ' + err.message, 'error');
+            });
+    } else {
+        location.reload();
+    }
+}
+
+function setEnabled(scannerName, value, btn) {
+    var group = btn.parentElement;
+    var buttons = group.querySelectorAll('.toggle-btn');
+    buttons.forEach(function(b) {
+        b.classList.remove('toggle-btn--on', 'toggle-btn--auto', 'toggle-btn--off');
+    });
+    if (value === true) {
+        btn.classList.add('toggle-btn--on');
+    } else if (value === 'auto') {
+        btn.classList.add('toggle-btn--auto');
+    } else {
+        btn.classList.add('toggle-btn--off');
+    }
+
+    fetch('/api/config/scanners/' + scannerName, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ enabled: value })
+    }).then(function(res) {
+        if (!res.ok) {
+            location.reload();
+        }
+    }).catch(function() {
+        location.reload();
+    });
+}
+
+function toggleCard(event, scannerName) {
+    if (event.target.closest('.toggle-btn') || event.target.closest('input') || event.target.closest('.btn')) {
+        return;
+    }
+
+    var allSettings = document.querySelectorAll('.card-settings--open');
+    allSettings.forEach(function(el) {
+        if (el.id !== 'settings-' + scannerName) {
+            el.classList.remove('card-settings--open');
+        }
+    });
+
+    var settings = document.getElementById('settings-' + scannerName);
+    if (settings) {
+        settings.classList.toggle('card-settings--open');
+    }
+}
+
+function saveSettings(scannerName) {
+    var timeoutInput = document.getElementById('timeout-' + scannerName);
+    var argsInput = document.getElementById('args-' + scannerName);
+    var alertEl = document.getElementById('card-alert-' + scannerName);
+
+    var timeout = parseInt(timeoutInput.value, 10);
+    if (isNaN(timeout) || timeout < 30 || timeout > 900) {
+        showAlert('card-alert-' + scannerName, 'Invalid settings: Timeout must be between 30 and 900 seconds. Correct the value and try again.', 'error');
+        return;
+    }
+
+    var argsStr = argsInput.value.trim();
+    var singleQuotes = (argsStr.match(/'/g) || []).length;
+    var doubleQuotes = (argsStr.match(/"/g) || []).length;
+    if (singleQuotes % 2 !== 0) {
+        showAlert('card-alert-' + scannerName, 'Invalid settings: Unbalanced single quotes in Extra Arguments. Correct the value and try again.', 'error');
+        return;
+    }
+    if (doubleQuotes % 2 !== 0) {
+        showAlert('card-alert-' + scannerName, 'Invalid settings: Unbalanced double quotes in Extra Arguments. Correct the value and try again.', 'error');
+        return;
+    }
+
+    var extraArgs = argsStr ? argsStr.split(/\s+/).filter(function(a) { return a.length > 0; }) : [];
+
+    fetch('/api/config/scanners/' + scannerName, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ timeout: timeout, extra_args: extraArgs })
+    }).then(function(res) {
+        if (res.ok) {
+            showAlert('card-alert-' + scannerName, 'Scanner settings updated successfully.', 'success');
+            setTimeout(function() {
+                var settings = document.getElementById('settings-' + scannerName);
+                if (settings) {
+                    settings.classList.remove('card-settings--open');
+                }
+            }, 1500);
+        } else {
+            return res.json().then(function(data) {
+                var msg = data.detail || 'Unknown error';
+                if (Array.isArray(msg)) { msg = msg.join(', '); }
+                showAlert('card-alert-' + scannerName, 'Failed to save configuration: ' + msg + '. Check file permissions on config.yml.', 'error');
+            });
+        }
+    }).catch(function(err) {
+        showAlert('card-alert-' + scannerName, 'Failed to save configuration: ' + err.message + '. Check file permissions on config.yml.', 'error');
+    });
+}
+
+function saveYaml() {
+    if (!editor) return;
+
+    var yamlContent = editor.getValue();
+
+    fetch('/api/config/yaml', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'text/plain' },
+        credentials: 'same-origin',
+        body: yamlContent
+    }).then(function(res) {
+        if (res.ok) {
+            showAlert('yaml-alert', 'Configuration saved successfully.', 'success');
+            var statusEl = document.getElementById('yaml-status');
+            statusEl.textContent = 'YAML valid';
+            statusEl.className = 'validation-bar validation-bar--valid';
+        } else {
+            return res.json().then(function(data) {
+                var msg = data.detail || 'Unknown error';
+                if (Array.isArray(msg)) { msg = msg.join(', '); }
+                if (res.status === 422) {
+                    showAlert('yaml-alert', msg, 'error');
+                    var statusEl = document.getElementById('yaml-status');
+                    statusEl.textContent = msg;
+                    statusEl.className = 'validation-bar validation-bar--invalid';
+                } else {
+                    showAlert('yaml-alert', 'Failed to save configuration: ' + msg + '. Check file permissions on config.yml.', 'error');
+                }
+            });
+        }
+    }).catch(function(err) {
+        showAlert('yaml-alert', 'Failed to save configuration: ' + err.message + '. Check file permissions on config.yml.', 'error');
+    });
+}
+
+function showAlert(containerId, message, type) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = '<div class="' + type + '-alert">' + message + '</div>';
+    container.style.display = 'block';
+    if (type === 'success') {
+        setTimeout(function() {
+            container.style.display = 'none';
+        }, 3000);
+    }
+}
+</script>
+{% endblock %}

@@ -274,6 +274,9 @@
       <a href="/dashboard/history" class="navbar__link{% if active_page == 'history' %} navbar__link--active{% endif %}">Scan History</a>
       <a href="/dashboard/trends" class="navbar__link{% if active_page == 'trends' %} navbar__link--active{% endif %}">Trends</a>
       {% if user and user.role == "admin" %}
+      <a href="/dashboard/scanners" class="navbar__link{% if active_page == 'scanners' %} navbar__link--active{% endif %}">Scanners</a>
+      {% endif %}
+      {% if user and user.role == "admin" %}
       <a href="/dashboard/users" class="navbar__link{% if active_page == 'users' %} navbar__link--active{% endif %}">Users</a>
       {% endif %}
       {% if user %}
