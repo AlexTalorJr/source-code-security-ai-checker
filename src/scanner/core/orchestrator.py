@@ -111,6 +111,7 @@ async def run_scan(
     persist: bool = True,
     progress_callback=None,
     skip_ai: bool = False,
+    profile_name: str | None = None,
 ) -> tuple[ScanResultSchema, list[FindingSchema], list[CompoundRiskSchema]]:
     """Run all enabled scanners against a target, deduplicate, and persist.
 
@@ -146,6 +147,29 @@ async def run_scan(
                 "Provide either target_path or repo_url."
             )
 
+    # Profile override: build filtered settings when a profile is specified
+    if profile_name:
+        profile = settings.profiles.get(profile_name)
+        if not profile:
+            raise ValueError(f"Profile '{profile_name}' not found in config")
+        from scanner.config import ScannerToolConfig
+
+        filtered_scanners = {}
+        for scanner_name, profile_scanner in profile.scanners.items():
+            base = settings.scanners.get(scanner_name)
+            if base is None:
+                continue  # Skip unknown scanners listed in profile
+            merged = ScannerToolConfig(
+                adapter_class=base.adapter_class,
+                languages=base.languages,
+                enabled=True,  # Profile scanners are explicitly enabled
+                timeout=profile_scanner.timeout if profile_scanner.timeout is not None else base.timeout,
+                extra_args=profile_scanner.extra_args if profile_scanner.extra_args is not None else base.extra_args,
+            )
+            filtered_scanners[scanner_name] = merged
+        # Replace settings.scanners with filtered version for this scan
+        settings = settings.model_copy(update={"scanners": filtered_scanners})
+
     started_at = datetime.utcnow()
     clone_path: str | None = None
 
@@ -160,6 +184,11 @@ async def run_scan(
             registry = ScannerRegistry(settings.scanners)
             nuclei_entry = registry.get_scanner_config("nuclei")
             if nuclei_entry is None or nuclei_entry.adapter_class is None:
+                if profile_name:
+                    raise ValueError(
+                        f"Profile '{profile_name}' does not include nuclei scanner, "
+                        "which is required for DAST scans with target_url."
+                    )
                 raise ValueError(
                     "Nuclei adapter not configured. Add nuclei entry to config.yml."
                 )
@@ -333,6 +362,7 @@ async def run_scan(
             repo_url=repo_url,
             branch=branch,
             target_url=target_url,
+            profile_name=profile_name,
             ai_cost_usd=ai_result.cost_usd if ai_result.cost_usd > 0 else None,
             ai_skipped=ai_result.skipped,
             ai_skip_reason=ai_result.skip_reason,
@@ -352,6 +382,7 @@ async def run_scan(
                         repo_url=scan_result.repo_url,
                         branch=scan_result.branch,
                         target_url=scan_result.target_url,
+                        profile_name=profile_name,
                         status=scan_result.status,
                         started_at=scan_result.started_at,
                         completed_at=scan_result.completed_at,

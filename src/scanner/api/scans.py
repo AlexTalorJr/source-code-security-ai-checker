@@ -38,6 +38,7 @@ def _scan_to_detail(scan: ScanResult) -> ScanDetailResponse:
         repo_url=scan.repo_url,
         branch=scan.branch,
         target_url=scan.target_url,
+        profile_name=scan.profile_name,
         commit_hash=scan.commit_hash,
         started_at=scan.started_at,
         completed_at=scan.completed_at,
@@ -65,6 +66,18 @@ async def trigger_scan(
     Creates a scan record with status 'queued' and enqueues it
     for background processing.
     """
+    # Validate profile exists if provided
+    if body.profile:
+        from scanner.api.config import read_config
+
+        config = read_config()
+        profiles = config.get("profiles", {})
+        if body.profile not in profiles:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Profile '{body.profile}' not found",
+            )
+
     async with request.app.state.session_factory() as session:
         async with session.begin():
             db_scan = ScanResult(
@@ -73,6 +86,7 @@ async def trigger_scan(
                 branch=body.branch,
                 target_url=body.target_url,
                 skip_ai=body.skip_ai,
+                profile_name=body.profile,
                 status="queued",
             )
             session.add(db_scan)

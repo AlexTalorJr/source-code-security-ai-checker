@@ -75,6 +75,7 @@ class ScanQueue:
                     branch = db_scan.branch
                     skip_ai = db_scan.skip_ai
                     target_url = db_scan.target_url
+                    profile_name = db_scan.profile_name
 
                 # Progress callback
                 def _progress_cb(stage, details):
@@ -95,6 +96,7 @@ class ScanQueue:
                     persist=False,
                     progress_callback=_progress_cb,
                     skip_ai=skip_ai,
+                    profile_name=profile_name,
                 )
 
                 # Update DB record with results and persist findings
