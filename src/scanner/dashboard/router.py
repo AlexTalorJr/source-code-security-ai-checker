@@ -641,6 +641,7 @@ async def start_scan(
     request: Request,
     path: str = Form(default=""),
     repo_url: str = Form(default=""),
+    target_url: str = Form(default=""),
     branch: str = Form(default=""),
     skip_ai: str = Form(default=""),
     profile: str = Form(default=""),
@@ -655,6 +656,7 @@ async def start_scan(
         scan = ScanResult(
             target_path=path or None,
             repo_url=repo_url or None,
+            target_url=target_url or None,
             branch=branch or None,
             skip_ai=bool(skip_ai),
             profile_name=profile or None,
