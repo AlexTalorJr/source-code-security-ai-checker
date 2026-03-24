@@ -1,6 +1,7 @@
 """Background scan queue for processing scan requests serially."""
 
 import asyncio
+import json
 import logging
 from datetime import datetime
 
@@ -122,6 +123,8 @@ class ScanQueue:
                             else None,
                             error_message=scan_result.error_message,
                             ai_cost_usd=scan_result.ai_cost_usd,
+                            tool_versions=json.dumps(scan_result.tool_versions) if scan_result.tool_versions else None,
+                            scanner_version=scan_result.scanner_version,
                         )
                     )
 

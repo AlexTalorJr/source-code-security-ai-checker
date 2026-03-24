@@ -25,7 +25,7 @@ class ScannerToolConfig(BaseModel):
     """
 
     enabled: bool | str = "auto"
-    timeout: int = 180
+    timeout: int = 240
     extra_args: list[str] = []
     adapter_class: str = ""
     languages: list[str] = []

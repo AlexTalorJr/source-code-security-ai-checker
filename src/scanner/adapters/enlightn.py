@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import re
 from pathlib import Path
 
 from scanner.adapters.base import ScannerAdapter
@@ -13,12 +14,21 @@ from scanner.core.fingerprint import compute_fingerprint
 from scanner.schemas.finding import FindingSchema
 from scanner.schemas.severity import Severity
 
-# Enlightn analyzer categories mapped to severities
-ENLIGHTN_SEVERITY_MAP: dict[str, Severity] = {
+# Enlightn section headers mapped to severities
+SECTION_SEVERITY_MAP: dict[str, Severity] = {
     "security": Severity.HIGH,
     "performance": Severity.LOW,
     "reliability": Severity.MEDIUM,
 }
+
+# Regex to parse check lines:
+# "Check N/M: <title>. Failed" or "Check N/M: <title>. Exception"
+CHECK_PATTERN = re.compile(
+    r"Check\s+\d+/\d+:\s+(.+?)\.\s+(Failed|Exception|Passed|Not Applicable)"
+)
+
+# Section header pattern: "| Running <Category> Checks"
+SECTION_PATTERN = re.compile(r"\|\s*Running\s+(\w+)\s+Checks")
 
 
 class EnlightnAdapter(ScannerAdapter):
@@ -45,6 +55,45 @@ class EnlightnAdapter(ScannerAdapter):
         except (json.JSONDecodeError, OSError):
             return False
 
+    @staticmethod
+    def _parse_text_output(stdout: str) -> list[dict]:
+        """Parse Enlightn CI text output into structured check results."""
+        results = []
+        current_section = "security"
+
+        for line in stdout.splitlines():
+            # Detect section changes
+            section_match = SECTION_PATTERN.search(line)
+            if section_match:
+                current_section = section_match.group(1).lower()
+                continue
+
+            # Parse check results
+            check_match = CHECK_PATTERN.search(line)
+            if check_match:
+                title = check_match.group(1).strip()
+                status = check_match.group(2)
+                if status in ("Passed", "Not Applicable"):
+                    continue
+                results.append({
+                    "title": title,
+                    "status": status.lower(),  # "failed" or "exception"
+                    "category": current_section,
+                    "description": "",
+                })
+                continue
+
+            # Capture description lines (text after a Failed/Exception check)
+            if results and not line.startswith(("Check ", "|", "+", "Report Card")):
+                desc_line = line.strip()
+                if desc_line and not desc_line.startswith("="):
+                    if results[-1]["description"]:
+                        results[-1]["description"] += " " + desc_line
+                    else:
+                        results[-1]["description"] = desc_line
+
+        return results
+
     async def run(
         self,
         target_path: str,
@@ -64,7 +113,8 @@ class EnlightnAdapter(ScannerAdapter):
             "php",
             str(Path(target_path) / "artisan"),
             "enlightn",
-            "--json",
+            "--ci",
+            "--details",
             "--no-interaction",
         ]
         if extra_args:
@@ -93,43 +143,40 @@ class EnlightnAdapter(ScannerAdapter):
         if not stdout or not stdout.strip():
             return []
 
-        try:
-            data = json.loads(stdout)
-        except json.JSONDecodeError:
+        # Parse text output (Enlightn does not support --json)
+        checks = self._parse_text_output(stdout)
+
+        if not checks:
+            logger.info("Enlightn: no failed checks found in output")
             return []
 
         findings: list[FindingSchema] = []
-        analyzers = data if isinstance(data, list) else data.get("analyzers", [])
+        for check in checks:
+            category = check["category"]
+            severity = SECTION_SEVERITY_MAP.get(category, Severity.MEDIUM)
 
-        for analyzer in analyzers:
-            status = analyzer.get("status", "")
-            if status == "passed":
-                continue
-
-            rule_id = analyzer.get("name", "unknown")
-            title = analyzer.get("title", rule_id)
-            description = analyzer.get("description", "")
-            category = analyzer.get("category", "security").lower()
-            severity = ENLIGHTN_SEVERITY_MAP.get(category, Severity.MEDIUM)
-
-            # Security category findings with "fail" are high
-            if category == "security" and status == "failed":
+            # Security failures are always HIGH
+            if category == "security" and check["status"] == "failed":
                 severity = Severity.HIGH
 
-            details = analyzer.get("details", "")
-            file_path = analyzer.get("file", "app")
-            line = analyzer.get("line")
+            # Exceptions indicate runtime errors — treat as MEDIUM
+            if check["status"] == "exception":
+                severity = Severity.MEDIUM
 
-            fingerprint = compute_fingerprint(file_path, rule_id, title)
+            title = check["title"]
+            description = check["description"]
+            rule_id = re.sub(r"[^a-zA-Z0-9]", "_", title)[:80]
+
+            fingerprint = compute_fingerprint("app", rule_id, title)
 
             findings.append(
                 FindingSchema(
                     fingerprint=fingerprint,
                     tool=self.tool_name,
                     rule_id=rule_id,
-                    file_path=file_path,
-                    line_start=line,
-                    snippet=details[:500] if details else "",
+                    file_path="app",
+                    line_start=None,
+                    snippet=description[:500] if description else "",
                     severity=severity,
                     title=title,
                     description=description,
