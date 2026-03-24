@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A multi-language security scanning platform that analyzes source code using 12 parallel scanners with AI-powered analysis. Auto-detects project languages (Python, PHP/Laravel, C/C++, JavaScript, Go, Rust, Java, C#, Ruby) and enables relevant scanners via config-driven plugin registry. Generates HTML/PDF reports with fix suggestions, blocks deployments via configurable quality gate, and integrates with Jenkins CI + Slack/email notifications. Fully self-contained via Docker.
+A multi-language security scanning platform that analyzes source code using 13 parallel scanners (SAST + DAST) with AI-powered analysis. Auto-detects project languages (Python, PHP/Laravel, C/C++, JavaScript, Go, Rust, Java, C#, Ruby) and enables relevant scanners via config-driven plugin registry. Features role-based access control, web-based scanner configuration, named scan profiles, and Nuclei-powered dynamic scanning. Generates HTML/PDF reports with fix suggestions, blocks deployments via configurable quality gate, and integrates with Jenkins CI + Slack/email notifications. Fully self-contained via Docker.
 
 ## Core Value
 
@@ -46,53 +46,46 @@ Every code change is automatically scanned for security vulnerabilities before d
 - ✓ Scanner configuration UI — enable/disable scanners, per-scanner settings, YAML config editor — v1.0.2 Phase 14
 - ✓ Scan profiles — named scanner configurations selectable via API and dashboard — v1.0.2 Phase 15
 - ✓ Bilingual documentation (EN, RU, FR, ES, IT) updated for all v1.0.2 features — v1.0.2 Phase 15
+- ✓ Gap closure — dashboard DAST form, schema migration fix, Bearer token auth in docs — v1.0.2 Phase 16
 
 ### Active
 
-(No active requirements — v1.0.2 milestone fully closed including gap closure)
+(No active requirements — planning next milestone)
 
-## Current Milestone: v1.0.2 Scanner UI, DAST & RBAC
-
-**Goal:** Add web-based scanner configuration, Nuclei DAST adapter, and token-based authentication with role-based access control.
-
-**Target features:**
-- Scanner configuration UI (enable/disable, settings, config editor, scan profiles)
-- Nuclei DAST adapter (template-based dynamic application security testing)
-- Token-based API authentication for CI/CD pipelines
-- Role-based access control (admin, viewer, scanner roles)
-- Dashboard access control per role
-
-### Out of Scope
+## Out of Scope
 
 - PostgreSQL/MySQL support — SQLite only for portability
 - SaaS-hosted scanner — fully self-hosted only
 - Real-time code monitoring — scan-on-demand and CI-triggered only
 - Windows host support — Linux containers only
 - Commercial/paid scanner integration — open-source tools only
-- OAuth/SSO/LDAP integration — simple local auth only for v1.0.2
+- OAuth/SSO/LDAP integration — simple local auth only for now
 - User self-registration — admin creates accounts
-- Full DAST pipeline (target management, DAST-specific reports) — Nuclei adapter only for v1.0.2
+- Full DAST pipeline (target management, scheduling, DAST-specific reports) — Nuclei adapter only for now
 
 ## Context
 
 **v1.0 shipped** — 6 phases, 21 plans, 150 commits, 5400+ LOC Python, 320 tests passing.
 **v2.0 shipped** — 1 phase, 2 plans. Research-only milestone producing scanner ecosystem report.
 **v1.0.1 shipped** — 4 phases, 8 plans, 28 commits. Plugin registry + 4 Tier-1 scanners + Docker + docs. 402 tests passing, ~6000 LOC Python.
-**v1.0.2 shipped** — 5 phases, 14 plans. RBAC, Nuclei DAST, scanner config UI, scan profiles, bilingual docs, gap closure. 487+ tests passing.
+**v1.0.2 shipped** — 5 phases, 14 plans, 26+ commits. RBAC, Nuclei DAST, scanner config UI, scan profiles, bilingual docs, gap closure. 487+ tests passing, 150 files changed.
 
 **Scanner tech stack:**
 - Python 3.12 (orchestrator, FastAPI, reports)
 - 13 scanners: Semgrep, cppcheck, Gitleaks, Trivy, Checkov, Psalm, Enlightn, PHP Security Checker, gosec, Bandit, Brakeman, cargo-audit, Nuclei (DAST)
 - Claude API (AI semantic analysis)
 - Jinja2 + WeasyPrint (HTML/PDF reports)
-- SQLite/WAL (scan history)
+- SQLite/WAL (scan history, user accounts, API tokens)
+- JWT sessions + Bearer tokens (authentication)
+- CodeMirror 5 (YAML editor in dashboard)
 - Docker + docker-compose (containerization)
 
 **Architecture — layered scanning:**
 - Layer 1: Language auto-detection → enable relevant scanners
-- Layer 2: Parallel scanner execution (12 tools via config-driven registry)
+- Layer 2: Parallel scanner execution (13 tools via config-driven registry)
 - Layer 3: AI enrichment (Claude API) — optional per scan
 - Layer 4: Report generation + quality gate + notifications
+- Layer 5: RBAC — role-gated API + dashboard access
 
 ## Constraints
 
@@ -118,9 +111,14 @@ Every code change is automatically scanned for security vulnerabilities before d
 | Config-driven plugin registry | Extends config.yml with adapter_class — no stevedore needed | ✓ Confirmed v1.0.1 |
 | Keep Semgrep CE, monitor Opengrep | Opengrep fork immature, cross-function taint moved to commercial | ✓ Confirmed v2.0 |
 | Keep Gitleaks over TruffleHog | Speed and simplicity win for CI/CD; TruffleHog as optional complement | ✓ Confirmed v2.0 |
-| Nuclei over ZAP for DAST | CLI-friendly, template-based, 30MB vs 500MB+ | ✓ Confirmed v2.0 |
+| Nuclei over ZAP for DAST | CLI-friendly, template-based, 30MB vs 500MB+ | ✓ Confirmed v1.0.2 |
 | ScannerRegistry over ALL_ADAPTERS | Dynamic loading via importlib, config-driven | ✓ Confirmed v1.0.1 |
 | Underscore convention for config keys | tool_name uses underscores to match config.yml keys | ✓ Confirmed v1.0.1 |
+| PyJWT + pwdlib[bcrypt] for auth | Replaces abandoned python-jose and deprecated passlib | ✓ Confirmed v1.0.2 |
+| JWT sessions + Bearer tokens | Dual auth: cookies for dashboard, tokens for API/CI | ✓ Confirmed v1.0.2 |
+| CodeMirror 5 via CDN | No build step needed for YAML editor | ✓ Confirmed v1.0.2 |
+| config.yml as single source of truth | Scanner settings live in config.yml, UI reads/writes it | ✓ Confirmed v1.0.2 |
+| Scan profiles as named presets | Reusable scanner configs without duplicating config.yml | ✓ Confirmed v1.0.2 |
 
 ---
-*Last updated: 2026-03-24 — Phase 16 v1.0.2 gap closure complete (dashboard target_url, schema migration, docs auth fix)*
+*Last updated: 2026-03-24 after v1.0.2 milestone*

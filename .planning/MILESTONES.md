@@ -1,5 +1,22 @@
 # Milestones
 
+## v1.0.2 Scanner UI, DAST & RBAC (Shipped: 2026-03-24)
+
+**Phases completed:** 5 phases, 14 plans, 29 tasks
+**Git range:** `af17c18`..`4b0cfa5` (26+ commits)
+**Timeline:** 2026-03-23 → 2026-03-24 (2 days)
+
+**Key accomplishments:**
+
+- RBAC with JWT auth — user accounts, API tokens, 3 roles (admin/scanner/viewer), dashboard login with session cookies
+- Nuclei DAST adapter — dynamic security scanning via target URLs, JSONL parsing, multi-arch Docker installation
+- Scanner configuration UI — card grid with three-state toggles (On/Auto/Off), CodeMirror YAML editor
+- Scan profiles — named scanner presets (e.g. "Quick scan"), API + dashboard selection, per-scanner timeout overrides
+- Bilingual documentation — RBAC, DAST, scanner config, scan profiles documented in 5 languages (EN/RU/FR/ES/IT)
+- Gap closure — dashboard DAST form field, inline schema migration fix, Bearer token auth replacing all X-API-Key references
+
+---
+
 ## v1.0.1 Scanner Plugin Registry (Shipped: 2026-03-22)
 
 **Phases completed:** 4 phases, 8 plans, 24 tasks

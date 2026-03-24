@@ -5,7 +5,7 @@
 - ✅ **v1.0 MVP** — Phases 1-6 (shipped 2026-03-20)
 - ✅ **v2.0 Scanner Ecosystem** — Phase 7 (shipped 2026-03-20)
 - ✅ **v1.0.1 Scanner Plugin Registry** — Phases 8-11 (shipped 2026-03-22)
-- **v1.0.2 Scanner UI, DAST & RBAC** — Phases 12-16 (in progress)
+- ✅ **v1.0.2 Scanner UI, DAST & RBAC** — Phases 12-16 (shipped 2026-03-24)
 
 ## Phases
 
@@ -38,99 +38,18 @@
 
 </details>
 
-### v1.0.2 Scanner UI, DAST & RBAC (In Progress)
+<details>
+<summary>✅ v1.0.2 Scanner UI, DAST & RBAC (Phases 12-16) — SHIPPED 2026-03-24</summary>
 
-**Milestone Goal:** Add web-based scanner configuration, Nuclei DAST adapter, and token-based authentication with role-based access control.
+- [x] Phase 12: RBAC Foundation (5/5 plans) — completed 2026-03-23
+- [x] Phase 13: Nuclei DAST Adapter (3/3 plans) — completed 2026-03-23
+- [x] Phase 14: Scanner Configuration UI (2/2 plans) — completed 2026-03-23
+- [x] Phase 15: Scan Profiles and Documentation (3/3 plans) — completed 2026-03-23
+- [x] Phase 16: v1.0.2 Polish and Tech Debt (1/1 plan) — completed 2026-03-24
 
-- [x] **Phase 12: RBAC Foundation** - User accounts, API tokens, role-based authorization, and SQLite hardening (completed 2026-03-23)
-- [x] **Phase 13: Nuclei DAST Adapter** - Template-based dynamic security scanning via Nuclei CLI (completed 2026-03-23)
-- [x] **Phase 14: Scanner Configuration UI** - Dashboard pages for scanner enable/disable, settings, and config editing (completed 2026-03-23)
-- [x] **Phase 15: Scan Profiles and Documentation** - Named scan presets and bilingual docs for all v1.0.2 features (completed 2026-03-23)
-- [x] **Phase 16: v1.0.2 Polish and Tech Debt** - DAST dashboard form, inline migration fix, stale doc cleanup (completed 2026-03-24)
-
-## Phase Details
-
-### Phase 12: RBAC Foundation
-**Goal**: Users can securely authenticate and access the platform according to their assigned role
-**Depends on**: Phase 11
-**Requirements**: AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-06, AUTH-07, INFRA-03
-**Success Criteria** (what must be TRUE):
-  1. Admin can create a user account and that user can log in to the dashboard with username and password
-  2. User can generate a personal API token, use it to call scan endpoints, and revoke it
-  3. Viewer-role user can view scan results but receives 403 when attempting to trigger a scan or change settings
-  4. Scanner-role user can trigger scans and view results via API token but cannot access dashboard configuration pages
-  5. Unauthenticated API requests return 401; SQLite handles concurrent writes without busy errors
-**Plans**: 5 plans
-
-Plans:
-- [ ] 12-01-PLAN.md — Models, schemas, config, SQLite hardening, admin bootstrap
-- [ ] 12-02-PLAN.md — Unified auth core (get_current_user, require_role, JWT sessions)
-- [ ] 12-03-PLAN.md — Test infrastructure and Phase 05 fixture migration
-- [ ] 12-04-PLAN.md — User CRUD API, Token API, role enforcement on endpoints
-- [ ] 12-05-PLAN.md — Dashboard UI (login, 403, navbar, users, tokens pages)
-
-### Phase 13: Nuclei DAST Adapter
-**Goal**: Users can run dynamic application security scans against target URLs alongside existing SAST scans
-**Depends on**: Phase 12
-**Requirements**: DAST-01, DAST-02, DAST-03, DAST-04
-**Success Criteria** (what must be TRUE):
-  1. User can trigger a DAST scan by providing a target_url via API and Nuclei executes against that URL
-  2. Nuclei findings appear in HTML and PDF reports alongside SAST findings with severity and template info
-  3. Nuclei binary is installed in the Docker image and works on both x86_64 and ARM64
-**Plans**: 3 plans
-
-Plans:
-- [ ] 13-01-PLAN.md — NucleiAdapter with JSONL parsing, severity mapping, and unit tests
-- [ ] 13-02-PLAN.md — Dockerfile Nuclei installation and config.yml.example entry
-- [ ] 13-03-PLAN.md — API target_url field, orchestrator DAST routing, DB migration, scan queue integration
-
-### Phase 14: Scanner Configuration UI
-**Goal**: Admins can manage scanner settings from the dashboard without editing config files manually
-**Depends on**: Phase 12
-**Requirements**: CONF-01, CONF-02, CONF-03
-**Success Criteria** (what must be TRUE):
-  1. Admin can enable or disable individual scanners from the dashboard and changes persist across restarts
-  2. Admin can edit per-scanner settings (timeout, extra args) from the dashboard and the next scan uses the updated values
-  3. Admin can edit config.yml via a web-based YAML editor with syntax highlighting
-**Plans**: 2 plans
-
-Plans:
-- [ ] 14-01-PLAN.md -- Config API endpoints, test infrastructure, dashboard scanner route
-- [ ] 14-02-PLAN.md -- Scanner configuration page template (cards + YAML editor) and navbar
-
-### Phase 15: Scan Profiles and Documentation
-**Goal**: Users can select predefined scan configurations and all v1.0.2 features are documented
-**Depends on**: Phase 13, Phase 14
-**Requirements**: CONF-04, CONF-05, INFRA-04
-**Success Criteria** (what must be TRUE):
-  1. Admin can create a named scan profile (e.g. "Quick scan") that saves a specific scanner configuration
-  2. User can select a scan profile when triggering a scan via API or dashboard, and only that profile's scanners execute
-  3. Bilingual documentation (EN, RU, FR, ES, IT) covers RBAC setup, scanner config UI usage, DAST scanning, and scan profiles
-**Plans**: 3 plans
-
-Plans:
-- [ ] 15-01-PLAN.md — Profile backend: Pydantic models, DB column, CRUD API, orchestrator override, scan integration, tests
-- [ ] 15-02-PLAN.md — Profile UI: Profiles tab on scanners page, profile dropdown on scan form, history table column
-- [ ] 15-03-PLAN.md — Documentation: EN/RU/FR/ES/IT admin-guide, user-guide, api.md updates for all v1.0.2 features
-
-### Phase 16: v1.0.2 Polish and Tech Debt
-**Goal**: Close tech debt from milestone audit — DAST dashboard support, migration safety, stale doc references
-**Depends on**: Phase 15
-**Requirements**: DAST-02 (partial gap closure)
-**Gap Closure**: Closes gaps from v1.0.2-MILESTONE-AUDIT.md
-**Success Criteria** (what must be TRUE):
-  1. Dashboard scan form has a target_url input field and DAST scans can be triggered from the dashboard
-  2. `_apply_schema_updates` in main.py includes target_url column migration
-  3. No X-API-Key references remain in any docs/ files (all 5 languages)
-**Plans**: 1 plan
-
-Plans:
-- [ ] 16-01-PLAN.md — DAST dashboard form, target_url migration, X-API-Key doc cleanup
+</details>
 
 ## Progress
-
-**Execution Order:**
-Phases 13 and 14 can execute in parallel after Phase 12 completes.
 
 | Phase | Milestone | Plans | Status | Completed |
 |-------|-----------|-------|--------|-----------|
@@ -149,4 +68,4 @@ Phases 13 and 14 can execute in parallel after Phase 12 completes.
 | 13. Nuclei DAST Adapter | v1.0.2 | 3/3 | Complete | 2026-03-23 |
 | 14. Scanner Configuration UI | v1.0.2 | 2/2 | Complete | 2026-03-23 |
 | 15. Scan Profiles and Documentation | v1.0.2 | 3/3 | Complete | 2026-03-23 |
-| 16. v1.0.2 Polish and Tech Debt | 1/1 | Complete    | 2026-03-24 | - |
+| 16. v1.0.2 Polish and Tech Debt | v1.0.2 | 1/1 | Complete | 2026-03-24 |

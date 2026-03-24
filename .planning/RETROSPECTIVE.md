@@ -81,6 +81,53 @@
 
 ---
 
+## Milestone: v1.0.2 — Scanner UI, DAST & RBAC
+
+**Shipped:** 2026-03-24
+**Phases:** 5 | **Plans:** 14 | **Tasks:** 29
+**Timeline:** 2 days (2026-03-23 → 2026-03-24)
+
+### What Was Built
+- RBAC with JWT auth: user accounts, API tokens, 3 roles (admin/scanner/viewer), dashboard login
+- Nuclei DAST adapter: dynamic scanning via target URLs, JSONL parsing, multi-arch Docker
+- Scanner configuration UI: card grid with three-state toggles, CodeMirror YAML editor
+- Scan profiles: named scanner presets, API + dashboard selection, per-scanner overrides
+- Bilingual documentation: all v1.0.2 features in 5 languages (EN/RU/FR/ES/IT)
+- Gap closure: dashboard DAST form, schema migration fix, Bearer token auth in all docs
+
+### What Worked
+- Milestone audit (pre-completion) caught 3 real gaps: missing dashboard target_url field, missing inline migration entry, stale X-API-Key references — all fixed in Phase 16
+- Phase 12 (RBAC, 5 plans) was the largest phase yet — wave-based execution handled it cleanly
+- Research phase accurately predicted PyJWT + pwdlib as auth stack replacements
+- Parallel phase execution (13 + 14 after 12) saved time — two independent feature tracks
+- Reusing existing UI patterns (accordion cards from Phase 14 in Phase 15) kept UI consistent
+
+### What Was Inefficient
+- 150 files changed including 15 doc files x 5 languages — translation volume is the dominant cost for doc phases
+- Phase 16 gap closure was 3 small fixes but required full phase ceremony (plan → execute → verify)
+- Roadmap plan checkboxes still show `[ ]` even after execution — only milestone completion marks the summary
+
+### Patterns Established
+- Dual auth pattern: JWT cookies for dashboard, Bearer tokens for API/CI
+- Three-state toggle pattern (On/Auto/Off) for scanner enable UI
+- URL-as-path pattern for DAST: target_url stored in file_path field
+- Scan profiles as named presets over config.yml duplication
+- _get_dashboard_user returns None (not 401) for redirect-based login flow
+
+### Key Lessons
+1. Milestone audits continue to pay for themselves — 3 real gaps caught in v1.0.2
+2. Auth decisions (JWT library, password hashing) matter long-term — research phase prevented choosing abandoned libraries
+3. Dashboard and API should always ship features in parallel — Phase 13 shipped DAST API-only, requiring Phase 16 to add dashboard form
+4. 5-language docs are a volume multiplier — consider tooling for translation in future milestones
+5. CodeMirror via CDN (no build step) was the right call for a Python-first project
+
+### Cost Observations
+- Model mix: ~70% opus (executors, planners), ~30% sonnet (checkers, verifiers)
+- Sessions: 2
+- Notable: Phase 16 (gap closure) was very efficient — 1 plan, 3 tasks, 3 commits
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -90,6 +137,7 @@
 | v1.0 | multiple | 6 | Foundation → full platform build |
 | v2.0 | 1 | 1 | Research-only milestone, single session |
 | v1.0.1 | 2 | 4 | Research → implementation pipeline validated; milestone audit caught real bug |
+| v1.0.2 | 2 | 5 | Largest milestone (14 plans); parallel phases; milestone audit caught 3 gaps |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -97,3 +145,5 @@
 2. Config-driven patterns scale better than hard-coded registries
 3. Milestone audits pay for themselves — they catch integration gaps that unit tests miss
 4. Research-first approach (v2.0 research → v1.0.1 implementation) produces well-scoped work
+5. API and dashboard features should ship together — shipping API-only creates gap-closure overhead (v1.0.2 lesson)
+6. 5-language documentation is a volume multiplier — consider automation for future milestones
