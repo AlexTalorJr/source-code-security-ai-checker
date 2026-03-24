@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 15-02-PLAN.md
-last_updated: "2026-03-23T19:02:30.738Z"
+stopped_at: Completed 16-01-PLAN.md
+last_updated: "2026-03-24T10:44:36.560Z"
 progress:
   total_phases: 4
   completed_phases: 4
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-22)
 
 **Core value:** Every code change is automatically scanned for security vulnerabilities before deployment
-**Current focus:** Phase 15 — scan-profiles-and-documentation
+**Current focus:** Phase 16 — v102-polish-and-tech-debt
 
 ## Current Position
 
-Phase: 15 (scan-profiles-and-documentation) — EXECUTING
-Plan: 3 of 3
+Phase: 16 (v102-polish-and-tech-debt) — EXECUTING
+Plan: 1 of 1
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Recent decisions affecting current work:
 - [Phase 15]: Profile override uses settings.model_copy(update=) for immutable scanner filtering
 - [Phase 15]: Doc tests use universal markers (URLs, technical terms) for cross-language verification
 - [Phase 15]: Reused existing accordion card pattern from scanner cards for profile cards
+- [Phase 16]: Dashboard target_url field placed in first form-row alongside path, repo_url, branch
 
 ### Pending Todos
 
@@ -78,6 +79,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-23T18:53:14.848Z
-Stopped at: Completed 15-02-PLAN.md
+Last session: 2026-03-24T10:44:36.552Z
+Stopped at: Completed 16-01-PLAN.md
 Resume file: None

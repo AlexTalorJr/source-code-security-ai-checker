@@ -46,7 +46,7 @@
 - [x] **Phase 13: Nuclei DAST Adapter** - Template-based dynamic security scanning via Nuclei CLI (completed 2026-03-23)
 - [x] **Phase 14: Scanner Configuration UI** - Dashboard pages for scanner enable/disable, settings, and config editing (completed 2026-03-23)
 - [x] **Phase 15: Scan Profiles and Documentation** - Named scan presets and bilingual docs for all v1.0.2 features (completed 2026-03-23)
-- [ ] **Phase 16: v1.0.2 Polish and Tech Debt** - DAST dashboard form, inline migration fix, stale doc cleanup
+- [x] **Phase 16: v1.0.2 Polish and Tech Debt** - DAST dashboard form, inline migration fix, stale doc cleanup (completed 2026-03-24)
 
 ## Phase Details
 
@@ -149,4 +149,4 @@ Phases 13 and 14 can execute in parallel after Phase 12 completes.
 | 13. Nuclei DAST Adapter | v1.0.2 | 3/3 | Complete | 2026-03-23 |
 | 14. Scanner Configuration UI | v1.0.2 | 2/2 | Complete | 2026-03-23 |
 | 15. Scan Profiles and Documentation | v1.0.2 | 3/3 | Complete | 2026-03-23 |
-| 16. v1.0.2 Polish and Tech Debt | v1.0.2 | 0/1 | Not started | - |
+| 16. v1.0.2 Polish and Tech Debt | 1/1 | Complete   | 2026-03-24 | - |
