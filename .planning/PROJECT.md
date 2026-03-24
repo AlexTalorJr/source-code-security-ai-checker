@@ -49,7 +49,7 @@ Every code change is automatically scanned for security vulnerabilities before d
 
 ### Active
 
-(No active requirements — v1.0.2 milestone complete)
+(No active requirements — v1.0.2 milestone fully closed including gap closure)
 
 ## Current Milestone: v1.0.2 Scanner UI, DAST & RBAC
 
@@ -78,7 +78,7 @@ Every code change is automatically scanned for security vulnerabilities before d
 **v1.0 shipped** — 6 phases, 21 plans, 150 commits, 5400+ LOC Python, 320 tests passing.
 **v2.0 shipped** — 1 phase, 2 plans. Research-only milestone producing scanner ecosystem report.
 **v1.0.1 shipped** — 4 phases, 8 plans, 28 commits. Plugin registry + 4 Tier-1 scanners + Docker + docs. 402 tests passing, ~6000 LOC Python.
-**v1.0.2 shipped** — 4 phases, 13 plans. RBAC, Nuclei DAST, scanner config UI, scan profiles, bilingual docs. 487+ tests passing.
+**v1.0.2 shipped** — 5 phases, 14 plans. RBAC, Nuclei DAST, scanner config UI, scan profiles, bilingual docs, gap closure. 487+ tests passing.
 
 **Scanner tech stack:**
 - Python 3.12 (orchestrator, FastAPI, reports)
@@ -123,4 +123,4 @@ Every code change is automatically scanned for security vulnerabilities before d
 | Underscore convention for config keys | tool_name uses underscores to match config.yml keys | ✓ Confirmed v1.0.1 |
 
 ---
-*Last updated: 2026-03-23 — Phase 15 Scan Profiles and Documentation complete (v1.0.2 milestone complete)*
+*Last updated: 2026-03-24 — Phase 16 v1.0.2 gap closure complete (dashboard target_url, schema migration, docs auth fix)*
