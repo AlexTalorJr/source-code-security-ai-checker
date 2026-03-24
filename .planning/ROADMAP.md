@@ -122,10 +122,10 @@ Plans:
   1. Dashboard scan form has a target_url input field and DAST scans can be triggered from the dashboard
   2. `_apply_schema_updates` in main.py includes target_url column migration
   3. No X-API-Key references remain in any docs/ files (all 5 languages)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 16-01: TBD
+- [ ] 16-01-PLAN.md — DAST dashboard form, target_url migration, X-API-Key doc cleanup
 
 ## Progress
 
@@ -149,4 +149,4 @@ Phases 13 and 14 can execute in parallel after Phase 12 completes.
 | 13. Nuclei DAST Adapter | v1.0.2 | 3/3 | Complete | 2026-03-23 |
 | 14. Scanner Configuration UI | v1.0.2 | 2/2 | Complete | 2026-03-23 |
 | 15. Scan Profiles and Documentation | v1.0.2 | 3/3 | Complete | 2026-03-23 |
-| 16. v1.0.2 Polish and Tech Debt | v1.0.2 | 0/? | Not started | - |
+| 16. v1.0.2 Polish and Tech Debt | v1.0.2 | 0/1 | Not started | - |
