@@ -5,7 +5,7 @@
 - ✅ **v1.0 MVP** — Phases 1-6 (shipped 2026-03-20)
 - ✅ **v2.0 Scanner Ecosystem** — Phase 7 (shipped 2026-03-20)
 - ✅ **v1.0.1 Scanner Plugin Registry** — Phases 8-11 (shipped 2026-03-22)
-- **v1.0.2 Scanner UI, DAST & RBAC** — Phases 12-15 (in progress)
+- **v1.0.2 Scanner UI, DAST & RBAC** — Phases 12-16 (in progress)
 
 ## Phases
 
@@ -46,6 +46,7 @@
 - [x] **Phase 13: Nuclei DAST Adapter** - Template-based dynamic security scanning via Nuclei CLI (completed 2026-03-23)
 - [x] **Phase 14: Scanner Configuration UI** - Dashboard pages for scanner enable/disable, settings, and config editing (completed 2026-03-23)
 - [x] **Phase 15: Scan Profiles and Documentation** - Named scan presets and bilingual docs for all v1.0.2 features (completed 2026-03-23)
+- [ ] **Phase 16: v1.0.2 Polish and Tech Debt** - DAST dashboard form, inline migration fix, stale doc cleanup
 
 ## Phase Details
 
@@ -112,6 +113,20 @@ Plans:
 - [ ] 15-02-PLAN.md — Profile UI: Profiles tab on scanners page, profile dropdown on scan form, history table column
 - [ ] 15-03-PLAN.md — Documentation: EN/RU/FR/ES/IT admin-guide, user-guide, api.md updates for all v1.0.2 features
 
+### Phase 16: v1.0.2 Polish and Tech Debt
+**Goal**: Close tech debt from milestone audit — DAST dashboard support, migration safety, stale doc references
+**Depends on**: Phase 15
+**Requirements**: DAST-02 (partial gap closure)
+**Gap Closure**: Closes gaps from v1.0.2-MILESTONE-AUDIT.md
+**Success Criteria** (what must be TRUE):
+  1. Dashboard scan form has a target_url input field and DAST scans can be triggered from the dashboard
+  2. `_apply_schema_updates` in main.py includes target_url column migration
+  3. No X-API-Key references remain in any docs/ files (all 5 languages)
+**Plans**: TBD
+
+Plans:
+- [ ] 16-01: TBD
+
 ## Progress
 
 **Execution Order:**
@@ -133,4 +148,5 @@ Phases 13 and 14 can execute in parallel after Phase 12 completes.
 | 12. RBAC Foundation | v1.0.2 | 5/5 | Complete | 2026-03-23 |
 | 13. Nuclei DAST Adapter | v1.0.2 | 3/3 | Complete | 2026-03-23 |
 | 14. Scanner Configuration UI | v1.0.2 | 2/2 | Complete | 2026-03-23 |
-| 15. Scan Profiles and Documentation | 3/3 | Complete    | 2026-03-23 | - |
+| 15. Scan Profiles and Documentation | v1.0.2 | 3/3 | Complete | 2026-03-23 |
+| 16. v1.0.2 Polish and Tech Debt | v1.0.2 | 0/? | Not started | - |
