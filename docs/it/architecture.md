@@ -167,7 +167,7 @@ sequenceDiagram
 
 ## Modello di Sicurezza
 
-- **Autenticazione tramite chiave API** -- tutti gli endpoint di scansione richiedono l'header `X-API-Key`, validato con `secrets.compare_digest` per un confronto sicuro rispetto al timing attack
+- **Autenticazione tramite token Bearer** -- tutti gli endpoint API (tranne /api/health) richiedono un token Bearer valido nell'header Authorization; i token vengono generati per utente dalla dashboard
 - **Utente Docker non-root** -- l'utente `scanner` esegue l'applicazione all'interno del container
 - **Segreti tramite variabili d'ambiente** -- le chiavi API e le password SMTP non vengono mai memorizzate nei file di configurazione; utilizzano le variabili d'ambiente `SCANNER_*`
 - **Mount config in sola lettura** -- `config.yml` è montato in sola lettura in Docker

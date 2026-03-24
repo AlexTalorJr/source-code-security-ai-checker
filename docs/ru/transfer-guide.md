@@ -127,7 +127,7 @@ curl http://localhost:8000/api/health
 11. Запустите первое сканирование:
     ```bash
     curl -X POST http://localhost:8000/api/scans \
-      -H "X-API-Key: your-key" \
+      -H "Authorization: Bearer nvsec_your_token" \
       -H "Content-Type: application/json" \
       -d '{"path": "/path/to/code"}'
     ```

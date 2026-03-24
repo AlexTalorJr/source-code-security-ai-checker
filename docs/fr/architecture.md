@@ -167,7 +167,7 @@ sequenceDiagram
 
 ## Modèle de sécurité
 
-- **Authentification par clé API** -- tous les endpoints de scan requièrent le header `X-API-Key`, validé avec `secrets.compare_digest` pour une comparaison protégée contre les attaques temporelles
+- **Authentification par jeton Bearer** -- tous les endpoints API (sauf /api/health) requierent un jeton Bearer valide dans le header Authorization ; les jetons sont generes par utilisateur depuis le tableau de bord
 - **Utilisateur Docker non-root** -- l'utilisateur `scanner` exécute l'application dans le conteneur
 - **Secrets via les variables d'environnement** -- les clés API et mots de passe SMTP ne sont jamais stockés dans les fichiers de configuration ; ils utilisent les variables d'environnement `SCANNER_*`
 - **Montage config en lecture seule** -- `config.yml` est monté en lecture seule dans Docker

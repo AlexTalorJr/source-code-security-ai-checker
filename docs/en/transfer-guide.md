@@ -127,7 +127,7 @@ Follow these steps to get a new installation running:
 11. Run your first scan:
     ```bash
     curl -X POST http://localhost:8000/api/scans \
-      -H "X-API-Key: your-key" \
+      -H "Authorization: Bearer nvsec_your_token" \
       -H "Content-Type: application/json" \
       -d '{"path": "/path/to/code"}'
     ```

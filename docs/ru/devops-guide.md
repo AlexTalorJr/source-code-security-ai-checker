@@ -130,7 +130,7 @@ stage('Security Scan') {
             def response = httpRequest(
                 url: "${SCANNER_URL}/api/scans",
                 httpMode: 'POST',
-                customHeaders: [[name: 'X-API-Key', value: "${SCANNER_API_KEY}"]],
+                customHeaders: [[name: 'Authorization', value: "Bearer ${SCANNER_API_TOKEN}"]],
                 contentType: 'APPLICATION_JSON',
                 requestBody: """{"repo_url": "${GIT_URL}", "branch": "${GIT_BRANCH}"}"""
             )

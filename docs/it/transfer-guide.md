@@ -127,7 +127,7 @@ Seguire questi passaggi per mettere in funzione una nuova installazione:
 11. Eseguire la prima scansione:
     ```bash
     curl -X POST http://localhost:8000/api/scans \
-      -H "X-API-Key: your-key" \
+      -H "Authorization: Bearer nvsec_your_token" \
       -H "Content-Type: application/json" \
       -d '{"path": "/path/to/code"}'
     ```

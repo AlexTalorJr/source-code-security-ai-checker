@@ -127,7 +127,7 @@ Suivez ces étapes pour mettre en place une nouvelle installation :
 11. Exécutez votre première analyse :
     ```bash
     curl -X POST http://localhost:8000/api/scans \
-      -H "X-API-Key: your-key" \
+      -H "Authorization: Bearer nvsec_your_token" \
       -H "Content-Type: application/json" \
       -d '{"path": "/path/to/code"}'
     ```

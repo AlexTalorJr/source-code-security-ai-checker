@@ -167,7 +167,7 @@ sequenceDiagram
 
 ## Security Model
 
-- **API key authentication** -- all scan endpoints require `X-API-Key` header, validated with `secrets.compare_digest` for timing-safe comparison
+- **Bearer token authentication** -- all API endpoints (except /api/health) require a valid Bearer token in the Authorization header; tokens are generated per-user from the dashboard
 - **Non-root Docker user** -- the `scanner` user runs the application inside the container
 - **Secrets via environment** -- API keys and SMTP passwords are never stored in config files; they use `SCANNER_*` environment variables
 - **Read-only config mount** -- `config.yml` is mounted as read-only in Docker
